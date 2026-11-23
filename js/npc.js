@@ -18,8 +18,8 @@
       const door = (k, dx = 0, dy = 1) => ({ x: (pl[k].door.x + dx) * TILE + 16, y: (pl[k].door.y + dy) * TILE + 8 });
       const sd = pl.shop, pd = pl.post;
       // 토닥·토실: 가판대 카운터 뒤 (부지 안쪽 위)
-      list.push(mk('todak', '토닥', 'mole', { band: '#ff7a7a', apron: '#fff2c9' }, (sd.x + 1.2) * TILE, (sd.y + 1.75) * TILE, { static: true, behind: true }));
-      list.push(mk('tosil', '토실', 'mole', { ribbon: '#ffb3cf', apron: '#e8f6ff' }, (sd.x + 2.8) * TILE, (sd.y + 1.75) * TILE, { static: true, behind: true }));
+      list.push(mk('todak', '토닥', 'mole', { band: '#ff7a7a', apron: '#fff2c9' }, (sd.x + 1.2) * TILE, (sd.y + 2.25) * TILE, { static: true, behind: true }));
+      list.push(mk('tosil', '토실', 'mole', { ribbon: '#ffb3cf', apron: '#e8f6ff' }, (sd.x + 2.8) * TILE, (sd.y + 2.25) * TILE, { static: true, behind: true }));
       // 보리 할멈: 우체국 문 옆
       const bp = door('post', 1.4, 0.4);
       list.push(mk('bori', '보리 할멈', 'hedgehog', {}, bp.x, bp.y, { static: true }));

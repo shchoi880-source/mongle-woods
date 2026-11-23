@@ -108,6 +108,11 @@
       return true;
     };
     const occupy = (x, y, w, h) => { for (let yy = y; yy < y + h; yy++) for (let xx = x; xx < x + w; xx++) occ[yy * W + xx] = 1; };
+    // 건물 주변 여유 공간(나무·꽃·바위 금지): 사방 2칸 + 문 앞 3칸
+    const reserve = new Uint8Array(W * H);
+    const reserveAround = (o) => {
+      for (let yy = o.ty - 2; yy < o.ty + o.h + 4; yy++) for (let xx = o.tx - 2; xx < o.tx + o.w + 2; xx++) if (inb(xx, yy)) reserve[yy * W + xx] = 1;
+    };
     function place(kind, w, h, cx, cy, extra) {
       // 원하는 위치 주변 나선 탐색
       for (let r = 0; r < 18; r++) for (let a = 0; a < Math.max(1, r * 8); a++) {
@@ -116,7 +121,7 @@
         if (free(x, y, w, h)) {
           occupy(x, y, w, h);
           const o = Object.assign({ kind, tx: x, ty: y, w, h }, extra || {});
-          objs.push(o); return o;
+          objs.push(o); if (w * h >= 4) reserveAround(o); return o;
         }
       }
       return null;
@@ -160,9 +165,10 @@
     // 9) 나무: 노이즈 숲 + 띄엄띄엄
     const treeKinds = ['tree', 'tree', 'tree', 'pine', 'fruit'];
     for (let y = HIGH_ROWS + 2; y < H - 4; y++) for (let x = 2; x < W - 2; x++) {
-      if (at(x, y) !== T.GRASS || occ[y * W + x]) continue;
+      if (at(x, y) !== T.GRASS || occ[y * W + x] || reserve[y * W + x]) continue;
       const f = fbm(seed + 41, x / 9, y / 9);
-      const p = f > 0.62 ? 0.26 : f > 0.5 ? 0.07 : 0.02;
+      const near = dist2(x, y, plx, ply) < 196; // 광장 반경 14칸은 듬성듬성
+      const p = (f > 0.62 ? 0.26 : f > 0.5 ? 0.07 : 0.02) * (near ? 0.25 : 1);
       if (u.hashf(seed, x, y, 77) < p && free(x, y, 1, 1, 1) && dist2(x, y, plx, ply) > 64) {
         const k = treeKinds[Math.floor(u.hashf(seed, x, y, 78) * treeKinds.length)];
         occupy(x, y, 1, 1);
@@ -178,7 +184,7 @@
     }
     // 10) 꽃밭·바위
     for (let y = HIGH_ROWS + 2; y < H - 4; y++) for (let x = 2; x < W - 2; x++) {
-      if (at(x, y) !== T.GRASS || occ[y * W + x]) continue;
+      if (at(x, y) !== T.GRASS || occ[y * W + x] || reserve[y * W + x]) continue;
       const f = noise2(seed + 51, x / 5, y / 5);
       if (f > 0.72 && u.hashf(seed, x, y, 81) < 0.55) {
         occupy(x, y, 1, 1);

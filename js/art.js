@@ -323,28 +323,27 @@
     // 기준: 스프라이트 좌상단 = 부지 좌상단에서 (-16, -44)u. 즉 부지 (0,0) → (16,44)
     const ox = 16, oy = 44;
     const win = night ? '#ffe28a' : '#bfe6f5';
-    if (kind === 'stall') { // 땅굴상점 가판대 (4×3)
+    if (kind === 'stall_back') { // 땅굴상점 뒤: 흙둔덕 + 굴 입구
       P.shadow(g, ox + 64, oy + 94, 120, 0.25);
-      // 뒤 흙둔덕 + 굴 입구
       P.blob(g, ox + 64, oy + 30, 62, 36, '#b98d62', C.line);
       P.blob(g, ox + 60, oy + 22, 44, 20, '#cfa57a');
       if (season === 'winter') P.blob(g, ox + 64, oy + 4, 46, 10, '#ffffff');
       P.blob(g, ox + 100, oy + 50, 14, 16, '#4e3424', C.line);
-      // 카운터
+      return;
+    }
+    if (kind === 'stall') { // 땅굴상점 앞: 카운터·차양·간판 (4×3)
       P.rrect(g, ox + 8, oy + 52, 112, 38, 6, C.wood, C.line);
       g.fillStyle = C.woodL; g.fillRect(ox + 12, oy + 56, 104, 5);
       g.fillStyle = C.woodD; for (let k = 0; k < 6; k++) g.fillRect(ox + 18 + k * 18, oy + 64, 2, 22);
-      // 줄무늬 차양
+      g.fillStyle = C.woodD; g.fillRect(ox + 8, oy + 30, 4, 24); g.fillRect(ox + 116, oy + 30, 4, 24);
       for (let k = 0; k < 8; k++) {
         g.fillStyle = k % 2 ? '#ffffff' : '#7fd3b8';
-        g.beginPath(); g.moveTo(ox + 4 + k * 15, oy + 18); g.lineTo(ox + 19 + k * 15, oy + 18); g.lineTo(ox + 19 + k * 15, oy + 34); g.quadraticCurveTo(ox + 11.5 + k * 15, oy + 40, ox + 4 + k * 15, oy + 34); g.fill();
+        g.beginPath(); g.moveTo(ox + 4 + k * 15, oy + 12); g.lineTo(ox + 19 + k * 15, oy + 12); g.lineTo(ox + 19 + k * 15, oy + 24); g.quadraticCurveTo(ox + 11.5 + k * 15, oy + 30, ox + 4 + k * 15, oy + 24); g.fill();
       }
-      g.lineWidth = 1.5; g.strokeStyle = C.line; g.strokeRect(ox + 4, oy + 18, 120, 16);
-      g.fillStyle = C.woodD; g.fillRect(ox + 8, oy + 34, 4, 20); g.fillRect(ox + 116, oy + 34, 4, 20);
-      // 간판
-      P.rrect(g, ox + 34, oy - 2, 60, 18, 6, '#fff4dc', C.line);
-      g.fillStyle = '#7a4f2e'; g.font = 'bold 11px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('땅굴상점', ox + 64, oy + 7.5);
-      // 진열품
+      g.lineWidth = 1.5; g.strokeStyle = C.line; g.strokeRect(ox + 4, oy + 12, 120, 12);
+      if (season === 'winter') P.rrect(g, ox + 6, oy + 8, 116, 6, 3, '#ffffff');
+      P.rrect(g, ox + 34, oy - 8, 60, 18, 6, '#fff4dc', C.line);
+      g.fillStyle = '#7a4f2e'; g.font = 'bold 11px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('땅굴상점', ox + 64, oy + 1.5);
       P.blob(g, ox + 28, oy + 50, 6, 5, '#ff9a8a', C.line, 1); P.blob(g, ox + 44, oy + 50, 5, 5, '#ffd66b', C.line, 1); P.rrect(g, ox + 80, oy + 44, 14, 10, 3, '#a7d8ff', C.line, 1);
       return;
     }

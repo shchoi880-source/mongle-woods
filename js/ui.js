@@ -47,7 +47,8 @@
   UI.refreshHud = () => {
     if (!G.time || !hud.time) return;
     const l = G.time.label(), w = G.weather.now();
-    hud.time.innerHTML = `<b>${l.date}</b><span>${G.weather.ICON[w.type]} ${l.clock}</span>`;
+    const ico = w.type === 'clear' && G.time.isNight() ? '🌙' : G.weather.ICON[w.type];
+    hud.time.innerHTML = `<b>${l.date}</b><span>${ico} ${l.clock}</span>`;
     hud.money.innerHTML = `<i class="coin"></i>${G.fmt.num(G.wallet.get())}`;
     const tool = G.player ? G.player.tool : 'hand';
     hud.tool.innerHTML = `<span>${G.TOOLS[tool].icon}</span><small>${G.TOOLS[tool].name}</small>`;
@@ -85,7 +86,7 @@
     const it = G.items.get(id) || { name: id };
     const nm = G.items.name(id, x);
     popEl.innerHTML = `<div class="pop-ico"><img src="${G.art.iconURL(id, 96)}" alt=""></div><div class="pop-txt"><b>${esc(msg || G.josa(nm, '을/를') + ' 얻었다!')}</b>${x && x.size ? `<span>${x.size}cm${x.v === 1 ? ' · 거대!' : ''}</span>` : ''}${x && x.newSp ? '<em>도감에 새로 등록!</em>' : ''}</div>`;
-    popEl.className = 'itempop' + (x && x.v === 1 ? ' giant' : '') + (it.ref && it.ref.tier >= 3 ? ' rare' : '');
+    popEl.className = 'itempop' + (x && x.v === 1 ? ' is-giant' : '') + (it.ref && it.ref.tier >= 3 ? ' rare' : '');
     popTimer = setTimeout(() => popEl.classList.add('hidden'), short ? 900 : 2000);
   };
 
