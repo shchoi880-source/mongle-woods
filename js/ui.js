@@ -51,7 +51,8 @@
     hud.time.innerHTML = `<b>${l.date}</b><span>${ico} ${l.clock}</span>`;
     hud.money.innerHTML = `<i class="coin"></i>${G.fmt.num(G.wallet.get())}`;
     const tool = G.player ? G.player.tool : 'hand';
-    hud.tool.innerHTML = `<span>${G.TOOLS[tool].icon}</span><small>${G.TOOLS[tool].name}</small>`;
+    if (G.house && G.house.inside) hud.tool.innerHTML = '<span>🛋️</span><small>꾸미기</small>';
+    else hud.tool.innerHTML = `<span>${G.TOOLS[tool].icon}</span><small>${G.TOOLS[tool].name}</small>`;
   };
   // 액션 버튼 라벨 (대상 미리보기)
   let lastAct = '';
@@ -85,7 +86,7 @@
     clearTimeout(popTimer);
     const it = G.items.get(id) || { name: id };
     const nm = G.items.name(id, x);
-    popEl.innerHTML = `<div class="pop-ico"><img src="${G.art.iconURL(id, 96)}" alt=""></div><div class="pop-txt"><b>${esc(msg || G.josa(nm, '을/를') + ' 얻었다!')}</b>${x && x.size ? `<span>${x.size}cm${x.v === 1 ? ' · 거대!' : ''}</span>` : ''}${x && x.newSp ? '<em>도감에 새로 등록!</em>' : ''}</div>`;
+    popEl.innerHTML = `<div class="pop-ico"><img src="${G.art.iconURL(G.items.icon(id, x), 96)}" alt=""></div><div class="pop-txt"><b>${esc(msg || G.josa(nm, '을/를') + ' 얻었다!')}</b>${x && x.size ? `<span>${x.size}cm${x.v === 1 ? ' · 거대!' : ''}</span>` : ''}${x && x.newSp ? '<em>도감에 새로 등록!</em>' : ''}</div>`;
     popEl.className = 'itempop' + (x && x.v === 1 ? ' is-giant' : '') + (it.ref && it.ref.tier >= 3 ? ' rare' : '');
     popTimer = setTimeout(() => popEl.classList.add('hidden'), short ? 900 : 2000);
   };
@@ -189,7 +190,7 @@
       const s = slots[i];
       const c = $('button', 'slot' + (s ? '' : ' empty') + (sel && sel.has(i) ? ' sel' : ''));
       if (s) {
-        c.innerHTML = `<img src="${G.art.iconURL(s.id, 64)}" alt="">${s.n > 1 ? `<b>${s.n}</b>` : ''}${s.x && s.x.v === 1 ? '<i class="giant">거대</i>' : ''}`;
+        c.innerHTML = `<img src="${G.art.iconURL(G.items.icon(s.id, s.x), 64)}" alt="">${s.n > 1 ? `<b>${s.n}</b>` : ''}${s.x && s.x.v === 1 ? '<i class="giant">거대</i>' : ''}`;
         c.onclick = () => onTap(i, s, c);
       }
       grid.append(c);
@@ -381,19 +382,23 @@
       // 구매
       const buy = $('div', 'buyrow');
       for (const e of G.shop.stock()) {
-        const own = e.kind === 'tool' && G.player.hasTool(e.id);
-        const b = $('button', 'chip' + (own ? ' off' : ''), `${G.TOOLS[e.id].icon} ${e.name} · ${own ? '가지고 있음' : G.fmt.money(e.price)}`);
+        const own = e.kind === 'tool' ? G.player.hasTool(e.id) : G.shop.soldOut(e);
+        const ico = e.kind === 'tool' ? `<span class="bi">${G.TOOLS[e.id].icon}</span>` : `<img src="${G.art.iconURL('furn:' + e.id + '#' + e.c, 64)}" alt="">`;
+        const b = $('button', 'buycard' + (own ? ' off' : ''), `${ico}<b>${esc(e.name)}</b><small>${own ? (e.kind === 'tool' ? '가지고 있음' : '다 팔림') : G.fmt.money(e.price)}</small>`);
         b.onclick = async () => {
           if (own) return;
           const r = G.shop.buy(e);
           if (!r.ok) { G.audio.sfx('error'); UI.toast(r.why, { icon: '🪙' }); return; }
-          G.audio.sfx('coin'); close();
-          await UI.say([{ who: 'todak', text: '전설의 삽이에요! 땅이 알아서 파질 거예요!' }, { who: 'tosil', text: '알아서는 안 파져요. 첫 손님이라 손잡이 덮개 넣었어요. 오빠한테 말하지 마세요.' }]);
-          G.player.setTool(e.id);
+          G.audio.sfx('coin');
+          if (e.kind === 'tool') {
+            close();
+            await UI.say([{ who: 'todak', text: '전설의 삽이에요! 땅이 알아서 파질 거예요!' }, { who: 'tosil', text: '알아서는 안 파져요. 첫 손님이라 손잡이 덮개 넣었어요. 오빠한테 말하지 마세요.' }]);
+            G.player.setTool(e.id);
+          } else { UI.toast(`${e.name}을(를) 샀어요! 텐트에서 꾸미기로 놓아 보세요.`, { icon: '🛋️' }); render(); }
         };
         buy.append(b);
       }
-      body.append(foot, $('div', 'pane-head', '<span>살 수 있는 물건</span>'), buy);
+      body.append(foot, $('div', 'pane-head', '<span>오늘의 물건 (매일 아침 바뀌어요)</span>'), buy);
     };
     render();
   }, { wide: true });

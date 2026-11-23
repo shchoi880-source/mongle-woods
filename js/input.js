@@ -9,6 +9,8 @@
     locked() { return this.locks.size > 0; },
     emit(type, extra) { G.audio && G.audio.unlock(); const ev = Object.assign({ type }, extra); G.scene.input(ev); },
     lastTouch: false,
+    // 터치 기기인가: 마지막 입력이 터치였거나, 기본 포인터가 손가락인 기기
+    isTouch() { return this.lastTouch || (typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches && !this.lastKey); },
   };
   const KEYMAP = {
     ArrowUp: 'u', KeyW: 'u', ArrowDown: 'd', KeyS: 'd', ArrowLeft: 'l', KeyA: 'l', ArrowRight: 'r', KeyD: 'r',
@@ -17,9 +19,10 @@
   const STICK_R = 56;
 
   I.init = (canvas) => {
+    addEventListener('pointerdown', (e) => { I.lastTouch = e.pointerType === 'touch' || e.pointerType === 'pen'; if (I.lastTouch) I.lastKey = false; }, true);
     addEventListener('keydown', (e) => {
       if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
-      I.lastTouch = false;
+      I.lastTouch = false; I.lastKey = true;
       if (!e.repeat) {
         if (e.code === 'Space' || e.code === 'Enter' || e.code === 'KeyE' || e.code === 'KeyZ') { I.emit('act'); e.preventDefault(); }
         else if (e.code === 'KeyQ' || e.code === 'KeyR') I.emit('tool');
@@ -33,8 +36,11 @@
     addEventListener('blur', () => { I.keys.clear(); I.stick = null; });
 
     // 조이스틱: 캔버스 왼쪽 55%에서 시작한 포인터
+    // 씬이 포인터를 직접 다루면(하우징 편집) 그쪽으로 보낸다
+    const scenePtr = (kind, e) => { const top = G.scene.top(); if (top && top.pointer && top.pointer(kind, e)) { e.preventDefault(); return true; } return false; };
     canvas.addEventListener('pointerdown', (e) => {
       G.audio && G.audio.unlock();
+      if (scenePtr('down', e)) { canvas.setPointerCapture && canvas.setPointerCapture(e.pointerId); return; }
       const w = canvas.clientWidth;
       if (e.pointerType !== 'mouse') I.lastTouch = true;
       if (e.clientX < w * 0.55 && !I.stick && e.pointerType !== 'mouse') {
@@ -46,9 +52,10 @@
       }
     });
     canvas.addEventListener('pointermove', (e) => {
+      if (scenePtr('move', e)) return;
       if (I.stick && e.pointerId === I.stick.id) { I.stick.x = e.clientX; I.stick.y = e.clientY; }
     });
-    const end = (e) => { if (I.stick && e.pointerId === I.stick.id) I.stick = null; };
+    const end = (e) => { scenePtr('up', e); if (I.stick && e.pointerId === I.stick.id) I.stick = null; };
     canvas.addEventListener('pointerup', end); canvas.addEventListener('pointercancel', end);
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
   };

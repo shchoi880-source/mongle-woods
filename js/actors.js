@@ -267,6 +267,7 @@
   // ---------- 아이콘 (32×32 좌표계) ----------
   const FISHCOL = { pale_chub: ['#cfe0f0', '#ff9a8a'], minnow: ['#c8c39a', '#8b8a64'], catfish: ['#6b6258', '#4a433c'], medaka: ['#f3e2b0', '#c9b27a'], crucian: ['#c9b37a', '#9c8550'], carp: ['#f39a5a', '#fff2e0'], smelt: ['#e8f0ff', '#a8b8d8'], horse_mackerel: ['#a9c3d6', '#e9eef2'], mackerel: ['#6a9fc0', '#2f5a7a'], red_seabream: ['#ff8c8c', '#ffd1c4'] };
   A.drawIcon = (g, id, t = 0) => {
+    if (id.startsWith('furn:')) { const [k, c] = id.slice(5).split('#'); G.house.drawIcon(g, k, { c: +c || 0 }); return; }
     const [cat, key] = id.indexOf(':') > 0 ? id.split(':') : [id, id];
     g.save();
     if (cat === 'bug') {

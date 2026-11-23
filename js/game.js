@@ -128,7 +128,7 @@
       if (o.kind === 'tree' || o.kind === 'fruit' || o.kind === 'pine' || o.kind === 'bigoak') return { kind: 'shake', ref: o, icon: '🌳', label: '흔들기', name: o.kind === 'bigoak' ? '할아버지 참나무' : '나무' };
       if (o.kind === 'signboard') return { kind: 'read', ref: o, icon: '📜', label: '읽기', name: '표지판' };
       if (o.kind === 'board') return { kind: 'board', ref: o, icon: '📌', label: '보기', name: '게시판' };
-      if (o.kind === 'tent') return { kind: 'tent', ref: o, icon: '⛺', label: '쉬기', name: '내 텐트' };
+      if (o.kind === 'tent') return { kind: 'tent', ref: o, icon: '⛺', label: '들어가기', name: '내 텐트' };
       if (o.kind === 'mailbox') return { kind: 'mailbox', ref: o, icon: '📮', label: '열기', name: '우체통' };
       if (o.kind === 'house') return { kind: 'house', ref: o, icon: '🚪', label: '두드리기', name: '딸랑의 집' };
       if (o.kind === 'post') return { kind: 'postoffice', ref: o, icon: '🚪', label: '두드리기', name: '우체국' };
@@ -236,7 +236,7 @@
         await G.ui.say([{ who: 'sys', text: `[몽글소식] 오늘의 유행 바람은 「${tr.name}」 쪽으로 분대요. 땅굴상점에서 조금 더 쳐 준대요.` }, { who: 'sys', text: `[쫑알 일보 창간 준비호] "새 우편지기 입주! 키 추정 3미터(정정 예정)"` }]);
         break;
       }
-      case 'tent': await tentMenu(); break;
+      case 'tent': G.house.enter(); break;
       case 'mailbox': await G.ui.say([{ who: 'sys', text: G.quest.st.letterDone ? '우체통이 비어 있어요. 내일 아침엔 편지가 올지도 몰라요.' : '우체통이 비어 있어요. 오늘 할 일은 잎첩(🍃)에서 볼 수 있어요.' }]); break;
       case 'house': await G.ui.say([{ who: 'sys', text: G.npc.get('ddalang').vis ? '똑똑… 대답이 없어요. 딸랑은 밖에서 놀고 있나 봐요.' : '안에서 쌔근쌔근 소리가 나요. 딸랑이 자고 있어요.' }]); break;
       case 'postoffice': await G.ui.say([{ who: 'sys', text: '우체국 문이 잠겨 있어요. 보리 할멈은 문 앞에서 기다리고 있어요.' }]); break;
@@ -250,7 +250,7 @@
     }
   }
   function o_poke(o) { o.shakeT = 0.3; G.audio.sfx(o.kind === 'lamp' ? 'chime' : 'tap'); }
-  async function tentMenu() {
+  GM.restMenu = async function tentMenu() {
     const i = await G.ui.choose({ who: 'sys', text: '내 텐트예요. 무엇을 할까요?' }, ['저장하기', '콩알이랑 잠깐 쉬기', '그만두기']);
     if (i === 0) { const r = G.save.now('tent'); G.audio.sfx('save'); G.ui.toast(r.ok ? '저장했어요! 언제든 이어서 할 수 있어요.' : '저장하지 못했어요.', { icon: '💾' }); }
     else if (i === 1) {
@@ -258,7 +258,7 @@
       await G.ui.say([{ who: 'kongal', text: '새근….' }, { who: 'sys', text: '콩알이 모자에서 내려와 베개 옆에 동그랗게 말았어요. "내일 꿈 얘기 해줄게."' }]);
       kg.sleep = false;
     }
-  }
+  };
   GM.openShop = async () => {
     const h = G.time.hour();
     if (h < 8 || h >= 22) { await G.ui.say([{ who: 'tosil', text: '가판대는 아침 8시부터 밤 10시까지예요. 오빠는 벌써 굴에서 자요.' }]); return; }
@@ -290,10 +290,10 @@
       { who: 'bori', text: '그리고 이것도 가져가렴. 잠자리채와 낚싯대다. 우편지기는 마을 구석구석을 알아야 하니까.' },
     ]);
     pl.giveTool('net'); pl.giveTool('rod');
-    G.ui.toast('잠자리채·낚싯대를 받았다! 오른쪽 아래 도구 버튼(Q)으로 바꿔요.', { icon: '🎣', ms: 3500 });
+    G.ui.toast(G.input.isTouch() ? '잠자리채·낚싯대를 받았다! 오른쪽 아래 도구 버튼으로 바꿔요.' : '잠자리채·낚싯대를 받았다! Q 키나 도구 버튼으로 바꿔요.', { icon: '🎣', ms: 3500 });
     await G.ui.say([
       { who: 'bori', text: '할 일은 잎첩(🍃)에 적어 두었단다. 순서는 상관없어. 다 못 해도 괜찮다. 편지는 내일도 오니까.' },
-      { who: 'bori', text: '살금살금 다가가면 벌레가 덜 놀란단다. 조이스틱을 살짝만 기울이거나 C 키를 누르고 걸어 보렴. 콕!' },
+      { who: 'bori', text: '살금살금 다가가면 벌레가 덜 놀란단다. ' + (G.input.isTouch() ? '조이스틱을 살짝만 기울여서' : 'C 키를 누른 채로') + ' 걸어 보렴. 콕!' },
     ]);
     q.intro = true; G.save.now('intro');
   };
@@ -320,7 +320,7 @@
       const s = speed * (G.input.stick ? Math.max(0.35, mv.mag) : 1) * dt;
       if (G.fishing.state !== 'idle') G.fishing.cancel(true);
       const ox = pl.x, oy = pl.y;
-      G.world.move(pl, mv.x * s, mv.y * s);
+      (GM.mover || G.world.move)(pl, mv.x * s, mv.y * s);
       pl.dir = Math.abs(mv.x) > Math.abs(mv.y) * 1.1 ? (mv.x < 0 ? 1 : 3) : (mv.y < 0 ? 2 : 0);
       const moved = Math.hypot(pl.x - ox, pl.y - oy);
       pl.moving = moved > 0.05;
@@ -330,8 +330,8 @@
       pl.stepT -= dt * (speed / (4 * TILE));
       if (pl.stepT <= 0 && pl.moving) {
         pl.stepT = 0.23;
-        const t = G.world.tileAt(pl.x, pl.y), T = G.TERR;
-        G.audio.sfx('step', { surf: t === T.SAND ? 'sand' : t === T.BRIDGE ? 'wood' : A.season === 'winter' && t === T.GRASS ? 'snow' : 'grass', vol: pl.mode === 'sneak' ? 0.4 : pl.mode === 'run' ? 1.4 : 1 });
+        const t = G.house && G.house.inside ? -1 : G.world.tileAt(pl.x, pl.y), T = G.TERR;
+        G.audio.sfx('step', { surf: t === -1 ? 'wood' : t === T.SAND ? 'sand' : t === T.BRIDGE ? 'wood' : A.season === 'winter' && t === T.GRASS ? 'snow' : 'grass', vol: pl.mode === 'sneak' ? 0.4 : pl.mode === 'run' ? 1.4 : 1 });
       }
       pl.idleT = 0;
     } else {
@@ -570,6 +570,7 @@
     world: true,
     enter() { G.ui.hud(true); G.ui.refreshHud(); },
     update(dt) {
+      if (G.scene.top() !== this) return; // 실내에 있을 때 마을 시뮬은 쉰다(시간은 계속 흐름)
       const t = GM.t;
       updatePlayer(dt); updateKongal(dt, t); updateFx(dt);
       G.npc.update(dt, pl, t);
@@ -761,7 +762,7 @@
       G.npc.pop(b, 'heart');
       await GM.introScript();
       b.x = b.homeX; b.y = b.homeY; b.dir = 0;
-      G.ui.hint('왼쪽 화면을 끌어서 걷기 · 오른쪽 아래 버튼으로 행동');
+      G.ui.hint(G.input.isTouch() ? '왼쪽 화면을 끌어서 걷기 · 오른쪽 아래 버튼으로 행동' : '방향키/WASD로 걷기 · Space로 행동 · Tab 잎첩');
       setTimeout(() => G.ui.hint(''), 6000);
     } else if (!fresh) {
       const k = G.time.st.playDays;
@@ -787,6 +788,7 @@
   G.on('time:hour', () => G.audio.ambient && G.audio.ambient(G.weather.now().type));
   G.on('cam:px', () => A.clearCache());
 
+  Object.assign(GM, { updatePlayer: (dt) => updatePlayer(dt), updateKongal: (dt, t) => updateKongal(dt, t), updateFx: (dt) => updateFx(dt), drawPlayer: (c, t) => drawPlayer(c, t), bubble: (x, y, s, a) => bubble(x, y, s, a), drawHeld: (t) => drawHeld(t), kg, pl, kongalSay: (s) => kongalSay(s), kongalReact: (k) => kongalReact(k), canvas: () => cv, ctx2d: () => ctx });
   GM.resize = () => { cam.resize(); if (GM.started) cam.follow(pl.x, pl.y, 0, true); };
 
   // ---------- 부팅 ----------

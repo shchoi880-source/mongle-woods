@@ -8,8 +8,11 @@
     get: (id) => G.data.get('items', id),
     name(id, x) {
       const it = G.items.get(id); if (!it) return '잃어버린 물건';
+      if (it.cat === 'furn' && it.ref.col && G.house) return G.house.COLN[(x && x.c) || 0] + ' ' + it.name;
       return (x && x.v === 1 ? '거대 ' : '') + it.name;
     },
+    // 아이콘 id (가구는 색을 붙인다)
+    icon(id, x) { return id.startsWith('furn:') ? id + '#' + ((x && x.c) || 0) : id; },
     // 판매가: val × 변이 배율 × 유행 바람
     sellPrice(id, x) {
       const it = G.items.get(id); if (!it || it.nosell) return 0;
@@ -94,15 +97,36 @@
   };
   G.shop = {
     // 오늘의 진열 (가판대 단계: 도구만)
-    stock() {
-      const list = [{ kind: 'tool', id: 'shovel', name: G.TOOLS.shovel.name, price: G.TOOLS.shovel.price }];
+    // 오늘의 진열: 도구 + 가구 4점(날마다 결정적으로 바뀜, 하루 한 번씩만 판매)
+    stock(day) {
+      const d = day === undefined ? G.time.day() : day;
+      const list = [{ kind: 'tool', id: 'shovel', name: G.TOOLS.shovel.name, price: G.TOOLS.shovel.price, key: 'shovel' }];
+      if (!G.house) return list;
+      const R = G.rng.stream(G.rng.KEYS.SHOP, d, 2);
+      const forms = G.house.FORMS.slice();
+      for (let k = 0; k < 4 && forms.length; k++) {
+        const f = forms.splice(Math.floor(R() * forms.length), 1)[0];
+        const c = f.col ? Math.floor(R() * G.house.COLS.length) : 0;
+        list.push({ kind: 'furn', id: f.id, c, name: G.items.name('furn:' + f.id, { c }), price: f.val, key: 'f' + k });
+      }
       return list;
     },
+    soldOut(e) { return econ.boughtDay === G.time.day() && !!(econ.bought || {})[e.key]; },
     buy(entry) {
       if (entry.kind === 'tool') {
         if (G.player.hasTool(entry.id)) return { ok: false, why: '이미 가지고 있어요.' };
         if (!G.wallet.spend(entry.price, 'buy')) return { ok: false, why: '몽이 조금 모자라요.' };
         G.player.giveTool(entry.id);
+        G.emit('shop:buy', { id: entry.id, price: entry.price });
+        return { ok: true };
+      }
+      if (entry.kind === 'furn') {
+        if (G.shop.soldOut(entry)) return { ok: false, why: '오늘은 다 팔렸어요.' };
+        if (!G.inv.canFit('furn:' + entry.id, { c: entry.c })) return { ok: false, why: '가방이 꽉 찼어요.' };
+        if (!G.wallet.spend(entry.price, 'buy')) return { ok: false, why: '몽이 조금 모자라요.' };
+        G.inv.add('furn:' + entry.id, 1, { c: entry.c });
+        if (econ.boughtDay !== G.time.day()) { econ.boughtDay = G.time.day(); econ.bought = {}; }
+        econ.bought[entry.key] = 1;
         G.emit('shop:buy', { id: entry.id, price: entry.price });
         return { ok: true };
       }
@@ -151,6 +175,7 @@
     { id: 'letter', text: '딸랑에게 편지 전해 주기', ev: 'quest:letter' },
     { id: 'shells', text: '해변에서 조개 3개 줍기', ev: 'item:gain', test: (p) => p.id.startsWith('shell:'), count: 3 },
     { id: 'dig', text: '삽을 사서 화석 파내기', ev: 'dig:found' },
+    { id: 'furn', text: '텐트에 가구 3개 놓기', ev: 'house:change', test: (p) => p.count >= 3 },
   ];
   const q = { done: {}, prog: {}, stamped: false, intro: false, letterGiven: false, letterDone: false };
   G.quest = {
