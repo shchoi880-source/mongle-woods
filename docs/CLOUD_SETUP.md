@@ -8,18 +8,23 @@
 - 완료: Realtime Database `asia-southeast1` 생성
 - 완료: 웹 앱 `mongle-woods-web` 등록 및 `js/firebase-config.js` 연결
 - 완료: `firebase.database.rules.json` 게시
-- 대기: **Authentication → Sign-in method**에서 Google 로그인 활성화
+- 대기: **Authentication → Sign-in method**에서 이메일/비밀번호 로그인 활성화
+- 선택 대기: Google 로그인 활성화
 - 대기: Authentication의 **Authorized domains**에 `shchoi880-source.github.io` 등록
 
-Google 로그인을 활성화하려면 OAuth 동의 화면에 공개되는 지원 이메일이 필요하다. 개인 이메일을 선택하지 말고, 별도의 공개용 지원 주소를 만든 뒤 설정한다.
+기본 계정은 실제 이메일을 받지 않는다. 사용자가 입력한 아이디를 소문자로 정규화한 뒤 `아이디@accounts.mongle.invalid` 형태의 내부 식별자로 바꾸어 Firebase 이메일/비밀번호 인증에만 사용한다. `.invalid`는 실제 메일 수신용 도메인이 아니다. 비밀번호는 게임이나 Realtime Database에 저장하지 않고 Firebase Authentication이 처리한다.
 
-Firebase 웹 설정값은 비밀키가 아니다. 실제 데이터 보호는 Database Rules가 담당하며, 현재 규칙은 `users/{uid}`를 해당 Google 계정 본인만 읽고 쓰게 한다.
+Google 연결은 로그인한 이용자의 선택 기능이다. 활성화하려면 OAuth 동의 화면에 공개되는 지원 이메일이 필요하므로 개인 이메일을 선택하지 말고 별도의 공개용 지원 주소를 사용한다.
 
-Google 로그인 정보는 인증에만 사용한다. 게임 코드와 Realtime Database에는 Google 이메일·이름·프로필 사진을 저장하지 않으며, 설정과 멀티플레이에서는 게임 속 캐릭터 이름만 표시한다. Firebase Authentication 관리자 콘솔에는 서비스 운영상 로그인 계정 이메일이 보일 수 있으므로 프로젝트 접근 권한은 오너에게만 둔다. OAuth 지원 이메일은 개인 주소가 아닌 별도의 공개용 지원 주소를 사용한다.
+Firebase 웹 설정값은 비밀키가 아니다. 실제 데이터 보호는 Database Rules가 담당하며, 현재 규칙은 `users/{uid}`를 해당 로그인 계정 본인만 읽고 쓰게 한다.
+
+로그인 아이디와 Google 로그인 정보는 인증에만 사용한다. 게임 코드와 Realtime Database에는 로그인 아이디·Google 이메일·이름·프로필 사진을 저장하지 않으며, 설정과 멀티플레이에서는 게임 속 캐릭터 이름만 표시한다. Firebase Authentication 관리자 콘솔에는 내부 식별자와, Google을 연결한 경우 해당 공급자 정보가 보일 수 있으므로 프로젝트 접근 권한은 오너에게만 둔다.
 
 ## 동기화 원칙
 
 - 기존 `localStorage` A/B 세이브는 계속 남는다. 계정 연결이 실패해도 오프라인 게임은 동작한다.
+- 기존 이용자가 회원가입하면 현재 캐릭터 이름을 변경하지 않고 기존 마을 전체를 첫 서버 세이브로 올린다.
+- 새 기기에서는 첫 화면의 **기존 계정으로 이어하기**로 로그인하여 캐릭터 생성 전에 서버 마을을 복원한다.
 - 서버에 저장이 없으면 현재 기기의 기존 마을을 첫 서버 세이브로 올린다.
 - 새 기기처럼 로컬 마을이 비어 있으면 서버 마을을 내려받는다.
 - 마지막 동기화 이후 한쪽만 바뀌었으면 바뀐 쪽을 적용한다.
@@ -29,6 +34,6 @@ Google 로그인 정보는 인증에만 사용한다. 게임 코드와 Realtime 
 
 ## 서버 데이터
 
-`users/{uid}/save`에 MG1 세이브 문자열, 상태 지문, 서버 revision, 요약 정보만 저장한다. 비밀번호나 Google 토큰은 게임 데이터에 저장하지 않는다.
+`users/{uid}/save`에 MG1 세이브 문자열, 상태 지문, 서버 revision, 요약 정보만 저장한다. 로그인 아이디·비밀번호·Google 토큰은 게임 데이터에 저장하지 않는다.
 
 멀티플레이용 `rooms/`는 아직 읽기·쓰기 모두 금지다. 친구 마을 기능을 구현할 때 캐릭터 이름·외형·위치만 노출하고 Google 계정 정보는 넣지 않으며, 별도의 멤버·크기·형식 검증과 초당 전송 제한을 추가한다.

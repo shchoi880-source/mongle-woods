@@ -694,16 +694,27 @@
     enter(args) {
       G.ui.hud(false);
       titleEl = document.createElement('div'); titleEl.className = 'title';
-      titleEl.innerHTML = `<div class="logo"><span>몽글숲</span><small>이야기</small></div><div class="tap">화면을 톡 눌러 주세요</div><div class="ver">${G.VERSION}</div>`;
+      titleEl.innerHTML = `<div class="logo"><span>몽글숲</span><small>이야기</small></div><div class="tap">${args && args.fresh ? '계정 없이 새로 시작' : '화면을 톡 눌러 주세요'}</div><div class="ver">${G.VERSION}</div>`;
       G.ui.root.append(titleEl);
+      let leaving = false;
       const go = () => {
-        titleEl.removeEventListener('pointerdown', go); removeEventListener('keydown', go);
+        if (!titleEl || leaving) return; leaving = true;
+        removeEventListener('keydown', keyGo);
         G.audio.unlock();
         setTimeout(() => G.audio.sfx('chime'), 60);
         titleEl.classList.add('out');
         setTimeout(() => { titleEl.remove(); titleEl = null; args && args.fresh ? G.scene.replace('create') : startTown(); }, 500);
       };
-      titleEl.addEventListener('pointerdown', go); addEventListener('keydown', go);
+      const keyGo = (e) => { if (!G.ui.open && !['INPUT', 'BUTTON'].includes(document.activeElement && document.activeElement.tagName)) go(e); };
+      titleEl.querySelector('.tap').onclick = go; addEventListener('keydown', keyGo);
+      if (args && args.fresh && G.cloud.view().configured) {
+        const actions = document.createElement('div'); actions.className = 'title-account';
+        const login = document.createElement('button'); login.className = 'btn ghost'; login.textContent = '기존 계정으로 이어하기';
+        const signup = document.createElement('button'); signup.className = 'btn'; signup.textContent = '회원가입하고 시작';
+        login.onclick = (e) => { e.stopPropagation(); G.audio.unlock(); G.ui.account('login'); };
+        signup.onclick = (e) => { e.stopPropagation(); G.audio.unlock(); G.ui.account('signup', (mode) => { if (mode === 'signup') go(); }); };
+        actions.append(login, signup); titleEl.insertBefore(actions, titleEl.querySelector('.ver'));
+      }
     },
     update(dt) { GM.titleT = (GM.titleT || 0) + dt; },
     draw() { drawTitleBg(GM.t); },
@@ -754,7 +765,7 @@
       const rnd = document.createElement('button'); rnd.className = 'btn ghost'; rnd.textContent = '🎲 랜덤';
       rnd.onclick = () => { for (const [k, , n] of parts) look[k] = Math.floor(Math.random() * n); right.querySelectorAll('.crow').forEach((r) => r.upd()); pose = 0.35; G.audio.sfx('pop'); };
       right.append(rnd);
-      const nameIn = document.createElement('input'); nameIn.placeholder = '이름 (최대 8자)'; nameIn.maxLength = 8;
+      const nameIn = document.createElement('input'); nameIn.placeholder = '이름 (최대 8자)'; nameIn.maxLength = 8; nameIn.value = pl.name || '';
       const townIn = document.createElement('input'); townIn.placeholder = '마을 이름 (최대 8자)'; townIn.maxLength = 8; townIn.value = '몽글숲';
       right.append(nameIn, townIn);
       const note = document.createElement('div'); note.className = 'muted small'; note.textContent = '모습은 나중에 거울에서 바꿀 수 있어요.';

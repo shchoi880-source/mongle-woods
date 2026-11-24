@@ -95,6 +95,9 @@ ok('클라우드 새 기기는 서버 복원', dc('blank', false, { fingerprint:
 ok('클라우드 서버만 변경 시 복원', dc('base', true, { fingerprint: 'server' }, cm, 'u1') === 'remote');
 ok('클라우드 로컬만 변경 시 업로드', dc('local', true, { fingerprint: 'base' }, cm, 'u1') === 'upload');
 ok('클라우드 양쪽 변경 시 충돌', dc('local', true, { fingerprint: 'server' }, cm, 'u1') === 'conflict');
+ok('계정 아이디 소문자 정규화', G.cloud._accountId('  Mongle_12 ') === 'mongle_12');
+ok('계정 아이디 형식 검증', G.cloud._validAccountId('mongle_12') && !G.cloud._validAccountId('몽글12') && !G.cloud._validAccountId('abc'));
+ok('실제 이메일을 만들지 않는 내부 식별자', G.cloud._accountEmail('Mongle_12') === 'mongle_12@accounts.mongle.invalid');
 
 // 가방: 쌓기·가득 참
 G.inv.slots.length = 0;

@@ -208,6 +208,69 @@
     (UI.open ? UI.open.card : UI.root).append(box);
   });
 
+  function accountForm(initialMode, close, onSuccess) {
+    const wrap = $('div', 'accountbox'); let mode = initialMode === 'signup' ? 'signup' : 'login';
+    const input = (placeholder, type, max) => {
+      const el = $('input'); el.placeholder = placeholder; el.type = type || 'text'; if (max) el.maxLength = max;
+      el.autocomplete = type === 'password' ? (mode === 'signup' ? 'new-password' : 'current-password') : 'username';
+      el.autocapitalize = 'none'; el.spellcheck = false; return el;
+    };
+    const render = () => {
+      wrap.innerHTML = '';
+      const tabs = $('div', 'accounttabs');
+      const loginTab = $('button', 'btn small' + (mode === 'login' ? '' : ' ghost'), '로그인');
+      const signupTab = $('button', 'btn small' + (mode === 'signup' ? '' : ' ghost'), '회원가입');
+      loginTab.onclick = () => { mode = 'login'; render(); }; signupTab.onclick = () => { mode = 'signup'; render(); };
+      tabs.append(loginTab, signupTab); wrap.append(tabs);
+      const note = $('div', 'muted small', mode === 'signup'
+        ? '실제 이메일은 받지 않아요. 아이디와 비밀번호를 잊으면 자동 복구할 수 없으니 꼭 따로 적어 두세요.'
+        : '가입할 때 만든 아이디와 비밀번호를 입력해 주세요.');
+      const form = $('form', 'accountform');
+      const id = input('아이디 (영문·숫자·밑줄 4~20자)', 'text', 20);
+      const pw = input('비밀번호 (8자 이상)', 'password', 72);
+      form.append(id, pw);
+      let pw2 = null, character = null;
+      if (mode === 'signup') {
+        pw2 = input('비밀번호 확인', 'password', 72);
+        character = input('캐릭터 이름 (최대 8자)', 'text', 8); character.value = G.player.name || '';
+        if (G.player.name && G.player.town) {
+          character.readOnly = true; character.title = '기존 마을의 캐릭터 이름을 그대로 연결해요.';
+        }
+        character.autocapitalize = 'sentences'; form.append(pw2, character);
+        if (character.readOnly) form.append($('div', 'muted small', `현재 마을의 「${esc(G.player.name)}」 이름을 그대로 연결해요.`));
+      }
+      const error = $('div', 'cloud-error small');
+      const submit = $('button', 'btn big', mode === 'signup' ? '계정 만들기' : '로그인'); submit.type = 'submit';
+      form.append(error, submit); wrap.append(note, form);
+      form.onsubmit = async (e) => {
+        e.preventDefault(); error.textContent = '';
+        if (mode === 'signup' && pw.value !== pw2.value) { error.textContent = '비밀번호 확인이 맞지 않아요.'; pw2.focus(); return; }
+        submit.disabled = true; submit.textContent = mode === 'signup' ? '계정 만드는 중…' : '로그인 중…';
+        const result = mode === 'signup'
+          ? await G.cloud.register(id.value, pw.value, character.value)
+          : await G.cloud.login(id.value, pw.value);
+        if (result) { close(result); if (onSuccess) onSuccess(mode, result); return; }
+        error.textContent = G.cloud.view().error || '계정 연결을 확인해 주세요.';
+        submit.disabled = false; submit.textContent = mode === 'signup' ? '계정 만들기' : '로그인';
+      };
+      if (mode === 'login') {
+        const google = $('button', 'btn ghost', 'Google로 로그인 (연결한 계정)');
+        google.onclick = async () => {
+          error.textContent = ''; google.disabled = true;
+          const result = await G.cloud.signInGoogle();
+          if (result) { close(result); if (onSuccess) onSuccess('google', result); return; }
+          error.textContent = G.cloud.view().error || 'Google 로그인을 확인해 주세요.'; google.disabled = false;
+        };
+        wrap.append(google);
+      }
+      setTimeout(() => id.focus(), 0);
+    };
+    render(); return wrap;
+  }
+  UI.account = (mode = 'login', onSuccess) => UI.modal('계정 연결', (body, close) => {
+    body.append(accountForm(mode, close, onSuccess));
+  });
+
   // 가방 칸 그리드
   function slotGrid(onTap, sel) {
     const grid = $('div', 'grid');
@@ -392,14 +455,20 @@
       return box;
     }
     if (s.phase === 'signed-out') {
-      box.append($('div', 'muted small', '구글 계정을 연결하면 현재 기기 세이브를 서버에 보관하고 다른 기기에서 이어 할 수 있어요.'));
-      const b = $('button', 'btn', '구글 계정으로 연결'); b.onclick = () => G.cloud.signIn(); box.append(b); return box;
+      box.append($('div', 'muted small', '아이디 계정을 만들거나 로그인하면 현재 마을을 서버에 보관하고 PC와 폰에서 이어 할 수 있어요. 실제 이메일은 받지 않아요.'));
+      if (s.error) box.append($('div', 'cloud-error small', esc(s.error)));
+      const login = $('button', 'btn', '로그인'); login.onclick = () => UI.account('login');
+      const signup = $('button', 'btn ghost', '회원가입'); signup.onclick = () => UI.account('signup');
+      const r = $('div', 'row wrap'); r.append(login, signup); box.append(r); return box;
     }
     if (s.phase === 'error') {
       box.append($('div', 'cloud-error small', esc(s.error || '계정 연결을 확인해 주세요.')));
-      const b = $('button', 'btn ghost', '다시 확인'); b.onclick = () => G.cloud.retry(); box.append(b); return box;
+      if (!s.user) {
+        const login = $('button', 'btn', '로그인 다시 하기'); login.onclick = () => UI.account('login'); box.append(login); return box;
+      }
+      const b = $('button', 'btn ghost', '다시 확인'); b.onclick = () => G.cloud.retry(); box.append(b);
     }
-    const busy = { loading: '클라우드 기능을 준비하는 중…', checking: '서버 마을을 확인하는 중…', 'signing-in': '구글 로그인 중…', redirecting: '로그인 화면으로 이동하는 중…', syncing: '마을을 안전하게 동기화하는 중…', reloading: '서버 마을을 적용하는 중…', ready: '동기화를 준비하는 중…' };
+    const busy = { loading: '클라우드 기능을 준비하는 중…', checking: '서버 마을을 확인하는 중…', registering: '계정을 만드는 중…', 'signing-in': '로그인 중…', 'linking-google': 'Google 계정을 연결하는 중…', redirecting: '로그인 화면으로 이동하는 중…', syncing: '마을을 안전하게 동기화하는 중…', reloading: '서버 마을을 적용하는 중…', ready: '동기화를 준비하는 중…' };
     if (busy[s.phase]) box.append($('div', 'cloudstatus', `<span class="cloudspin">☁️</span>${busy[s.phase]}`));
     if (s.user) box.append($('div', 'clouduser', `<b>${esc(G.player.name || '우편지기')}</b><small>계정 연결됨 · 다른 사람에게는 캐릭터 이름만 보여요</small>`));
     if (s.phase === 'waiting-local') box.append($('div', 'muted small', '계정이 연결됐어요. 마을 만들기를 마치면 첫 세이브를 자동으로 서버에 올려요.'));
@@ -407,6 +476,10 @@
       const when = s.lastSyncAt ? new Date(s.lastSyncAt).toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' }) : '방금';
       box.append($('div', 'cloud-ok small', `✓ 동기화됨 · ${esc(when)}`));
     }
+    if (s.user && !s.user.hasGoogle && !['linking-google', 'redirecting'].includes(s.phase)) {
+      const google = $('button', 'btn small ghost', 'Google 계정 연결 (선택)'); google.onclick = () => G.cloud.linkGoogle(); box.append(google);
+      box.append($('div', 'muted small', '연결하면 다음부터 Google로도 로그인할 수 있어요. Google 정보는 다른 이용자에게 보이지 않아요.'));
+    } else if (s.user && s.user.hasGoogle) box.append($('div', 'cloud-ok small', '✓ Google 계정도 연결됨'));
     if (s.phase === 'conflict' && s.conflict) {
       box.append($('div', 'cloudwarn', '<b>두 기기에서 마을이 달라졌어요</b><span>자동으로 덮어쓰지 않았어요. 계속 사용할 저장을 골라 주세요.</span>'));
       const choices = $('div', 'cloudchoices'); choices.append(cloudSummary(s.conflict.local, '이 기기'), cloudSummary(s.conflict.remote, '서버'));

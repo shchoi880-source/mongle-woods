@@ -6,9 +6,10 @@
   const META_KEY = 'mg.cloud.meta';
   const BACKUP_KEY = 'mg.cloud.backup';
   const REQUIRED_CONFIG = ['apiKey', 'authDomain', 'databaseURL', 'projectId', 'appId'];
-  const WAIT = new Set(['loading', 'checking', 'signing-in', 'redirecting', 'syncing', 'reloading']);
+  const WAIT = new Set(['loading', 'checking', 'registering', 'signing-in', 'linking-google', 'redirecting', 'syncing', 'reloading']);
   let api = null, auth = null, db = null, userRef = null;
   let initialized = false, applyingRemote = false, uploadTimer = 0, authRun = 0;
+  let pendingCharacterName = '';
   const st = { phase: 'unconfigured', configured: false, user: null, conflict: null, error: '', lastSyncAt: 0 };
 
   function readJSON(key) { try { return JSON.parse(G.store.getItem(key) || 'null'); } catch (e) { return null; } }
@@ -28,6 +29,9 @@
     const c = G.FIREBASE_CONFIG;
     return !!(c && REQUIRED_CONFIG.every((k) => typeof c[k] === 'string' && c[k].trim()));
   }
+  function accountId(value) { return String(value || '').trim().toLowerCase(); }
+  function validAccountId(value) { return /^[a-z0-9_]{4,20}$/.test(accountId(value)); }
+  function accountEmail(value) { return accountId(value) + '@accounts.mongle.invalid'; }
   function cleanSummary(s) {
     return { name: s.name || '', town: s.town || '', created: +s.created || 0, money: +s.money || 0, dex: +s.dex || 0, playDays: +s.playDays || 0, savedAt: +s.savedAt || 0 };
   }
@@ -67,6 +71,15 @@
     const known = {
       'auth/popup-closed-by-user': '로그인 창이 닫혔어요.', 'auth/cancelled-popup-request': '로그인이 취소됐어요.',
       'auth/unauthorized-domain': '이 주소가 Firebase 로그인 허용 주소에 등록되지 않았어요.',
+      'auth/email-already-in-use': '이미 사용 중인 아이디예요.',
+      'auth/invalid-credential': '아이디 또는 비밀번호가 맞지 않아요.',
+      'auth/invalid-email': '아이디 형식이 올바르지 않아요.',
+      'auth/weak-password': '비밀번호는 8자 이상으로 정해 주세요.',
+      'auth/too-many-requests': '로그인 시도가 너무 많아요. 잠시 뒤 다시 해 주세요.',
+      'auth/network-request-failed': '인터넷 연결을 확인해 주세요.',
+      'auth/operation-not-allowed': '이 로그인 방식이 아직 서버에서 활성화되지 않았어요.',
+      'auth/credential-already-in-use': '이 Google 계정은 다른 몽글숲 계정에 이미 연결되어 있어요.',
+      'auth/provider-already-linked': '이미 Google 계정이 연결되어 있어요.',
       'PERMISSION_DENIED': '클라우드 저장 권한이 없어요. Database Rules를 확인해 주세요.',
     };
     st.phase = 'error'; st.error = known[raw] || known[err && err.code] || raw; emit(); G.emit('cloud:error', { message: st.error });
@@ -135,8 +148,12 @@
   async function handleUser(user) {
     const run = ++authRun;
     if (!user) { userRef = null; state('signed-out', { user: null, conflict: null }); return; }
-    // Google 이름·이메일·사진은 게임 상태에 보관하지 않는다. 인증에는 내부 uid만 사용한다.
-    st.user = { uid: user.uid };
+    if (pendingCharacterName) {
+      G.player.name = pendingCharacterName;
+      pendingCharacterName = '';
+    }
+    // 로그인 아이디·Google 이름·이메일·사진은 게임 상태에 보관하지 않는다.
+    st.user = { uid: user.uid, hasGoogle: (user.providerData || []).some((p) => p.providerId === 'google.com') };
     state('checking', { user: st.user, conflict: null });
     try {
       userRef = api.db.ref(db, 'users/' + user.uid + '/save');
@@ -157,7 +174,7 @@
   }
 
   const cloud = G.cloud = {
-    SDK, META_KEY, BACKUP_KEY, _decide: decide,
+    SDK, META_KEY, BACKUP_KEY, _decide: decide, _accountId: accountId, _validAccountId: validAccountId, _accountEmail: accountEmail,
     view: publicState,
     async init() {
       if (initialized) return; initialized = true; st.configured = configured();
@@ -174,15 +191,56 @@
         try { await authApi.getRedirectResult(auth); } catch (e) { fail(e); }
       } catch (e) { fail(e); }
     },
-    async signIn() {
+    async register(id, password, characterName) {
+      id = accountId(id); characterName = String(characterName || '').trim();
+      const local = localCopy();
+      // 이미 플레이 중인 이용자는 회원가입 입력으로 기존 캐릭터 이름이 바뀌지 않는다.
+      if (local.established) characterName = local.summary.name;
+      if (!validAccountId(id)) return fail(new Error('아이디는 영문 소문자·숫자·밑줄로 4~20자여야 해요.'));
+      if (String(password || '').length < 8) return fail(new Error('비밀번호는 8자 이상으로 정해 주세요.'));
+      if (!characterName || characterName.length > 8) return fail(new Error('캐릭터 이름은 1~8자로 정해 주세요.'));
+      if (!st.configured) return fail(new Error('Firebase 설정이 아직 끝나지 않았어요.'));
+      if (!auth) { await cloud.init(); if (!auth) return; }
+      pendingCharacterName = characterName; state('registering');
+      try {
+        const result = await api.auth.createUserWithEmailAndPassword(auth, accountEmail(id), password);
+        if (pendingCharacterName) { G.player.name = pendingCharacterName; pendingCharacterName = ''; }
+        return result;
+      }
+      catch (e) { pendingCharacterName = ''; fail(e); }
+    },
+    async login(id, password) {
+      id = accountId(id);
+      if (!validAccountId(id)) return fail(new Error('아이디는 영문 소문자·숫자·밑줄로 4~20자여야 해요.'));
+      if (!password) return fail(new Error('비밀번호를 입력해 주세요.'));
+      if (!st.configured) return fail(new Error('Firebase 설정이 아직 끝나지 않았어요.'));
+      if (!auth) { await cloud.init(); if (!auth) return; }
+      state('signing-in');
+      try { return await api.auth.signInWithEmailAndPassword(auth, accountEmail(id), password); }
+      catch (e) { fail(e); }
+    },
+    async signInGoogle() {
       if (!st.configured) return fail(new Error('Firebase 설정이 아직 끝나지 않았어요.'));
       if (!auth) { await cloud.init(); if (!auth) return; }
       state('signing-in');
       const provider = new api.auth.GoogleAuthProvider(); provider.setCustomParameters({ prompt: 'select_account' });
-      try { await api.auth.signInWithPopup(auth, provider); }
+      try { return await api.auth.signInWithPopup(auth, provider); }
       catch (e) {
         if (['auth/popup-blocked', 'auth/operation-not-supported-in-this-environment', 'auth/web-storage-unsupported'].includes(e.code)) {
           state('redirecting'); await api.auth.signInWithRedirect(auth, provider);
+        } else fail(e);
+      }
+    },
+    async linkGoogle() {
+      if (!auth || !auth.currentUser) return fail(new Error('먼저 아이디로 로그인해 주세요.'));
+      const provider = new api.auth.GoogleAuthProvider(); provider.setCustomParameters({ prompt: 'select_account' });
+      state('linking-google');
+      try {
+        const result = await api.auth.linkWithPopup(auth.currentUser, provider);
+        await handleUser(result.user); return result;
+      } catch (e) {
+        if (['auth/popup-blocked', 'auth/operation-not-supported-in-this-environment', 'auth/web-storage-unsupported'].includes(e.code)) {
+          state('redirecting'); await api.auth.linkWithRedirect(auth.currentUser, provider);
         } else fail(e);
       }
     },
