@@ -15,6 +15,17 @@
     const at = (x, y) => ({ x, y });
     const npcAt = (id) => { const n = G.npc.get(id); return n && n.vis ? at(n.x, n.y) : null; };
     const plotAt = (k) => { const p = m.plots[k]; return p ? at((p.door.x + 0.5) * TILE, (p.door.y + 0.5) * TILE) : null; };
+    // 가장 가까운 것 찾기 (위치가 정해지지 않은 미션도 ⭐로 안내)
+    const near = (list, fx, fy) => { let best = null, bd = 1e18; for (const o of list) { const d = (fx(o) - pl.x) ** 2 + (fy(o) - pl.y) ** 2; if (d < bd) { bd = d; best = o; } } return best; };
+    const nearObj = (pred) => { const o = near(m.objs.filter(pred), (o) => o.tx * TILE + 16, (o) => o.ty * TILE + 16); return o ? at(o.tx * TILE + 16, o.ty * TILE + 16) : null; };
+    const nearWater = () => {
+      let best = null, bd = 1e18; const W = G.world;
+      for (let ty = 0; ty < m.h; ty += 1) for (let tx = 0; tx < m.w; tx += 1) {
+        if (!W.waterKind(tx, ty) || W.waterKind(tx, ty) === 'sea') continue;
+        for (const [dx, dy] of [[0, 1], [1, 0], [-1, 0], [0, -1]]) if (W.walkableTile(tx + dx, ty + dy)) { const x = (tx + dx) * TILE + 16, y = (ty + dy) * TILE + 16, d = (x - pl.x) ** 2 + (y - pl.y) ** 2; if (d < bd) { bd = d; best = at(x, y); } }
+      }
+      return best;
+    };
     // 0) 달리기 중
     const rc = G.events && G.events.race;
     if (rc && rc.on) { if (!rc.touched) return { text: `🏃 ${rc.cp.nm} 앞을 찍고 오기!`, pos: at(rc.cp.x, rc.cp.y) }; return { text: '🏃 호떡에게 돌아가기!', pos: npcAt('hotteok') }; }
@@ -29,13 +40,13 @@
     if (card && G.time.st.playDays <= 3) {
       const map = {
         sell: ['잡은 걸 땅굴상점에서 팔아 보기', plotAt('shop')],
-        bug: ['꽃 근처의 곤충 잡기 (살금살금!)', null],
-        fish: ['강이나 연못에서 물고기 낚기', null],
-        shake: ['나무 앞에서 행동 버튼으로 흔들어 보기', null],
+        bug: ['꽃 근처의 곤충 잡기 (살금살금!)', card.id === 'bug' ? nearObj((o) => o.kind === 'flower') : null],
+        fish: ['강이나 연못에서 물고기 낚기', card.id === 'fish' ? nearWater() : null],
+        shake: ['나무 앞에서 행동 버튼으로 흔들어 보기', card.id === 'shake' ? nearObj((o) => (o.kind === 'tree' || o.kind === 'fruit') && !o.deco) : null],
         letter: ['딸랑에게 편지 전해 주기', npcAt('ddalang')],
-        meet: ['이웃 셋(딸랑·소금·라임)과 인사하기', null],
-        shells: ['남쪽 해변에서 조개 3개 줍기', null],
-        dig: [pl.hasTool('shovel') ? '땅의 금 간 자국을 삽으로 파기' : '땅굴상점에서 삽 사기 (500몽)', pl.hasTool('shovel') ? null : plotAt('shop')],
+        meet: ['이웃 셋(딸랑·소금·라임)과 인사하기', (() => { const id = ['ddalang', 'sogeum', 'lime'].find((x) => !G.npc.st[x].met); return id ? npcAt(id) || plotAt(G.npc.VILLAGERS[id].plot) : null; })()],
+        shells: ['남쪽 해변에서 조개 3개 줍기', card.id === 'shells' ? (() => { const sh = near(G.world.state.shells.filter((x) => !G.world.isTaken(x.id)), (x) => x.tx * TILE + 16, (x) => x.ty * TILE + 16); return sh ? at(sh.tx * TILE + 16, sh.ty * TILE + 16) : null; })() : null],
+        dig: [pl.hasTool('shovel') ? '땅의 금 간 자국을 삽으로 파기' : '땅굴상점에서 삽 사기 (500몽)', pl.hasTool('shovel') ? (card.id === 'dig' ? (() => { const dg = near(G.world.state.digs.filter((x) => !G.world.isTaken(x.id)), (x) => x.tx * TILE + 16, (x) => x.ty * TILE + 16); return dg ? at(dg.tx * TILE + 16, dg.ty * TILE + 16) : null; })() : null) : plotAt('shop')],
         furn: ['내 텐트에 들어가 「꾸미기」로 가구 3개 놓기', plotAt('tent')],
       };
       const [text, pos] = map[card.id] || [card.text, null];
@@ -46,7 +57,7 @@
       const f = G.fest.FESTS.find((x) => G.inv.count(x.token) >= G.fest.NEED && !(G.player.unlocks || {})['hat' + x.hat]);
       if (f) return { text: `${f.icon} ${f.tname} ${G.fest.NEED}개 모았어요! 보리 할멈에게 가져가기`, pos: npcAt('bori') || plotAt('post') };
       const nf = G.fest.now();
-      if (nf && !(G.player.unlocks || {})['hat' + nf.hat]) return { text: `${nf.icon} ${nf.name}! 마을에 떨어진 ${nf.tname} 모으기 (${G.inv.count(nf.token)}/${G.fest.NEED})`, pos: null };
+      if (nf && !(G.player.unlocks || {})['hat' + nf.hat]) { const d = near(G.game.drops.filter((x) => x.id === nf.token), (x) => x.x, (x) => x.y); return { text: `${nf.icon} ${nf.name}! 마을에 떨어진 ${nf.tname} 모으기 (${G.inv.count(nf.token)}/${G.fest.NEED})`, pos: d ? at(d.x, d.y) : null }; }
     }
     // 3.3) 이웃 생일·새 이야기 (6차 회의 B)
     if (G.story) {
@@ -132,7 +143,7 @@
         info.innerHTML = '';
         if (sel) { const t = document.createElement('b'); t.textContent = sel.name; info.append(t); if (!sel.me) info.append(' ', goBtn(sel)); return; }
         if (obj) {
-          const t = document.createElement('span'); t.innerHTML = `<b>지금 할 일</b> ${obj.text}`; info.append(t);
+          const t = document.createElement('span'); t.innerHTML = `<b>📌 지금 할 일</b> ${obj.text}${obj.pos ? ' <span class="muted">(⭐ 위치)</span>' : ' <span class="muted">(어디서든 할 수 있어요)</span>'}`; info.append(t);
           if (obj.pos) info.append(' ', goBtn({ tx: obj.pos.x / TILE, ty: obj.pos.y / TILE, short: '목적지' }));
         } else info.innerHTML = '<span class="muted">표시를 누르면 이름이 보이고 걸어갈 수 있어요.</span>';
       };
@@ -154,7 +165,15 @@
       const centerOn = (px, py, z) => { view.z = z; view.ox = wrap.clientWidth / 2 - px * z; view.oy = wrap.clientHeight / 2 - py * z; clamp(); };
       const meXY = () => ({ x: G.player.x / TILE * S, y: (G.player.y / TILE - y0) * S });
       // 처음엔 내 위치를 2.5배로
-      requestAnimationFrame(() => { const p = meXY(); centerOn(p.x, p.y, fitZ() * 2.5); });
+      // 처음 보기: 미션 위치(⭐)가 있으면 나와 ⭐가 함께 보이게, 없으면 내 위치를 크게
+      requestAnimationFrame(() => {
+        const p = meXY();
+        if (obj && obj.pos) {
+          const q = { x: obj.pos.x / TILE * S, y: (obj.pos.y / TILE - y0) * S - 30 };
+          const pad = 90, z = Math.max(fitZ(), Math.min(fitZ() * 3, (wrap.clientWidth - pad) / (Math.abs(p.x - q.x) + 1), (wrap.clientHeight - pad) / (Math.abs(p.y - q.y) + 1)));
+          centerOn((p.x + q.x) / 2, (p.y + q.y) / 2, z);
+        } else centerOn(p.x, p.y, fitZ() * 2.5);
+      });
       let t0 = performance.now(), raf = 0;
       const draw = () => {
         if (!cv.isConnected && raf) return;
