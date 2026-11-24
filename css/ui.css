@@ -42,7 +42,7 @@ input, select, textarea { font: inherit; color: var(--ink); }
 .hud-on .hud-target.on { opacity: 1 !important; transform: none; }
 .stick { position: absolute; width: 112px; height: 112px; margin: -56px 0 0 -56px; border-radius: 50%; background: rgba(255,255,255,.22); border: 3px solid rgba(255,255,255,.55); display: none; pointer-events: none !important; }
 .stick .nub { position: absolute; left: 32px; top: 32px; width: 42px; height: 42px; border-radius: 50%; background: rgba(255,255,255,.85); box-shadow: var(--shadow); }
-.hud-hint { position: absolute; left: 50%; bottom: calc(120px + var(--safe-b)); transform: translateX(-50%); background: rgba(91,70,54,.75); color: #fff; padding: 8px 16px; border-radius: 16px; font-size: 14px; white-space: nowrap; }
+.hud-hint { position: absolute; left: 50%; bottom: calc(120px + var(--safe-b)); transform: translateX(-50%); background: rgba(91,70,54,.75); color: #fff; padding: 8px 16px; border-radius: 16px; font-size: 14px; white-space: normal; text-align: center; width: max-content; max-width: min(90vw, 560px); line-height: 1.4; }
 .hud-hint.on { opacity: 1; }
 
 /* ---- 토스트 ---- */
@@ -337,3 +337,7 @@ input, select, textarea { font: inherit; color: var(--ink); }
 .upmark { position: absolute; top: 4px; right: 6px; font-style: normal; background: #ffd24d; border-radius: 8px; padding: 0 4px; font-size: 12px; } .buycard { position: relative; } .boxgrid { max-height: 40vh; overflow-y: auto; }
 .tap { max-width: min(90vw, 460px); text-align: center; line-height: 1.5; } .tap small { font-weight: 600; opacity: .8; }
 .chip.locked { opacity: .55; border-style: dashed; }
+
+/* 7차 회의: 잎첩 높이 고정(탭을 바꿀 때 창이 들썩이지 않게), 상점 탭 */
+.sheet.nb { height: min(88%, 760px); }
+.shoptabs .tab { flex: 1; font-size: 15px; padding: 9px 12px; }

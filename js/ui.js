@@ -213,7 +213,7 @@
   UI.modal = (title, build, o = {}) => new Promise((resolve) => {
     G.input.lock('modal');
     modalEl.innerHTML = '';
-    const card = $('div', 'sheet' + (o.wide ? ' wide' : ''));
+    const card = $('div', 'sheet' + (o.wide ? ' wide' : '') + (o.cls ? ' ' + o.cls : ''));
     const head = $('div', 'sheet-head', `<h2>${esc(title)}</h2>`);
     const x = $('button', 'btn-x', '✕'); x.onclick = () => close();
     head.append(x); card.append(head);
@@ -349,7 +349,7 @@
     for (const [id, nm] of TABS) { const b = $('button', 'tab', nm); b.dataset.t = id; b.onclick = () => { G.audio.sfx('tap'); show(id); }; tabs.append(b); }
     body.append(tabs, pane); show(tab);
     if (Date.now() - (G.settings.get('lastExport') || 0) > 7 * 864e5 && G.time.st.playDays > 1) tabs.querySelector('[data-t=set]').classList.add('badge');
-  }, { wide: true });
+  }, { wide: true, cls: 'nb' });
 
   // ---------- 꾸미기 (오너 요청: 이름·모습 언제든, 스타일 다양하게) ----------
   // 움직이는 미리보기 캔버스. stop()으로 멈춘다
@@ -874,7 +874,13 @@
     const tr = G.market.trend();
     const render = () => {
       body.innerHTML = '';
-      const tabs = $('div', 'subtabs');
+      // 사기/팔기 탭 (7차 회의: 폰에서 사는 칸이 한참 아래에 있어 안 보였다)
+      const tabs = $('div', 'subtabs shoptabs');
+      const sellable = G.inv.slots.filter((x) => G.items.sellPrice(x.id, x.x)).length;
+      const tab = UI._shopTab || (sellable ? 'sell' : 'buy');
+      for (const [id, nm] of [['sell', `💰 팔기 (${sellable})`], ['buy', '🛒 사기']]) {
+        const b = $('button', 'tab' + (tab === id ? ' on' : ''), nm); b.onclick = () => { UI._shopTab = id; G.audio.sfx('tap'); render(); }; tabs.append(b);
+      }
       body.append(tabs);
       const head = $('div', 'pane-head', `<span>팔 물건을 골라 주세요 · 유행 바람: 「${tr.name}」 +20%</span>`);
       const all = $('button', 'btn small ghost', '모두 고르기');
@@ -921,7 +927,12 @@
         };
         buy.append(b);
       }
-      body.append(foot, $('div', 'pane-head', '<span>오늘의 물건 (매일 아침 바뀌어요)</span>'), buy);
+      if (tab === 'sell') { body.append(foot); }
+      else {
+        // 사기 탭: 팔기 칸은 감춘다
+        for (const el of [head, body.querySelector('.grid')]) if (el) el.remove();
+        body.append($('div', 'pane-head', `<span>오늘의 물건 (매일 아침 바뀌어요) · 내 돈 ${G.fmt.money(G.wallet.get())}</span>`), buy);
+      }
     };
     render();
   }, { wide: true });
