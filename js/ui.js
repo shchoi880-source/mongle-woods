@@ -36,7 +36,9 @@
     hud.tool.onclick = () => { press(hud.tool); G.input.emit('tool'); };
     hud.act = $('button', 'btn-act', '<span class="act-ico">✋</span><span class="act-lbl"></span>'); hud.act.title = '행동 (Space)';
     hud.act.addEventListener('pointerdown', (e) => { e.preventDefault(); press(hud.act); G.input.emit('act'); });
-    br.append(hud.chat, hud.tool, hud.act);
+    const toolKey = $('div', 'hud-control'); toolKey.append(hud.tool, $('kbd', 'hud-key', 'Q'));
+    const actKey = $('div', 'hud-control'); actKey.append(hud.act, $('kbd', 'hud-key', 'Space'));
+    br.append(hud.chat, toolKey, actKey);
     root.append(br);
     hud.target = $('div', 'hud-target'); root.append(hud.target);
     hud.stick = $('div', 'stick', '<div class="nub"></div>'); root.append(hud.stick);

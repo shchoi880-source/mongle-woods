@@ -15,6 +15,8 @@
   const KEYMAP = {
     ArrowUp: 'u', KeyW: 'u', ArrowDown: 'd', KeyS: 'd', ArrowLeft: 'l', KeyA: 'l', ArrowRight: 'r', KeyD: 'r',
   };
+  const ACTION_KEYS = new Set(['Space']);
+  const TOOL_KEYS = new Set(['KeyQ']);
   let runHold = 0;
   const STICK_R = 56;
 
@@ -24,10 +26,10 @@
       if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
       I.lastTouch = false; I.lastKey = true;
       if (!e.repeat) {
-        // 친구와 함께 있을 땐 Enter = 채팅 (오너 요청). 그 밖엔 행동
+        // Enter는 친구 채팅 전용. 일반 행동은 화면 표시와 동일하게 Space 하나만 쓴다.
         if ((e.code === 'Enter' || e.code === 'NumpadEnter') && G.net && G.net.active) { I.emit('chat'); e.preventDefault(); }
-        else if (e.code === 'Space' || e.code === 'Enter' || e.code === 'KeyE' || e.code === 'KeyZ') { I.emit('act'); e.preventDefault(); }
-        else if (e.code === 'KeyQ' || e.code === 'KeyR') I.emit('tool');
+        else if (ACTION_KEYS.has(e.code)) { I.emit('act'); e.preventDefault(); }
+        else if (TOOL_KEYS.has(e.code)) I.emit('tool');
         else if (e.code === 'Tab' || e.code === 'KeyI' || e.code === 'KeyB') { I.emit('menu'); e.preventDefault(); }
         else if (e.code === 'KeyM') I.emit('map');
         else if (e.code === 'KeyT' || e.code === 'Slash') { I.emit('chat'); e.preventDefault(); }
@@ -36,7 +38,7 @@
       I.keys.add(e.code);
       if (KEYMAP[e.code]) e.preventDefault();
     });
-    addEventListener('keyup', (e) => { I.keys.delete(e.code); if (e.code === 'Space' || e.code === 'Enter') I.emit('actUp'); });
+    addEventListener('keyup', (e) => { I.keys.delete(e.code); if (ACTION_KEYS.has(e.code)) I.emit('actUp'); });
     addEventListener('blur', () => { I.keys.clear(); I.stick = null; });
 
     // 조이스틱: 캔버스 왼쪽 55%에서 시작한 포인터
