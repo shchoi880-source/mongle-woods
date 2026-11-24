@@ -104,6 +104,12 @@
       const d = day === undefined ? G.time.day() : day;
       const list = [{ kind: 'tool', id: 'shovel', name: G.TOOLS.shovel.name, price: G.TOOLS.shovel.price, key: 'shovel' }];
       if (G.TOOLS.axe) list.push({ kind: 'tool', id: 'axe', name: G.TOOLS.axe.name, price: G.TOOLS.axe.price, key: 'axe' });
+      // 계절 씨앗 (3개 묶음) + 물뿌리개
+      if (G.farm) {
+        const season = G.farm.SEASON_OF(G.time.dayDate(d).m);
+        for (const c of G.data.all('crops').filter((x) => x.season === season)) list.push({ kind: 'seed', id: c.id, name: c.name + ' 씨앗 3개', price: c.seed * 3, key: 'seed_' + c.id });
+        if (G.TOOLS.can && !G.player.hasTool('can')) list.push({ kind: 'tool', id: 'can', name: G.TOOLS.can.name, price: G.TOOLS.can.price, key: 'can' });
+      }
       if (!G.house) return list;
       const R = G.rng.stream(G.rng.KEYS.SHOP, d, 2);
       const forms = G.house.SHOP_FORMS.slice();
@@ -121,6 +127,15 @@
         if (!G.wallet.spend(entry.price, 'buy')) return { ok: false, why: '몽이 조금 모자라요.' };
         G.player.giveTool(entry.id);
         G.emit('shop:buy', { id: entry.id, price: entry.price });
+        return { ok: true };
+      }
+      if (entry.kind === 'seed') {
+        if (!G.inv.canFit('seed:' + entry.id)) return { ok: false, why: '가방이 꽉 찼어요.' };
+        if (!G.wallet.spend(entry.price, 'buy')) return { ok: false, why: '몽이 조금 모자라요.' };
+        G.inv.add('seed:' + entry.id, 3);
+        G.emit('shop:buy', { id: entry.id, price: entry.price });
+        // 첫 씨앗 손님에게 토실이 물뿌리개를 덤으로
+        if (G.farm && !G.farm.st.seedGift && !G.player.hasTool('can')) { G.farm.st.seedGift = true; G.player.giveTool('can'); return { ok: true, gift: true }; }
         return { ok: true };
       }
       if (entry.kind === 'furn') {
