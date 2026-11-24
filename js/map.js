@@ -41,6 +41,12 @@
       const [text, pos] = map[card.id] || [card.text, null];
       return { text, pos };
     }
+    // 3.4) 목장
+    const ra = G.ranch.st.animals;
+    const rr = ra.find((x) => x.ready);
+    if (rr) return { text: `목장에서 ${rr.name}의 선물 거두기 🧺`, pos: at(rr.x, rr.y) };
+    const rp = ra.find((x) => x.pet !== G.time.day() && !G.ranch.st.riding);
+    if (rp) return { text: `목장의 ${rp.name} 쓰다듬기 🤲`, pos: at(rp.x, rp.y) };
     // 3.5) 텃밭
     const fp = G.farm.st.plots;
     const ripe = fp.find((x) => G.farm.stage(x) === 3);
@@ -77,6 +83,7 @@
     const add = (tx, ty, icon, name, kind) => out.push({ tx, ty, icon, name, kind });
     const b = (k, icon, name) => { const p = P(k); if (p) add(p.x + p.w / 2, p.y + p.h / 2, icon, name, 'bld'); };
     b('shop', '🏪', '땅굴상점');
+    if (G.ranch.st.pen) add(G.ranch.st.pen.x + G.ranch.st.pen.w / 2, G.ranch.st.pen.y + G.ranch.st.pen.h / 2, '🐮', '내 목장', 'bld');
     if (G.farm.st.plots[0]) add(G.farm.st.plots[0].tx + 1.5, G.farm.st.plots[0].ty + 0.5, '🥕', '내 텃밭', 'bld'); b('post', '📮', '우체국 (보리 할멈)'); b('tent', '🏠', '내 ' + G.nest.cur().name);
     if (P('museum2')) b('museum2', '🦴', G.museum.isOpen() ? '조약돌 박물관' : '박물관 (내일 개관)');
     if (P('oak')) add(P('oak').x + 1, P('oak').y + 1, '🌳', '할아버지 참나무 (광장)', 'bld');

@@ -110,6 +110,9 @@
         for (const c of G.data.all('crops').filter((x) => x.season === season)) list.push({ kind: 'seed', id: c.id, name: c.name + ' 씨앗 3개', price: c.seed * 3, key: 'seed_' + c.id });
         if (G.TOOLS.can && !G.player.hasTool('can')) list.push({ kind: 'tool', id: 'can', name: G.TOOLS.can.name, price: G.TOOLS.can.price, key: 'can' });
       }
+      if (G.ranch) {
+        for (const [k, v] of Object.entries(G.ranch.KINDS)) list.push({ kind: 'animal', id: k, name: v.baby, price: v.price, key: 'an_' + k });
+      }
       if (!G.house) return list;
       const R = G.rng.stream(G.rng.KEYS.SHOP, d, 2);
       const forms = G.house.SHOP_FORMS.slice();
@@ -129,6 +132,7 @@
         G.emit('shop:buy', { id: entry.id, price: entry.price });
         return { ok: true };
       }
+      if (entry.kind === 'animal') { const r = G.ranch.buy(entry.id); if (r.ok) G.emit('shop:buy', { id: entry.id, price: entry.price }); return r; }
       if (entry.kind === 'seed') {
         if (!G.inv.canFit('seed:' + entry.id)) return { ok: false, why: '가방이 꽉 찼어요.' };
         if (!G.wallet.spend(entry.price, 'buy')) return { ok: false, why: '몽이 조금 모자라요.' };
