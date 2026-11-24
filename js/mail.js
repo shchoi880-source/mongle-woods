@@ -27,6 +27,12 @@
     lime: [['딱히 할 말이 있어서 쓰는 건 아니야. 종이가 남아서.', '추신. 화단에 물 준 거 나 아니야.'],
       ['어제 네 모자 위 솜뭉치가 나한테 손을 흔들었어. …흔든 것 같았어.', '추신. 이 편지 버려도 돼. 버리지 말고.'],
       ['꽃이 하나 더 피었어. 그냥 알려 주는 거야. 흥칫.', '추신. 보러 와도 되고. 안 와도 되고.']],
+    jjongal: [['독점 인터뷰 요청서! 질문 1. 우편지기의 하루는 몇 걸음인가요? 질문 2. 그 걸음은 즐거운가요?', '추신. 답장 오면 1면에 싣는다. 도토독!'],
+      ['어제 신문 오타 7개. 단추가 빨간 펜으로 다 고쳐 줬어. 신문이 빨개졌어.', '추신. 이 편지에도 오타가 있으면 그건 일부러야.'],
+      ['제보 감사! …아직 제보 안 했다고? 그럼 미리 감사!', '추신. 소문 하나 = 구독 1일. 알지?']],
+    danchu: [['{name} 님께. 오늘 광장 벤치는 열두 개였습니다. 평화로운 하루였다는 뜻이지요.', '추신. 이 편지는 정확히 세 번 고쳐 썼습니다.'],
+      ['기록부 「오늘의 고마운 일」 칸에 {name} 님 이름이 세 번 적혔습니다.', '추신. 네 번째 칸도 비워 두었습니다. 단정.'],
+      ['빙판 마을의 친척에게 몽글숲 이야기를 썼어요. {name} 님 이야기가 제일 길었습니다.', '추신. 칭찬입니다.']],
   };
 
   const ML = G.mail = {
@@ -52,7 +58,8 @@
       for (const [id, v] of Object.entries(G.npc.VILLAGERS)) {
         const s = G.npc.st[id]; if (!s || !s.met) continue;
         if (R() > 0.3 + G.npc.level(id) * 0.12) continue;
-        const pool = LETTERS[id]; const [body, ps] = pool[Math.floor(R() * pool.length)];
+        const pool = LETTERS[id]; if (!pool) continue;
+        const [body, ps] = pool[Math.floor(R() * pool.length)];
         let gift = null;
         if (R() < 0.3 && G.house) {
           const f = G.house.SHOP_FORMS[Math.floor(R() * G.house.SHOP_FORMS.length)];
@@ -78,6 +85,7 @@
       await G.ui.say([{ who: 'kongal', text: '꼬물… 꼬물. (콩알이 어젯밤 꿈 얘기를 해요)' }, { who: 'sys', text: `「${st.dream}」` + (st.dreamSp ? '\n…오늘 어딘가에서 이루어질지도 몰라요.' : '') }]);
       const n = ML.unread();
       if (n) G.ui.toast(`우체통에 편지 ${n}통이 와 있어요!`, { icon: '📮', ms: 3500 });
+      if (G.news) G.news.moveInNote();
       G.audio.sfx('chime');
     },
     // 우체통 열기
@@ -93,7 +101,7 @@
           for (const l of st.box) {
             const from = l.from === 'bori' ? '보리 할멈' : G.npc.VILLAGERS[l.from].name;
             const b = document.createElement('button'); b.className = 'mailrow' + (l.read ? '' : ' new');
-            b.innerHTML = `<span class="env">${l.read ? '📭' : '💌'}</span><b>${from}</b><span class="muted small">${l.body.slice(0, 22)}…</span>${l.gift && !l.taken ? '<i class="gift">🎁</i>' : ''}`;
+            b.innerHTML = `<span class="env">${l.read ? '📭' : '💌'}</span><b>${from}</b><span class="muted small">${G.str(l.body, { name: G.player.name }).slice(0, 22)}…</span>${l.gift && !l.taken ? '<i class="gift">🎁</i>' : ''}`;
             b.onclick = () => { G.audio.sfx('open'); read(l); };
             list.append(b);
           }
@@ -104,7 +112,7 @@
           const from = l.from === 'bori' ? '보리 할멈' : G.npc.VILLAGERS[l.from].name;
           body.innerHTML = '';
           const card = document.createElement('div'); card.className = 'letter';
-          card.innerHTML = `<div class="lt-to">${G.player.name}에게</div><p>${l.body}</p><p class="ps">${l.ps}</p><div class="lt-from">— ${from}</div>`;
+          card.innerHTML = `<div class="lt-to">${G.player.name}에게</div><p>${G.str(l.body, { name: G.player.name })}</p><p class="ps">${G.str(l.ps, { name: G.player.name })}</p><div class="lt-from">— ${from}</div>`;
           const row = document.createElement('div'); row.className = 'row wrap';
           if (l.gift && !l.taken) {
             const g = document.createElement('button'); g.className = 'btn';

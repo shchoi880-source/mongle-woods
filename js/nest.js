@@ -13,10 +13,10 @@
   G.TOOLS.axe = { name: '도끼', icon: '🪓', price: 500 };
 
   // ---------- 둥지 단계 ----------
-  // 베타 조정(오너 확인 대기): 오두막 '주민 4명' → '이웃 3명과 인사', 작은 집 '기증 30' → '기증 15' (현재 콘텐츠 수량 기준)
+  // 베타 조정(오너 확인 대기): 작은 집 '기증 30' → '기증 15' (현재 콘텐츠 수량 기준). 오두막은 원안(주민 4명)
   const STAGES = [
     { id: 'tent', name: '텐트', cost: 5000, room: { w: 7, h: 6 } },
-    { id: 'cabin', name: '오두막', cost: 28000, room: { w: 9, h: 7 }, days: 5, active: 3, cond: () => ['ddalang', 'sogeum', 'lime'].every((id) => G.npc.st[id] && G.npc.st[id].met), condText: '이웃 셋과 인사하기' },
+    { id: 'cabin', name: '오두막', cost: 28000, room: { w: 9, h: 7 }, days: 5, active: 3, cond: () => Object.keys(G.npc.VILLAGERS).filter((id) => G.npc.isResident(id)).length >= 4, condText: '주민 4명 입주' },
     { id: 'house', name: '작은 집', cost: 98000, room: { w: 11, h: 8 }, days: 14, active: 9, cond: () => G.museum.total() >= 15, condText: '박물관 기증 15점' },
   ];
   const st = { stage: 0, debt: 5000, paidTotal: 0, building: -1, badges: 0 };

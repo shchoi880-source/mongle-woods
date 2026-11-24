@@ -256,8 +256,9 @@
       case 'read': await G.ui.say([{ who: 'sys', text: G.museum.isOpen() ? '「조약돌 박물관」 — 화석 감정은 무료! 기증은 언제나 환영이래요.' : '「조약돌 박물관 — 내일 개관」 느림보 박사가 오는 중이래요. 조금 느려서….' }]); break;
       case 'museum': if (G.museum.isOpen()) await G.museum.talk(); else await G.ui.say([{ who: 'sys', text: '천막 입구에 「내일 아침 개관!」이라고 적혀 있어요. 박사님은 아직 오는 중인가 봐요.' }]); break;
       case 'board': {
+        if (G.news.available()) { await G.news.open(); break; }
         const tr = G.market.trend();
-        await G.ui.say([{ who: 'sys', text: `[몽글소식] 오늘의 유행 바람은 「${tr.name}」 쪽으로 분대요. 땅굴상점에서 조금 더 쳐 준대요.` }, { who: 'sys', text: `[쫑알 일보 창간 준비호] "새 우편지기 입주! 키 추정 3미터(정정 예정)"` }]);
+        await G.ui.say([{ who: 'sys', text: `[몽글소식] 오늘의 유행 바람은 「${tr.name}」 쪽으로 분대요. 땅굴상점에서 조금 더 쳐 준대요.` }, { who: 'sys', text: '게시판 한쪽에 「신문 창간 예정! — 곧 이사 올 다람쥐 기자」라는 쪽지가 붙어 있어요.' }]);
         break;
       }
       case 'tent': G.house.enter(); break;
