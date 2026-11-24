@@ -7,7 +7,7 @@ const ROOT = path.resolve(__dirname, '..');
 const N = +(process.argv[2] || 1000);
 
 // 브라우저 전용 파일(art·actors·input·audio·ui·dev·boot)은 로드하지 않는다. 나머지는 로드 시 DOM에 접근하지 않는다
-for (const f of ['core', 'save', 'time', 'data', 'world', 'sys', 'eco', 'npc', 'house', 'museum', 'mail', 'nest', 'requests', 'news', 'tide', 'lantern', 'events', 'farm', 'ranch', 'game']) require(path.join(ROOT, 'js', f + '.js'));
+for (const f of ['core', 'save', 'firebase-config', 'cloud', 'time', 'data', 'world', 'sys', 'eco', 'npc', 'house', 'museum', 'mail', 'nest', 'requests', 'news', 'tide', 'lantern', 'events', 'farm', 'ranch', 'game']) require(path.join(ROOT, 'js', f + '.js'));
 const G = globalThis.G;
 let fails = 0;
 const ok = (name, cond, detail) => { console.log(`${cond ? '✔' : '✘'} ${name}${detail ? ' — ' + detail : ''}`); if (!cond) fails++; };
@@ -73,6 +73,14 @@ ok('V8 도감 복원', G.collect.has('bug', 3, 0) && G.collect.has('fish', 5, 1)
 const ex = G.save.exportString(); const pi = G.save.parseImport(ex);
 ok('V8 내보내기 문자열 검증', pi.ok && ex.startsWith('MG1:'));
 ok('V8 손상된 내보내기 거부', !G.save.parseImport(ex.slice(0, -3) + 'zzz').ok);
+ok('V8 상태 지문 안정성', G.save.fingerprint() === G.save.fingerprint() && G.save.fingerprint(pi.env) === G.save.fingerprint(JSON.parse(JSON.stringify(pi.env))));
+{ // 시각(time.lastMs)만 바뀌면 지문은 그대로, 돈이 바뀌면 달라진다 (가짜 충돌 방지)
+  const e1 = JSON.parse(JSON.stringify(pi.env)), e2 = JSON.parse(JSON.stringify(pi.env)), e3 = JSON.parse(JSON.stringify(pi.env));
+  e2.s.time.d.lastMs = (e2.s.time.d.lastMs || 0) + 123456; e3.s.econ.d.money += 1;
+  ok('V8 지문: 시각만 바뀌면 같음', G.save.fingerprint(e1) === G.save.fingerprint(e2));
+  ok('V8 지문: 진행이 바뀌면 다름', G.save.fingerprint(e1) !== G.save.fingerprint(e3));
+}
+ok('V8 세이브 요약', pi.summary.money === snapMoney && pi.summary.name !== undefined && pi.summary.playDays !== undefined);
 // 마이그레이션 v1 → v2 (player.ring 추가)
 const env = JSON.parse(JSON.stringify(pi.env));
 env.s.player = { v: 1, d: { x: 100, y: 200, dir: 0, look: {}, name: '옛날', town: '마을', tools: ['hand', 'net'], tool: 'net' } };
@@ -85,6 +93,17 @@ G.save.importEnv(env2);
 ok('V8 모르는 섹션 보존', !!G.save.snapshot().future_thing);
 // 크기 예산
 ok('V10 세이브 크기 ≤ 160KB', G.save.size() <= G.save.LIMIT, (G.save.size() / 1024).toFixed(1) + 'KB');
+
+// 클라우드 충돌 정책: 한쪽만 바뀌면 자동, 양쪽이 바뀌면 반드시 선택.
+const dc = G.cloud._decide, cm = { uid: 'u1', baseFingerprint: 'base', baseRevision: 2 };
+ok('클라우드 첫 연결은 로컬 업로드', dc('local', true, null, {}, 'u1') === 'upload');
+ok('클라우드 새 기기는 서버 복원', dc('blank', false, { fingerprint: 'server' }, {}, 'u1') === 'remote');
+ok('클라우드 서버만 변경 시 복원', dc('base', true, { fingerprint: 'server' }, cm, 'u1') === 'remote');
+ok('클라우드 로컬만 변경 시 업로드', dc('local', true, { fingerprint: 'base' }, cm, 'u1') === 'upload');
+ok('클라우드 양쪽 변경 시 충돌', dc('local', true, { fingerprint: 'server' }, cm, 'u1') === 'conflict');
+ok('계정 아이디 소문자 정규화', G.cloud._accountId('  Mongle_12 ') === 'mongle_12');
+ok('계정 아이디 형식 검증', G.cloud._validAccountId('mongle_12') && !G.cloud._validAccountId('몽글12') && !G.cloud._validAccountId('abc'));
+ok('실제 이메일을 만들지 않는 내부 식별자', G.cloud._accountEmail('Mongle_12') === 'mongle_12@accounts.mongle.invalid');
 
 // 가방: 쌓기·가득 참
 G.inv.slots.length = 0;
