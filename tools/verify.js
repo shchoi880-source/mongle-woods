@@ -111,8 +111,13 @@ ok('실제 이메일을 만들지 않는 내부 식별자', G.cloud._accountEmai
 {
   const gameSource = fs.readFileSync(path.join(ROOT, 'js', 'game.js'), 'utf8');
   const cloudSource = fs.readFileSync(path.join(ROOT, 'js', 'cloud.js'), 'utf8');
+  const inputSource = fs.readFileSync(path.join(ROOT, 'js', 'input.js'), 'utf8');
+  const uiSource = fs.readFileSync(path.join(ROOT, 'js', 'ui.js'), 'utf8');
   ok('폰 첫 화면 로그인 뒤 게임 진행', gameSource.includes("G.ui.account('login', () => go())"));
   ok('Google 로그인은 모바일 호환 팝업 방식', cloudSource.includes('signInWithPopup') && !cloudSource.includes('signInWithRedirect'));
+  ok('PC 행동 단축키는 Space 하나', inputSource.includes("ACTION_KEYS = new Set(['Space'])"));
+  ok('PC 도구 단축키는 Q 하나', inputSource.includes("TOOL_KEYS = new Set(['KeyQ'])"));
+  ok('PC 우측 버튼에 단축키 표시', uiSource.includes("$('kbd', 'hud-key', 'Q')") && uiSource.includes("$('kbd', 'hud-key', 'Space')"));
 }
 {
   const prevUI = G.ui, prevAudio = G.audio;

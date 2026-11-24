@@ -32,6 +32,8 @@ input, select, textarea { font: inherit; color: var(--ink); }
 .btn-tool { width: 60px; height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; }
 .btn-tool span { font-size: 22px; } .btn-tool small { font-size: 10px; font-weight: 700; margin-top: 2px; color: var(--ink2); }
 .btn-act { width: 86px; height: 86px; border-radius: 50%; background: linear-gradient(#ffe7a8, #ffd24d); box-shadow: 0 5px 0 #d9a42a, 0 8px 18px rgba(91,70,54,.2); display: flex; flex-direction: column; align-items: center; justify-content: center; touch-action: none; }
+.hud-control { display: flex; flex-direction: column; align-items: center; gap: 7px; }
+.hud-key { display: none; min-width: 30px; padding: 3px 8px; border: 2px solid rgba(91,70,54,.22); border-bottom-width: 4px; border-radius: 8px; background: rgba(255,250,241,.94); color: var(--ink2); font: 700 11px/1 "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", system-ui, sans-serif; text-align: center; box-shadow: 0 2px 6px rgba(91,70,54,.12); }
 .act-ico { font-size: 30px; line-height: 1; } .act-lbl { font-size: 12px; font-weight: 800; margin-top: 3px; min-height: 14px; }
 .pressed { animation: press .16s ease-out; }
 @keyframes press { 0% { transform: translateY(2px) scale(.96); } 60% { transform: translateY(-1px) scale(1.05); } 100% { transform: none; } }
@@ -318,6 +320,8 @@ input, select, textarea { font: inherit; color: var(--ink); }
 
 /* PC(마우스): 채팅은 화면 왼쪽 아래 (오너 요청: 위는 보기 힘들다). 폰은 키보드 때문에 위 그대로 */
 @media (hover: hover) and (pointer: fine) {
+  .hud-key { display: block; }
+  .hud-target { bottom: calc(138px + var(--safe-b)); }
   .chatlog { top: auto; bottom: calc(18px + var(--safe-b)); max-width: 420px; }
   .chatbar { top: auto; bottom: calc(14px + var(--safe-b)); left: calc(10px + var(--safe-l)); transform: none; width: min(46vw, 440px); }
   .chatbar .chatfull { order: 1; max-height: 34vh; }
