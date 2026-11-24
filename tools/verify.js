@@ -13,10 +13,13 @@ let fails = 0;
 const ok = (name, cond, detail) => { console.log(`${cond ? '✔' : '✘'} ${name}${detail ? ' — ' + detail : ''}`); if (!cond) fails++; };
 
 // V1 데이터 무결성: 필수 필드·ix 중복은 G.data.add가 이미 검사. 여기선 수량과 참조.
-ok('V1 곤충 10종 이상', G.data.all('bugs').length >= 10, String(G.data.all('bugs').length));
-ok('V1 물고기 10종', G.data.all('fish').length === 10, String(G.data.all('fish').length));
-ok('V1 화석 4종', G.data.all('fossils').length === 4);
-ok('V1 조개 6종', G.data.all('shells').length === 6);
+ok('V1 곤충 40종 이상', G.data.all('bugs').length >= 40, String(G.data.all('bugs').length));
+ok('V1 물고기 30종 이상', G.data.all('fish').length >= 30, String(G.data.all('fish').length));
+ok('V1 화석 12종', G.data.all('fossils').length === 12);
+ok('V1 바다생물 10종', G.data.all('sea').length === 10);
+ok('V1 조개 10종', G.data.all('shells').length === 10);
+for (const t of ['bugs', 'fish', 'fossils', 'shells', 'sea']) { const ix = G.data.all(t).map((r) => r.ix).sort((a, b) => a - b); ok(`V1 ${t} 번호 빈칸 없음`, ix.every((v, i) => v === i)); }
+for (const t of ['bugs', 'fish', 'fossils', 'shells', 'sea']) for (const r of G.data.all(t)) if (!G.items.get((t === 'bugs' ? 'bug' : t === 'fossils' ? 'fossil' : t === 'shells' ? 'shell' : t) + ':' + r.id)) ok(`V1 ${r.id} 아이템`, false);
 for (const t of ['bugs', 'fish']) for (const r of G.data.all(t)) {
   if (!(r.size[0] < r.size[1])) ok(`V1 ${r.id} 크기 범위`, false);
   if (!r.months.every((m) => m >= 1 && m <= 12)) ok(`V1 ${r.id} 월`, false);
@@ -135,7 +138,7 @@ ok('시간 05:00 하루 경계', d2 === d1 + 1);
 ok('날씨 결정적', JSON.stringify(G.weather.at(20000, 10)) === JSON.stringify(G.weather.at(20000, 10)));
 
 // 이름 충돌 검사(r2-재미 1-5): '콩'·'몽' 첫 음절은 콩알·몽실 전용
-const names = [...G.data.all('bugs'), ...G.data.all('fish'), ...G.data.all('fossils'), ...G.data.all('shells')].map((r) => r.name);
+const names = [...G.data.all('bugs'), ...G.data.all('fish'), ...G.data.all('fossils'), ...G.data.all('shells'), ...G.data.all('sea')].map((r) => r.name);
 const clash = names.filter((n) => /^(콩|몽)/.test(n));
 ok('이름 금칙(콩·몽 첫 음절)', clash.length === 0, clash.join(','));
 const dup = names.filter((n, i) => names.indexOf(n) !== i);

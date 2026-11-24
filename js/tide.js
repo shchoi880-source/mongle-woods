@@ -1,4 +1,4 @@
-// 조수 웅덩이 + 바다생물 4종 (오너 결정 D7의 「조수 웅덩이 4」). 썰물(조수 < 0.42)일 때 해변에 웅덩이가 드러난다
+// 조수 웅덩이 + 바다생물 10종 (오너 결정 D7의 「조수 웅덩이 4」). 썰물(조수 < 0.42)일 때 해변에 웅덩이가 드러난다
 (function (G) {
   'use strict';
   const u = G.u, TILE = G.C.TILE, D = G.data;
@@ -9,6 +9,13 @@
     { id: 'starfish', ix: 1, name: '불가사리', months: ALL, tier: 1, val: 260, size: [8, 15], w: 8, col: ['#ffa94d', '#ffd8a8'] },
     { id: 'anemone', ix: 2, name: '말미잘', months: [4, 5, 6, 7, 8, 9, 10, 11], tier: 2, val: 500, size: [4, 9], w: 5, col: ['#ff8fb1', '#ffd1e0'] },
     { id: 'baby_octopus', ix: 3, name: '꼬마 문어', months: ALL, tier: 3, val: 1500, size: [10, 18], w: 2, col: ['#c97aa8', '#f3c6de'] },
+    // 2차 확장 (2026-11)
+    { id: 'shore_crab', ix: 4, name: '방게', months: ALL, tier: 1, val: 180, size: [2, 4], w: 10, col: ['#8a6a5a', '#c9a088'] },
+    { id: 'shrimp', ix: 5, name: '꼬마새우', months: [3, 4, 5, 6, 7, 8, 9, 10], tier: 1, val: 220, size: [2, 5], w: 9, col: ['#ffb8a8', '#ff8a7a'] },
+    { id: 'sea_urchin', ix: 6, name: '보라성게', months: [10, 11, 12, 1, 2, 3, 4], tier: 2, val: 450, size: [4, 8], w: 6, col: ['#7a5aa8', '#c9b3ff'] },
+    { id: 'sea_cucumber', ix: 7, name: '해삼', months: [11, 12, 1, 2, 3], tier: 2, val: 600, size: [10, 20], w: 5, col: ['#8a5a4a', '#c98a6a'] },
+    { id: 'sea_slug', ix: 8, name: '갯민숭달팽이', months: [4, 5, 6, 7, 8, 9], tier: 3, val: 1200, size: [2, 6], w: 3, col: ['#5a8aff', '#ffd24d'] },
+    { id: 'seahorse', ix: 9, name: '해마', months: [5, 6, 7, 8, 9, 10], tier: 4, val: 2800, size: [5, 12], w: 1.2, col: ['#ffb04a', '#ffe0a0'] },
   ]);
   D.add('items', D.all('sea').map((s) => ({ id: 'sea:' + s.id, name: s.name, cat: 'sea', val: s.val, stack: 1, ref: s })));
   G.TRENDS.push({ id: 'sea', name: '바다생물', test: (it) => it.cat === 'sea' });
@@ -84,6 +91,12 @@
     if (key === 'hermit_crab') { P.blob(g, 3, -3, 9, 8, c[1], A_LINE, 1.4); g.strokeStyle = '#d9a87a'; g.lineWidth = 1.4; g.beginPath(); g.arc(3, -3, 4, 0, Math.PI * 1.5); g.stroke(); P.blob(g, -6, 3, 5, 4, c[0], A_LINE, 1.3); P.blob(g, -8, 0, 1, 1.4, '#2d2430'); P.blob(g, -5, 0, 1, 1.4, '#2d2430'); }
     else if (key === 'starfish') { g.fillStyle = c[0]; g.strokeStyle = A_LINE; g.lineWidth = 1.4; g.beginPath(); for (let i = 0; i < 10; i++) { const r = i % 2 ? 5 : 12, a = i * Math.PI / 5 - Math.PI / 2; g.lineTo(Math.cos(a) * r, Math.sin(a) * r + 1); } g.closePath(); g.fill(); g.stroke(); P.blob(g, 0, 1, 2, 2, c[1]); }
     else if (key === 'anemone') { P.rrect(g, -6, 2, 12, 8, 3, c[1], A_LINE, 1.3); for (let i = 0; i < 7; i++) { g.strokeStyle = c[0]; g.lineWidth = 2.6; g.lineCap = 'round'; g.beginPath(); g.moveTo(-6 + i * 2, 2); g.quadraticCurveTo(-8 + i * 2.6, -6, -9 + i * 3, -9); g.stroke(); } }
+    else if (key === 'shore_crab') { g.strokeStyle = c[0]; g.lineWidth = 2; g.beginPath(); for (const s2 of [-1, 1]) for (let k = 0; k < 3; k++) { g.moveTo(s2 * 6, 2 + k * 2); g.lineTo(s2 * 12, 4 + k * 3); } g.stroke(); for (const s2 of [-1, 1]) P.blob(g, s2 * 9, -5, 3, 2.6, c[1], A_LINE, 1.1); P.blob(g, 0, 1, 8.5, 6, c[0], A_LINE, 1.4); P.blob(g, -2.5, -4.5, 1, 1.5, '#2d2430'); P.blob(g, 2.5, -4.5, 1, 1.5, '#2d2430'); }
+    else if (key === 'shrimp') { g.strokeStyle = c[1]; g.lineWidth = 1; g.beginPath(); g.moveTo(9, -4); g.quadraticCurveTo(14, -12, 6, -13); g.moveTo(9, -3); g.quadraticCurveTo(16, -8, 13, -13); g.stroke(); for (let k = 0; k < 5; k++) P.blob(g, 7 - k * 3.2, -2 + k * 1.6, 4 - k * 0.4, 3.4 - k * 0.3, c[0], A_LINE, 1.1); g.fillStyle = c[1]; g.beginPath(); g.moveTo(-8, 5); g.lineTo(-13, 3); g.lineTo(-12, 9); g.closePath(); g.fill(); P.blob(g, 8, -4, 1, 1, '#2d2430'); }
+    else if (key === 'sea_urchin') { g.strokeStyle = c[0]; g.lineWidth = 1.4; g.beginPath(); for (let k = 0; k < 18; k++) { const a = k / 18 * Math.PI * 2; g.moveTo(Math.cos(a) * 6, Math.sin(a) * 6); g.lineTo(Math.cos(a) * 13, Math.sin(a) * 13); } g.stroke(); P.blob(g, 0, 0, 8, 8, c[1], A_LINE, 1.3); }
+    else if (key === 'sea_cucumber') { P.rrect(g, -13, -5, 26, 11, 5.5, c[0], A_LINE, 1.4); for (let k = 0; k < 6; k++) P.blob(g, -9 + k * 3.6, -4.5, 1.2, 1.6, c[1]); }
+    else if (key === 'sea_slug') { P.blob(g, 0, 2, 12, 5, c[0], A_LINE, 1.4); P.blob(g, 0, 1, 8, 2, c[1]); for (const x of [8, 10.5]) { g.strokeStyle = c[1]; g.lineWidth = 1.6; g.beginPath(); g.moveTo(x, -2); g.lineTo(x + 1, -7); g.stroke(); } for (let k = 0; k < 4; k++) P.blob(g, -9 + k * 1.6, -3 - k * 0.6, 1.4, 2.4, c[1], A_LINE, 0.8); }
+    else if (key === 'seahorse') { P.blob(g, 1, -2, 5, 8, c[0], A_LINE, 1.4); P.blob(g, 3, -10, 4.5, 3.5, c[0], A_LINE, 1.3); P.rrect(g, 6, -11, 6, 2.6, 1.3, c[0], A_LINE, 1.1); g.strokeStyle = c[0]; g.lineWidth = 3; g.lineCap = 'round'; g.beginPath(); g.moveTo(-1, 5); g.quadraticCurveTo(-4, 13, 2, 12); g.stroke(); P.blob(g, 3, 0, 2.6, 4.5, c[1]); P.blob(g, 3.5, -11, 1, 1, '#2d2430'); }
     else { P.blob(g, 0, -4, 9, 8, c[0], A_LINE, 1.4); for (let i = -3; i <= 3; i++) { g.strokeStyle = c[0]; g.lineWidth = 2.6; g.lineCap = 'round'; g.beginPath(); g.moveTo(i * 2, 3); g.quadraticCurveTo(i * 3, 8, i * 3.4 + 1, 11); g.stroke(); } P.blob(g, -3, -4, 1.6, 2, '#2d2430'); P.blob(g, 3, -4, 1.6, 2, '#2d2430'); P.blob(g, 0, -9, 3, 1.4, c[1]); }
     g.restore();
   };

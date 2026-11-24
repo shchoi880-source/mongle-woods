@@ -20,6 +20,23 @@
     { id: 'cushion', ix: 10, name: '방석', w: 1, h: 1, val: 120, col: true, layer: 'rug' },
     { id: 'clock', ix: 11, name: '탁상시계', w: 1, h: 1, val: 450 },
     { id: 'workbench', ix: 12, name: '작업대', w: 2, h: 1, val: 0, fixed: true, hidden: true },
+    // 2차 확장 (2026-11) — ix는 이어서만
+    { id: 'tv', ix: 13, name: '동글 텔레비전', w: 1, h: 1, val: 1400, col: true },
+    { id: 'piano', ix: 14, name: '꼬마 피아노', w: 2, h: 1, val: 3800 },
+    { id: 'fridge', ix: 15, name: '말랑 냉장고', w: 1, h: 1, val: 1600, col: true },
+    { id: 'stove', ix: 16, name: '보글 화덕', w: 1, h: 1, val: 1800 },
+    { id: 'aquarium', ix: 17, name: '물방울 어항', w: 2, h: 1, val: 2600 },
+    { id: 'wardrobe', ix: 18, name: '구름 옷장', w: 2, h: 1, val: 2200, col: true },
+    { id: 'bench', ix: 19, name: '정원 벤치', w: 2, h: 1, val: 900 },
+    { id: 'floorlamp', ix: 20, name: '꽃 스탠드', w: 1, h: 1, val: 950, col: true, light: true },
+    { id: 'teddy', ix: 21, name: '곰돌이 인형', w: 1, h: 1, val: 700, col: true },
+    { id: 'tree_pot', ix: 22, name: '큰 화분 나무', w: 1, h: 1, val: 1100 },
+    { id: 'desk', ix: 23, name: '공부 책상', w: 2, h: 1, val: 1300 },
+    { id: 'fireplace', ix: 24, name: '벽난로', w: 2, h: 1, val: 6000, light: true },
+    { id: 'starlamp', ix: 25, name: '별빛 조명', w: 1, h: 1, val: 2400, col: true, light: true },
+    { id: 'bathtub', ix: 26, name: '거품 욕조', w: 2, h: 1, val: 4200, col: true },
+    { id: 'cake', ix: 27, name: '케이크 장식', w: 1, h: 1, val: 800 },
+    { id: 'globe', ix: 28, name: '지구본', w: 1, h: 1, val: 1500 },
   ];
   G.data.table('furn', { key: 'id', ix: true, required: ['id', 'ix', 'name', 'w', 'h', 'val'] });
   G.data.add('furn', FORMS);
@@ -131,6 +148,22 @@
         P.rrect(g, 34, -14, 20, 7, 2, '#c9d3da', L, 1); g.fillStyle = '#a7724a'; g.fillRect(50, -15, 8, 9);
         break;
       }
+      case 'tv': P.rrect(g, 9, 22, 14, 6, 2, woodD, L, 1.2); P.rrect(g, 3, -2, 26, 24, 8, c, L, 1.4); P.rrect(g, 7, 2, 18, 15, 5, '#3f4a5a', L, 1.1); P.blob(g, 12, 6, 4, 1.6, 'rgba(255,255,255,0.4)'); g.strokeStyle = L; g.lineWidth = 1.2; g.beginPath(); g.moveTo(12, -2); g.lineTo(8, -9); g.moveTo(20, -2); g.lineTo(24, -9); g.stroke(); break;
+      case 'piano': P.rrect(g, 2, -20, W - 4, 40, 5, '#3a2f3f', L, 1.5); P.rrect(g, 4, 6, W - 8, 9, 2, '#ffffff', L, 1.1); g.fillStyle = '#2d2430'; for (let k = 0; k < 9; k++) if (k % 7 !== 2 && k % 7 !== 6) g.fillRect(9 + k * 6, 6, 3, 5); g.fillStyle = woodD; g.fillRect(6, 20, 4, 8); g.fillRect(W - 10, 20, 4, 8); P.rrect(g, 20, -14, 24, 12, 2, '#fff8e6', L, 1); break;
+      case 'fridge': P.rrect(g, 5, -22, 22, 50, 6, c, L, 1.4); g.strokeStyle = L; g.lineWidth = 1.2; g.beginPath(); g.moveTo(5, -2); g.lineTo(27, -2); g.stroke(); P.rrect(g, 21, -16, 3, 9, 1.5, '#ffffff', L, 0.8); P.rrect(g, 21, 3, 3, 11, 1.5, '#ffffff', L, 0.8); P.blob(g, 12, -14, 3, 3, '#ff8a7a'); break;
+      case 'stove': P.rrect(g, 3, -4, 26, 32, 6, '#c9a888', L, 1.4); P.rrect(g, 8, 10, 16, 12, [8, 8, 2, 2], '#3a2f3f', L, 1.1); P.blob(g, 16, 18, 4, 3, '#ff9a3a'); P.blob(g, 16, 18, 2, 1.6, '#ffe28a'); P.blob(g, 16, -6, 9, 4, '#9aa5b0', L, 1.2); P.rrect(g, 14, -12, 4, 6, 2, '#9aa5b0', L, 1); break;
+      case 'aquarium': { P.rrect(g, 4, 14, W - 8, 14, 3, woodD, L, 1.3); P.rrect(g, 4, -12, W - 8, 27, 5, 'rgba(143,211,255,0.75)', L, 1.4); P.rrect(g, 6, 6, W - 12, 8, 3, '#e8d2a0'); const tt = G.time.now() / 60000 / G.time.SPEED * 6; for (const [k, col] of [[0, '#ff9a3a'], [1, '#ffd24d']]) { const fx = 14 + ((tt * 8 + k * 20) % (W - 28)); P.blob(g, fx, -2 + k * 6, 3.4, 2.2, col, L, 0.8); } for (let k = 0; k < 3; k++) P.blob(g, 10 + k * 3, -6 - ((tt * 10 + k * 4) % 8), 1, 1, 'rgba(255,255,255,0.8)'); P.blob(g, W - 14, 4, 2, 6, '#7cc35a'); break; }
+      case 'wardrobe': P.rrect(g, 3, -22, W - 6, 50, 6, c, L, 1.5); g.strokeStyle = L; g.lineWidth = 1.2; g.beginPath(); g.moveTo(W / 2, -18); g.lineTo(W / 2, 24); g.stroke(); P.blob(g, W / 2 - 4, 2, 1.6, 1.6, '#ffd24d', L, 0.8); P.blob(g, W / 2 + 4, 2, 1.6, 1.6, '#ffd24d', L, 0.8); for (const x of [12, W - 12]) P.blob(g, x, -14, 5, 3, 'rgba(255,255,255,0.6)'); break;
+      case 'bench': g.fillStyle = woodD; for (const x of [8, W - 8]) g.fillRect(x - 2, 14, 4, 14); P.rrect(g, 3, 10, W - 6, 8, 3, wood, L, 1.3); P.rrect(g, 3, -6, W - 6, 7, 3, woodL, L, 1.2); P.rrect(g, 3, 3, W - 6, 6, 3, woodL, L, 1.2); break;
+      case 'floorlamp': P.blob(g, 16, 27, 7, 2.6, woodD, L, 1.1); g.strokeStyle = woodD; g.lineWidth = 2.4; g.beginPath(); g.moveTo(16, 26); g.lineTo(16, -6); g.stroke(); for (let k = 0; k < 5; k++) { const a = k / 5 * Math.PI * 2; P.blob(g, 16 + Math.cos(a) * 6, -12 + Math.sin(a) * 6, 4.5, 4.5, c, L, 1.1); } P.blob(g, 16, -12, 4, 4, '#ffe28a', L, 1); break;
+      case 'teddy': P.blob(g, 16, 20, 9, 8, c, L, 1.4); for (const x of [9, 23]) P.blob(g, x, 25, 3.4, 3, c, L, 1.1); P.blob(g, 16, 6, 8, 7.5, c, L, 1.4); for (const x of [9, 23]) P.blob(g, x, 0, 3, 3, c, L, 1.1); P.blob(g, 16, 9, 3, 2.2, '#fff3e0'); P.blob(g, 16, 8, 1.2, 0.9, L); P.blob(g, 13, 5, 0.9, 1.1, L); P.blob(g, 19, 5, 0.9, 1.1, L); P.blob(g, 16, 15, 3, 1.6, '#ff8fb1', L, 0.8); break;
+      case 'tree_pot': P.rrect(g, 8, 16, 16, 12, [2, 2, 6, 6], '#c9d3da', L, 1.3); g.strokeStyle = woodD; g.lineWidth = 3; g.beginPath(); g.moveTo(16, 17); g.lineTo(16, 0); g.stroke(); for (const [x, y, r] of [[16, -12, 11], [7, -4, 7], [25, -4, 7], [16, -22, 7]]) P.blob(g, x, y, r, r * 0.85, '#5aa548', L, 1.2); P.blob(g, 12, -16, 3, 2, '#8fd36a'); break;
+      case 'desk': P.rrect(g, 2, -2, W - 4, 10, 3, wood, L, 1.4); g.fillStyle = woodD; g.fillRect(6, 8, 4, 20); P.rrect(g, W - 24, 8, 20, 20, 2, woodD, L, 1.2); P.blob(g, W - 14, 18, 1.6, 1.6, '#ffd24d'); P.rrect(g, 10, -10, 12, 8, 1, '#ffffff', L, 1); P.rrect(g, 30, -12, 4, 10, 1, '#ff8a7a'); P.rrect(g, 35, -10, 4, 8, 1, '#8fd3ff'); break;
+      case 'fireplace': { P.rrect(g, 2, -20, W - 4, 48, 5, '#d0b8a8', L, 1.5); P.rrect(g, 0, -24, W, 7, 3, woodD, L, 1.3); P.rrect(g, 14, -4, W - 28, 28, [12, 12, 1, 1], '#3a2f3f', L, 1.3); const fl = Math.sin(G.time.now() / 400 / G.time.SPEED * 60) * 1.5; P.blob(g, W / 2, 16, 8, 6 + fl, '#ff9a3a'); P.blob(g, W / 2, 17, 4, 3.6 + fl * 0.5, '#ffe28a'); g.fillStyle = woodD; g.fillRect(W / 2 - 10, 21, 20, 3); break; }
+      case 'starlamp': { P.blob(g, 16, 26, 6, 2.4, woodD, L, 1); g.strokeStyle = L; g.lineWidth = 1.4; g.beginPath(); g.moveTo(16, 25); g.lineTo(16, 10); g.stroke(); g.fillStyle = c; g.beginPath(); for (let k = 0; k < 10; k++) { const r = k % 2 ? 5 : 11, a = -Math.PI / 2 + k * Math.PI / 5; g.lineTo(16 + Math.cos(a) * r, 2 + Math.sin(a) * r); } g.closePath(); g.fill(); g.stroke(); P.blob(g, 14, 0, 2.2, 1.4, 'rgba(255,255,255,0.7)'); break; }
+      case 'bathtub': P.rrect(g, 2, 0, W - 4, 26, 12, '#ffffff', L, 1.5); P.rrect(g, 6, 2, W - 12, 8, 4, c); for (let k = 0; k < 6; k++) P.blob(g, 10 + k * 9, 1 - (k % 2) * 3, 5, 4.5, '#ffffff', L, 0.9); g.fillStyle = '#c9d3da'; g.fillRect(8, 24, 4, 4); g.fillRect(W - 12, 24, 4, 4); P.rrect(g, W - 12, -12, 3, 14, 1.5, '#c9d3da', L, 1); break;
+      case 'cake': P.rrect(g, 5, 16, 22, 10, 3, '#ffffff', L, 1.2); P.rrect(g, 8, 4, 16, 14, 4, '#ffd1dc', L, 1.3); P.rrect(g, 8, 4, 16, 4, 2, '#ffffff'); for (const x of [11, 16, 21]) { P.rrect(g, x - 1, -3, 2, 7, 1, '#8fd3ff'); P.blob(g, x, -5, 1.4, 2, '#ffd24d'); } P.blob(g, 16, 11, 2, 2, '#ff5a6a'); break;
+      case 'globe': P.blob(g, 16, 27, 7, 2.4, woodD, L, 1.1); g.strokeStyle = woodD; g.lineWidth = 2; g.beginPath(); g.moveTo(16, 26); g.lineTo(16, 18); g.arc(16, 4, 13, Math.PI * 0.6, Math.PI * 1.4, false); g.stroke(); P.blob(g, 16, 4, 11, 11, '#8fd3ff', L, 1.3); P.blob(g, 12, 0, 5, 4, '#7cc35a'); P.blob(g, 20, 8, 4, 3, '#7cc35a'); P.blob(g, 18, -4, 2.5, 2, '#7cc35a'); break;
       default: P.rrect(g, 4, 4, W - 8, Hh - 8, 4, '#ddd', L);
     }
   }
@@ -275,9 +308,10 @@
     if (stage === 0) { ctx.moveTo(-8, wallH); ctx.lineTo(-8, 10); ctx.quadraticCurveTo(RW / 2, -40, RW + 8, 10); ctx.lineTo(RW + 8, wallH); }
     else { ctx.moveTo(-8, wallH); ctx.lineTo(-8, -6); ctx.lineTo(RW + 8, -6); ctx.lineTo(RW + 8, wallH); }
     ctx.closePath();
-    ctx.fillStyle = stage === 0 ? '#ffd08a' : stage === 1 ? '#d9a877' : '#ffe6ee'; ctx.fill(); ctx.clip();
+    ctx.fillStyle = stage === 0 ? '#ffd08a' : stage === 1 ? '#d9a877' : stage === 3 ? '#fff0d8' : stage === 4 ? '#f3ecff' : '#ffe6ee'; ctx.fill(); ctx.clip();
     if (stage === 0) for (let k = 0; k < 20; k++) { ctx.fillStyle = '#ffb05a'; ctx.fillRect(k * 22 - 4, -50, 10, wallH + 60); }
     else if (stage === 1) for (let y = -6; y < wallH; y += 12) { ctx.fillStyle = (y / 12) % 2 ? '#c99868' : '#e2b88a'; ctx.fillRect(-8, y, RW + 16, 11); P.blob(ctx, -2, y + 5, 4, 5, '#b8875a'); P.blob(ctx, RW + 2, y + 5, 4, 5, '#b8875a'); }
+    else if (stage >= 3) { const c = stage === 3 ? '#f0c8a8' : '#d8c8ff'; for (let x = -8; x < RW + 16; x += 20) { ctx.fillStyle = c; ctx.fillRect(x, -6, 8, wallH); } ctx.fillStyle = stage === 3 ? '#c98e5a' : '#a88ad8'; ctx.fillRect(-8, wallH - 14, RW + 16, 14); }
     else { for (let y = 0; y < wallH; y += 16) for (let x = (y / 16) % 2 * 16; x < RW + 16; x += 32) P.blob(ctx, x, y + 6, 3, 3, '#ffc2d6'); ctx.fillStyle = '#e8c494'; ctx.fillRect(-8, wallH - 14, RW + 16, 14); }
     if (stage > 0) { P.rrect(ctx, RW / 2 - 26, 4, 52, 30, 6, '#bfe6f5', L, 1.6); ctx.fillStyle = L; ctx.fillRect(RW / 2 - 1, 4, 2, 30); ctx.fillRect(RW / 2 - 26, 18, 52, 2); }
     ctx.fillStyle = 'rgba(91,70,54,0.12)'; ctx.fillRect(-8, wallH - 10, RW + 16, 10);

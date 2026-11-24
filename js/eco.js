@@ -43,7 +43,7 @@
     if (wx.type === 'rain' || wx.type === 'snow') cands = cands.filter((sp) => sp.loc !== 'air' && sp.loc !== 'flower');
     if (!cands.length) return;
     const dream = G.mail ? G.mail.dreamSpecies() : '';
-    const sp = u.pickW(cands.map((s) => ({ s, w: TIER_W[s.tier] * (dream === 'bug:' + s.id ? 6 : 1) })), R()).s;
+    const sp = u.pickW(cands.map((s) => ({ s, w: TIER_W[s.tier] * (s.rare || 1) * (dream === 'bug:' + s.id ? 6 : 1) })), R()).s;
     const spot = findSpot(sp.loc, p.x, p.y, R); if (!spot) return;
     const [tx, ty, alt, obj] = spot;
     const v = G.rollVariant(R(), { night: G.time.isNight(), wet: wx.type !== 'clear' && wx.type !== 'cloudy', golden: G.lantern && G.lantern.golden() });

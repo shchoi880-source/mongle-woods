@@ -532,7 +532,7 @@
         const sp = A.building(G.museum.isOpen() ? 'museum' : 'museum_closed', A.season, night);
         R.push({ sy: foot - 2, draw: (c) => c.drawImage(sp, bx - 16, by - 44, 160, 140) });
       } else if (k === 'post' || k === 'tent' || k === 'house') {
-        const sp = A.building(k === 'tent' ? ['tent', 'cabin', 'smallhouse'][G.nest.st.stage] || 'tent' : k, A.season, night);
+        const sp = A.building(k === 'tent' ? ['tent', 'cabin', 'smallhouse', 'bighouse', 'dreamhouse'][G.nest.st.stage] || 'tent' : k, A.season, night);
         R.push({ sy: foot - (k === 'stall' ? 30 : 2), draw: (c) => c.drawImage(sp, bx - 16, by - 44, 160, 140) });
       } else if (k === 'lantern') {
         const sp = A.prop(o.n <= G.lantern.count() ? 'lantern_lit' : 'lantern', A.season, night);
