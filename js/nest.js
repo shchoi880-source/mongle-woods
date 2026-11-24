@@ -146,7 +146,7 @@
             const can = G.craft.can(r);
             const owned = r.out.startsWith('tool:') && G.player.hasTool(r.out.slice(5));
             const row = document.createElement('div'); row.className = 'recipe' + (can ? ' can' : '');
-            const ico = r.out.startsWith('tool:') ? `<span class="bi">${G.TOOLS[r.out.slice(5)].icon}</span>` : `<img src="${G.art.iconURL(r.out + '#' + c, 64)}" alt="">`;
+            const ico = r.out.startsWith('tool:') ? `<img src="${G.art.iconURL(r.out, 64)}" alt="">` : `<img src="${G.art.iconURL(r.out + '#' + c, 64)}" alt="">`;
             const need = r.need.map(([id, n]) => { const have = G.inv.count(id); return `<span class="${have >= n ? 'ok' : 'no'}">${G.items.get(id).name} ${have}/${n}</span>`; }).join(' ');
             row.innerHTML = `${ico}<div class="rinfo"><b>${G.craft.name(r)}</b><div class="small">${need}</div></div>`;
             if (f && f.col) {

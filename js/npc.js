@@ -254,7 +254,7 @@
           G.audio.sfx('catch');
           await G.ui.say(L('give').map((l) => say(l.text)));
           G.player.setTool(v.tool);
-          G.ui.toast(G.input.isTouch() ? '오른쪽 아래 도구 버튼으로 도구를 바꿔요.' : 'Q 키나 도구 버튼으로 도구를 바꿔요.', { icon: G.TOOLS[v.tool].icon, ms: 3000 });
+          G.ui.toast(G.input.isTouch() ? '오른쪽 아래 도구 버튼으로 도구를 바꿔요.' : 'Q 키나 도구 버튼으로 도구를 바꿔요.', { icon: G.ui.toolIcon(v.tool), ms: 3000 });
         }
         N.addFs(id, 2, 'meet'); N.pop(n, 'heart'); G.emit('npc:met', { id });
         G.save.mark('talk');

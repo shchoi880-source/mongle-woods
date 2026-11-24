@@ -122,23 +122,23 @@
     const tp = G.tide.near(f.x, f.y, 26) || G.tide.near(pl.x, pl.y, 22);
     if (tp) return { kind: 'pool', ref: tp, icon: '🦀', label: '잡기', name: '조수 웅덩이' };
     // 3) 도구별
-    if (pl.tool === 'net') { const b = G.eco.nearest('bug', f.x, f.y, 48); return { kind: 'net', ref: b, icon: '🪲', label: '휘두르기', name: b && b.fade > 0.5 ? b.sp.name : '' }; }
+    if (pl.tool === 'net') { const b = G.eco.nearest('bug', f.x, f.y, 48); return { kind: 'net', ref: b, icon: 'tool:net', label: '휘두르기', name: b && b.fade > 0.5 ? b.sp.name : '' }; }
     if (pl.tool === 'rod') {
-      if (G.fishing.state !== 'idle') return { kind: 'rod', icon: '🎣', label: G.fishing.state === 'reel' ? '영차!' : G.fishing.state === 'bite' ? '당기기!' : '거두기' };
+      if (G.fishing.state !== 'idle') return { kind: 'rod', icon: 'tool:rod', label: G.fishing.state === 'reel' ? '영차!' : G.fishing.state === 'bite' ? '당기기!' : '거두기' };
       const water = waterAhead();
-      return { kind: 'rod', icon: '🎣', label: water ? '던지기' : '던지기', name: water ? ({ river: '강', pond: '연못', sea: '바다' })[water] : '' };
+      return { kind: 'rod', icon: 'tool:rod', label: '던지기', name: water ? ({ river: '강', pond: '연못', sea: '바다' })[water] : '' };
     }
     const ft = { x: Math.floor(f.x / TILE), y: Math.floor(f.y / TILE) };
     if (pl.tool === 'axe') {
       const o = objAhead();
-      if (o && (o.kind === 'tree' || o.kind === 'fruit' || o.kind === 'pine')) return { kind: 'chop', ref: o, icon: '🪓', label: '찍기', name: '나무' };
-      return { kind: 'swingtool', icon: '🪓', label: '휘두르기', name: '' };
+      if (o && (o.kind === 'tree' || o.kind === 'fruit' || o.kind === 'pine')) return { kind: 'chop', ref: o, icon: 'tool:axe', label: '찍기', name: '나무' };
+      return { kind: 'swingtool', icon: 'tool:axe', label: '휘두르기', name: '' };
     }
     if (pl.tool === 'shovel') {
       const ro = objAhead();
       if (ro && ro.kind === 'rock') return { kind: 'rockhit', ref: ro, icon: '🪨', label: '두드리기', name: '바위' };
       const dg = G.world.state.digs.find((d) => !G.world.isTaken(d.id) && Math.abs(d.tx * TILE + 16 - f.x) < 26 && Math.abs(d.ty * TILE + 16 - f.y) < 26);
-      return { kind: 'dig', ref: dg, icon: '⛏️', label: '파기', name: dg ? '금 간 땅' : '' };
+      return { kind: 'dig', ref: dg, icon: 'tool:shovel', label: '파기', name: dg ? '금 간 땅' : '' };
     }
     // 눈사람 (첫눈 이후 겨울)
     const sm = G.events.snowmanPos();
@@ -238,7 +238,7 @@
             if (GM.gain('fossil_raw', 1, { f: fo.id }, { msg: '수상한 화석을 파냈다! 박물관에서 감정받아요.', sfx: 'dug' })) {
               G.world.take(dg.id); G.emit('dig:found', { id: fo.id }); kongalReact('jump');
             }
-          } else { G.ui.toast('흙이 단단해요. 금 간 땅을 찾아봐요.', { icon: '⛏️', ms: 1500 }); }
+          } else { G.ui.toast('흙이 단단해요. 금 간 땅을 찾아봐요.', { icon: G.ui.toolIcon('shovel'), ms: 1500 }); }
         }, 260);
         break;
       }
@@ -536,10 +536,12 @@
         R.push({ sy: foot - (k === 'stall' ? 30 : 2), draw: (c) => c.drawImage(sp, bx - 16, by - 44, 160, 140) });
       } else if (k === 'lantern') {
         const sp = A.prop(o.n <= G.lantern.count() ? 'lantern_lit' : 'lantern', A.season, night);
-        R.push({ sy: foot - 4, draw: (c) => drawShaky(c, sp, bx + 16, foot - 4, -32, -76, o, 64, 80, 0.04) });
+        R.push({ sy: foot - 4, draw: (c) => drawShaky(c, sp, bx + 16, foot - 4, -32, -76, o, 96, 80, 0.04) });
       } else if (k === 'lamp' || k === 'bench' || k === 'mailbox' || k === 'board' || k === 'signboard') {
         const sp = A.prop(k === 'mailbox' && G.mail.unread() ? 'mailbox_full' : k, A.season, night);
-        R.push({ sy: foot - 4, draw: (c) => drawShaky(c, sp, bx + 16 + (k === 'bench' || k === 'board' ? 16 : 0), foot - 4, -32, -76, o, 64, 80, 0.04) });
+        // 그림판 왼쪽 = 부지 왼쪽 - 16u. 두 칸짜리는 흔들림 축만 가운데로
+        const pw = k === 'bench' || k === 'board' ? 2 : 1;
+        R.push({ sy: foot - 4, draw: (c) => drawShaky(c, sp, bx + pw * 16, foot - 4, -16 - pw * 16, -76, o, 96, 80, 0.04) });
       }
     }
   }

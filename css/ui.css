@@ -219,3 +219,8 @@ input, select, textarea { font: inherit; color: var(--ink); }
 .mapcv { display: block; width: 100%; height: auto; }
 .mapinfo { margin-top: 8px; } .maplegend { margin-top: 6px; line-height: 1.5; }
 .toasts { top: calc(112px + var(--safe-t)); }
+
+/* ---- 도구 그림 아이콘 ---- */
+.tool-img { width: 30px; height: 30px; display: block; } .act-img { width: 40px; height: 40px; display: block; margin: 0 auto; }
+.ti-img { width: 18px; height: 18px; vertical-align: -4px; }
+.chip .ti-img { margin-right: 2px; }

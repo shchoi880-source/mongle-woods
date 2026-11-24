@@ -49,6 +49,8 @@
   };
   function press(el) { el.classList.remove('pressed'); void el.offsetWidth; el.classList.add('pressed'); G.audio.sfx('tap'); }
   function bump(el) { el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); }
+  // 도구 아이콘 HTML (맨손만 이모지)
+  UI.toolIcon = (t, cls = 'ti-img') => t === 'hand' ? '✋' : `<img class="${cls}" src="${G.art.iconURL('tool:' + t, 64)}" alt="">`;
   UI.hud = (on) => { UI.root.classList.toggle('hud-on', !!on); };
   let lastGoal = '';
   UI.refreshGoal = () => {
@@ -67,14 +69,15 @@
     hud.money.innerHTML = `<i class="coin"></i>${G.fmt.num(G.wallet.get())}`;
     const tool = G.player ? G.player.tool : 'hand';
     if (G.house && G.house.inside) hud.tool.innerHTML = '<span>🛋️</span><small>꾸미기</small>';
-    else hud.tool.innerHTML = `<span>${G.TOOLS[tool].icon}</span><small>${G.TOOLS[tool].name}</small>`;
+    else hud.tool.innerHTML = `<span>${UI.toolIcon(tool, 'tool-img')}</span><small>${G.TOOLS[tool].name}</small>`;
   };
   // 액션 버튼 라벨 (대상 미리보기)
   let lastAct = '';
   UI.setAction = (icon, label, target) => {
     const k = icon + label + (target || '');
     if (k === lastAct) return; lastAct = k;
-    hud.act.querySelector('.act-ico').textContent = icon;
+    const ai = hud.act.querySelector('.act-ico');
+    if (icon.startsWith('tool:')) ai.innerHTML = UI.toolIcon(icon.slice(5), 'act-img'); else ai.textContent = icon;
     hud.act.querySelector('.act-lbl').textContent = label;
     hud.target.textContent = target || ''; hud.target.classList.toggle('on', !!target);
   };
@@ -239,7 +242,7 @@
       const sortB = $('button', 'btn small ghost', '정리'); sortB.onclick = () => { G.inv.sort(); G.audio.sfx('tap'); render(); };
       head.append(sortB);
       const tools = $('div', 'toolrow');
-      for (const t of G.player.tools) { const b = $('button', 'chip' + (G.player.tool === t ? ' on' : ''), `${G.TOOLS[t].icon} ${G.TOOLS[t].name}`); b.onclick = () => { G.player.setTool(t); render(); }; tools.append(b); }
+      for (const t of G.player.tools) { const b = $('button', 'chip' + (G.player.tool === t ? ' on' : ''), `${UI.toolIcon(t)} ${G.TOOLS[t].name}`); b.onclick = () => { G.player.setTool(t); render(); }; tools.append(b); }
       pane.append(head, tools, slotGrid((i, s) => {
         const it = G.items.get(s.id);
         const p = G.items.sellPrice(s.id, s.x);
