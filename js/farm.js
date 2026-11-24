@@ -65,12 +65,12 @@
     }
     G.save.mark('farm');
   };
-  const GROW_MIN = 240, WET_MIN = 720; // 마을 분
+  const GROW_MIN = 240, WET_MIN = 720; // 놀이 시계 단위(실제 초): 4분·12분
   F.GROW_MIN = GROW_MIN; F.WET_MIN = WET_MIN;
   const raining = () => { const w = G.weather.now().type; return w === 'rain' || w === 'snow'; };
   // 매 마을 분: 촉촉한 작물은 자란다 (놀지 않는 동안엔 마을 시간이 멈추므로 따로 따라잡을 필요 없음)
   F.tick = () => {
-    const now = G.time.gmin();
+    const now = G.time.pmin();
     if (st.lastMin === undefined || st.lastMin < 0 || now < st.lastMin) { st.lastMin = now; return; }
     const dt = Math.min(now - st.lastMin, 180); if (dt <= 0) return;
     const rain = raining(); let changed = false;
@@ -87,7 +87,7 @@
     st.lastMin = now; if (changed) G.save.mark('farm');
   };
   F.stage = (p) => { if (!p.crop) return -1; const c = D.get('crops', p.crop); return p.prog >= c.grow ? 3 : p.prog === 0 ? 0 : p.prog / c.grow < 0.5 ? 1 : 2; };
-  F.watered = (p) => (p.wet || 0) > G.time.gmin() || raining();
+  F.watered = (p) => (p.wet || 0) > G.time.pmin() || raining();
   // 다 자라기까지 남은 실제 분(촉촉하다는 가정)
   F.minsLeft = (p) => { const c = D.get('crops', p.crop); return Math.max(0, Math.ceil((c.grow * GROW_MIN - (p.gp || 0)) / G.time.SPEED)); };
   F.at = (tx, ty) => st.plots.find((p) => p.tx === tx && p.ty === ty);
@@ -126,19 +126,19 @@
     }
     if (tg.act === 'water') {
       if (!pl.hasTool('can')) { await G.ui.say([{ who: 'sys', text: '물뿌리개가 없어요. 땅굴상점에서 팔아요.' }]); return; }
-      p.wet = G.time.gmin() + WET_MIN; pl.swing = 0.001; pl.busy = 0.35; G.audio.sfx('plop');
+      p.wet = G.time.pmin() + WET_MIN; pl.swing = 0.001; pl.busy = 0.35; G.audio.sfx('plop');
       for (let k = 0; k < 8; k++) G.game.fx.push({ x: p.tx * TILE + 16 + (Math.random() - 0.5) * 16, y: p.ty * TILE + 10, vx: (Math.random() - 0.5) * 30, vy: 40 + Math.random() * 30, t: 0, life: 0.5, kind: 'drop', c: '#a7e3ff' });
       // 옆 칸도 물이 안 줬으면 같이 (물뿌리개는 넓게 뿌린다)
       const big = pl.up && pl.up.can; // 큰 물뿌리개 = 주변 5×3
-      for (const q of st.plots) if (q !== p && q.crop && Math.abs(q.tx - p.tx) <= (big ? 2 : 1) && (big ? Math.abs(q.ty - p.ty) <= 1 : q.ty === p.ty)) q.wet = G.time.gmin() + WET_MIN;
+      for (const q of st.plots) if (q !== p && q.crop && Math.abs(q.tx - p.tx) <= (big ? 2 : 1) && (big ? Math.abs(q.ty - p.ty) <= 1 : q.ty === p.ty)) q.wet = G.time.pmin() + WET_MIN;
       G.emit('farm:water', {}); G.save.mark('farm'); return;
     }
     if (tg.act === 'harvest') {
       const c = D.get('crops', p.crop);
       // 거대 작물: 12% ("잘 나오네" 정도, 오너 요청) + 8번 연속 안 나오면 다음은 확정
-      const giant = (st.dry || 0) >= 8 || u.hashf(G.rng.seed, G.time.gmin(), p.tx, p.ty, st.harvested) < 0.12;
+      const giant = (st.dry || 0) >= 8 || u.hashf(G.rng.seed, G.time.pmin(), p.tx, p.ty, st.harvested) < 0.12;
       st.dry = giant ? 0 : (st.dry || 0) + 1;
-      const n = giant ? 1 : 1 + (u.hashf(G.rng.seed, p.tx, p.ty, G.time.gmin(), st.harvested) < 0.35 ? 1 : 0);
+      const n = giant ? 1 : 1 + (u.hashf(G.rng.seed, p.tx, p.ty, G.time.pmin(), st.harvested) < 0.35 ? 1 : 0);
       const x = giant ? { v: 1, size: Math.round(c.val / 10) } : null;
       if (!G.inv.canFit('crop:' + c.id, x)) { G.audio.sfx('error'); G.ui.toast('가방이 꽉 찼어요!', { icon: '🎒' }); return; }
       if (G.game.gain('crop:' + c.id, n, x, { msg: giant ? `거대 ${c.name}를 수확했다! 쫑알이 보면 1면감이야!` : `${c.name} ${n}개 수확!`, src: 'farm' })) {
@@ -211,7 +211,7 @@
   G.on('time:day', () => { if (G.world.map) F.ensurePlots(); });
   // 자리 비운 동안: 촉촉했던 시간만큼 자란다(물기도 그만큼 마른다)
   F.away = (mins) => {
-    const now = G.time.gmin(); let grew = 0;
+    const now = G.time.pmin(); let grew = 0;
     for (const p of st.plots) {
       if (!p.crop) continue;
       const c = D.get('crops', p.crop); if (!c || p.prog >= c.grow) continue;

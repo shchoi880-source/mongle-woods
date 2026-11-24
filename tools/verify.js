@@ -144,15 +144,15 @@ ok('곤충: 가장 예민한 종도 채 들고 걸어서 포획 거리 진입', 
 // 마을 시계: 실제 1초 = 마을 1분, 농사·목장은 몇 분 안에
 {
   const T = G.time, F = G.farm, t0 = T.now();
-  { const h = T.hour(); T.advance(0.25); ok('시계: 실제 0.25초 = 마을 15초(깊은 밤엔 2.5배)', T.now() - t0 === ((h >= 21 || h < 4) ? 37500 : 15000)); }
+  { const h = T.hour(); T.advance(0.25); ok('시계: 낮 0.7배·밤 2.5배', T.now() - t0 === ((h >= 19 || h < 5) ? 37500 : 10500)); }
   const step = (realSec) => { for (let i = 0; i < realSec * 4; i++) { T.advance(0.25); if (i % 4 === 3) { F.tick(); G.ranch.tick(); } } };
   F.st.plots = [{ tx: 1, ty: 1, crop: 'spinach', prog: 0, gp: 0, wet: 0, water: -1, giant: false }]; F.st.lastMin = -1; F.tick();
   const p = F.st.plots[0]; G.weather.override({ type: 'clear', wind: 0 });
   step(60); ok('농사: 물 안 주면 안 자람', p.prog === 0);
-  p.wet = T.gmin() + F.WET_MIN; step(8 * 60 + 2);
+  p.wet = T.pmin() + F.WET_MIN; step(8 * 60 + 2);
   ok('농사: 물 주고 8분이면 시금치(2) 수확', F.stage(p) === 3, `prog=${p.prog}`);
   F.st.plots = [];
-  const a = { id: 1, kind: 'chicken', born: T.day() - 2, petAt: T.gmin(), ready: false, love: 0 };
+  const a = { id: 1, kind: 'chicken', born: T.day() - 2, petAt: T.pmin(), ready: false, love: 0 };
   G.ranch.st.animals = [a]; step(2 * 60 + 2);
   ok('목장: 닭 쓰다듬고 2분이면 달걀', a.ready === true && G.ranch.canPet(a) === false);
   G.ranch.st.animals = []; G.weather.override(null);

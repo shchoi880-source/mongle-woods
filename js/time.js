@@ -10,10 +10,11 @@
 
   let offset = 0;           // 개발용 시간 이동(ms)
   let lastMin = -1, lastHour = -1, lastDay = null;
-  const st = { lastMs: 0, maxDay: 0, playDays: 0, lastPlayDay: -1, tt: 0, vms: 0, realAt: 0 };
+  const st = { lastMs: 0, maxDay: 0, playDays: 0, lastPlayDay: -1, tt: 0, vms: 0, realAt: 0, pms: 0 };
   const SPEED = 60; // 실제 1초 = 마을 1분
-  // 깊은 밤(21~04시)은 2.5배 빨리 (오너 피드백: 밤이 너무 길다). 어두운 시간 실제 약 10분 → 6분
-  const NIGHT_FAST = 2.5, fastHour = (h) => h >= 21 || h < 4;
+  // 오너 결정(D20 수정): 하루 24분 = 낮 20분 + 밤 4분. 낮(05~19시, 14시간)은 0.7배, 밤(19~05시, 10시간)은 2.5배
+  // 하루 평균은 그대로 실제 1분 = 마을 60분이라 농사·목장 속도는 하루 단위로 같다
+  const DAY_RATE = 0.7, NIGHT_RATE = 2.5, rateAt = (h) => (h >= 19 || h < 5 ? NIGHT_RATE : DAY_RATE);
 
   const T = G.time = {
     st,
@@ -21,12 +22,15 @@
     // 마을 시각(ms). 처음엔 오늘 실제 날짜·시각에서 출발하고, 그다음은 놀고 있는 동안만 흐른다
     now: () => (st.vms || (st.vms = Date.now())) + offset,
     // 놀고 있는 동안 흐르게 한다 (탭 숨김·타이틀에선 안 부름). dt는 실제 초
-    advance(dt) { if (!(dt > 0)) return; T.now(); st.vms += Math.min(dt, 0.25) * 1000 * SPEED * (fastHour(T.hour()) ? NIGHT_FAST : 1); },
+    advance(dt) { if (!(dt > 0)) return; T.now(); st.vms += Math.min(dt, 0.25) * 1000 * SPEED * rateAt(T.hour()); T.pmin(); st.pms += Math.min(dt, 0.25); },
+    // 놀이 시계: 실제 1초 = 1 (농사·목장 타이머용). 낮·밤 빠르기와 상관없이 실제 시간대로 자란다. 처음엔 마을 분에서 이어 받는다(옛 세이브 호환)
+    pmin: () => { if (!st.pms) st.pms = Math.floor(T.now() / 60000); return Math.floor(st.pms); },
+    rate: () => rateAt(T.hour()),
     // 다음 아침(05시)까지 실제 몇 분
     minsToMorning() {
       const d = T.date(); let left = (G.C.DAY_H * 60 - (d.getHours() * 60 + d.getMinutes()) + 1440) % 1440 || 1440, h = d.getHours(), mm = d.getMinutes(), real = 0;
       // 시간대마다 빠르기가 달라서 한 시간씩 나눠 계산 (실제 분)
-      while (left > 0) { const step = Math.min(left, 60 - mm); real += step / SPEED / (fastHour(h) ? NIGHT_FAST : 1); left -= step; mm = 0; h = (h + 1) % 24; }
+      while (left > 0) { const step = Math.min(left, 60 - mm); real += step / SPEED / rateAt(h); left -= step; mm = 0; h = (h + 1) % 24; }
       return Math.max(1, Math.ceil(real));
     },
     gmin: () => Math.floor(T.now() / 60000),  // 마을 시각(분) — 농사·목장 타이머용
@@ -87,7 +91,7 @@
   };
 
   G.save.section('time', {
-    v: 1, def: () => ({ lastMs: 0, maxDay: 0, playDays: 0, lastPlayDay: -1, tt: 0, vms: 0, realAt: 0 }),
+    v: 1, def: () => ({ lastMs: 0, maxDay: 0, playDays: 0, lastPlayDay: -1, tt: 0, vms: 0, realAt: 0, pms: 0 }),
     get: () => Object.assign({}, st), set: (d) => { Object.assign(st, d); lastDay = null; lastMin = -1; lastHour = -1; },
   });
 

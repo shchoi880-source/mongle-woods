@@ -39,8 +39,8 @@
   RC.TROUGH_MIN = 720;
   // 쓰다듬을 수 있나: 생산물을 기다리는 중이 아니고, 거둘 것도 없을 때
   RC.canPet = (a) => !a.ready && !(a.petAt > 0);
-  RC.minsLeft = (a) => a.petAt > 0 ? Math.max(1, Math.ceil((a.petAt + KINDS[a.kind].hrs * 60 - G.time.gmin()) / G.time.SPEED)) : 0;
-  RC.troughFull = () => (st.troughUntil || 0) > G.time.gmin();
+  RC.minsLeft = (a) => a.petAt > 0 ? Math.max(1, Math.ceil((a.petAt + KINDS[a.kind].hrs * 60 - G.time.pmin()) / G.time.SPEED)) : 0;
+  RC.troughFull = () => (st.troughUntil || 0) > G.time.pmin();
 
   // 울타리 자리: 집 근처 6×4 풀밭(나무·텃밭·길 피함)
   RC.ensurePen = () => {
@@ -79,7 +79,7 @@
 
   // 매 마을 분: 쓰다듬고 시간이 지난 동물은 생산물 준비 (아기·조랑말은 다시 쓰다듬을 수 있게만)
   RC.tick = () => {
-    const now = G.time.gmin(); let changed = false;
+    const now = G.time.pmin(); let changed = false;
     for (const a of st.animals) {
       if (!(a.petAt > 0) || a.ready) continue;
       const k = KINDS[a.kind];
@@ -113,14 +113,14 @@
     if (tg.act === 'trough') {
       const food = G.inv.slots.findIndex((s) => s.id.startsWith('crop:'));
       if (food < 0) { await G.ui.say([{ who: 'sys', text: '여물통이 비어 있어요. 텃밭 작물을 하나 넣으면 12분 동안 먹이가 돼요. (그동안 쓰다듬은 동물은 생산물이 2개!)' }]); return; }
-      if (RC.troughFull()) { await G.ui.say([{ who: 'sys', text: `먹이가 아직 넉넉해요. (약 ${Math.ceil((st.troughUntil - G.time.gmin()) / G.time.SPEED)}분 남음)` }]); return; }
+      if (RC.troughFull()) { await G.ui.say([{ who: 'sys', text: `먹이가 아직 넉넉해요. (약 ${Math.ceil((st.troughUntil - G.time.pmin()) / G.time.SPEED)}분 남음)` }]); return; }
       const nm = G.items.name(G.inv.slots[food].id); G.inv.removeAt(food, 1);
-      st.troughUntil = G.time.gmin() + RC.TROUGH_MIN;
+      st.troughUntil = G.time.pmin() + RC.TROUGH_MIN;
       G.audio.sfx('drop'); G.ui.toast(`여물통에 ${nm}${G.josa(nm, '을/를').slice(-1)} 넣었어요. 동물들이 좋아해요!`, { icon: '🌾' });
       G.save.mark('ranch'); return;
     }
     if (tg.act === 'pet') {
-      a.petAt = G.time.gmin(); a.love = Math.min(10, a.love + 1); a.hop = 0.35;
+      a.petAt = G.time.pmin(); a.love = Math.min(10, a.love + 1); a.hop = 0.35;
       pl.squash = 0.12; G.audio.sfx(a.kind === 'chicken' ? 'kongal' : 'pop');
       G.game.sparkle(a.x, a.y - 20, 6, '#ff9fbf');
       const say = { chicken: '꼬꼬댁!', cow: '음머~', sheep: '메에~', pig: '꿀꿀!', pony: '히힝!' }[a.kind];
