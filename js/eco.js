@@ -3,12 +3,15 @@
   'use strict';
   const u = G.u, TILE = G.C.TILE;
   const TIER_W = [0, 10, 5, 2, 0.7, 0.25];
+  // 코지 채집 보정: 채를 들고 걷는 접근은 넉넉하게, 달리기는 여전히 곤충을 놀라게 한다.
+  const BUG_TUNE = Object.freeze({ walkScare: 0.65, netWalkScare: 0.35, runScare: 1.15, netRunScare: 0.85, fleeSpeed: 105, catchRadius: 34, catchGrace: 0.5, missScare: 1.5 });
 
   const bugs = [], fish = [];
   let spawnT = 0, fishT = 0;
 
   function hourIn(ranges, h) { return ranges.some(([a, b]) => h >= a && h < b); }
   function available(sp, month, hour) { return sp.months.includes(month) && hourIn(sp.hours, hour); }
+  function scareScale(p) { return p.mode === 'sneak' ? 0 : p.mode === 'run' ? (p.tool === 'net' ? BUG_TUNE.netRunScare : BUG_TUNE.runScare) : p.tool === 'net' ? BUG_TUNE.netWalkScare : BUG_TUNE.walkScare; }
   function rollSize(sp, r, giant) {
     const s = u.lerp(sp.size[0], sp.size[1], Math.pow(r, 1.5));
     return Math.round((giant ? s * 1.55 : s) * 10) / 10;
@@ -97,8 +100,9 @@
         if (d > TILE * 20 || (b.state === 'flee' && b.t > 2.2)) { bugs.splice(i, 1); continue; }
         if (b.state === 'curl' && b.t > 4) { b.state = 'idle'; b.t = 0; } // 4초 뒤 다시 펴짐
         if (b.state === 'held') continue;
-        // 도망 판정: 살금이 아닌 이동으로 반경 안에 들어오면
-        if (b.state !== 'flee' && b.state !== 'curl' && p.moving && p.mode !== 'sneak' && d < b.sp.flee * TILE * (p.mode === 'run' ? 1.4 : 1)) E.scare(b, p);
+        // 도망 판정: 잠자리채를 들고 걷는 동안은 포획 거리까지 여유 있게 접근할 수 있다.
+        const scare = scareScale(p);
+        if (b.state !== 'flee' && b.state !== 'curl' && p.moving && scare && d < b.sp.flee * TILE * scare) E.scare(b, p);
         behave(b, dt, p);
       }
       // 물고기
@@ -122,7 +126,7 @@
       if (b.sp.beh === 'E') { if (b.state !== 'curl') { b.state = 'curl'; b.t = 0; G.emit('eco:flee', { e: b }); } return; } // 동글 말림: 도망 대신 그 자리에
       b.state = 'flee'; b.t = 0;
       const a = Math.atan2(b.y - p.y, b.x - p.x);
-      b.vx = Math.cos(a) * 140; b.vy = Math.sin(a) * 140;
+      b.vx = Math.cos(a) * BUG_TUNE.fleeSpeed; b.vy = Math.sin(a) * BUG_TUNE.fleeSpeed;
       G.emit('eco:flee', { e: b });
     },
     // 잠자리채 휘두르기: 맞으면 그 곤충 반환
@@ -134,12 +138,12 @@
       for (const b of bugs) {
         if (b.state === 'held' || b.fade < 0.5) continue;
         const d = u.dist(b.x, b.y - (b.alt || 0) * 0.4, tx, ty);
-        if (d < 26 && d < bd) { bd = d; best = b; }
+        if (d < BUG_TUNE.catchRadius && d < bd) { bd = d; best = b; }
       }
       if (best && best.state !== 'flee') { bugs.splice(bugs.indexOf(best), 1); return best; }
-      if (best && best.state === 'flee' && best.t < 0.2) { bugs.splice(bugs.indexOf(best), 1); return best; } // 막 날아오른 순간은 봐준다
+      if (best && best.state === 'flee' && best.t < BUG_TUNE.catchGrace) { bugs.splice(bugs.indexOf(best), 1); return best; } // 막 날아오른 순간은 넉넉히 봐준다
       // 헛손질: 근처 곤충이 놀람
-      for (const b of bugs) if (u.dist(b.x, b.y, p.x, p.y) < TILE * 2.2) E.scare(b, p);
+      for (const b of bugs) if (u.dist(b.x, b.y, p.x, p.y) < TILE * BUG_TUNE.missScare) E.scare(b, p);
       return null;
     },
     nearest(kind, x, y, r) {
@@ -158,6 +162,7 @@
       return res;
     },
     clear() { bugs.length = 0; fish.length = 0; },
+    _bugTune: BUG_TUNE, _scareScale: scareScale,
     // 렌더 목록
     collect(out, rect, t) {
       for (const b of bugs) if (inRect(b, rect)) out.push({ sy: b.y + (b.alt ? 2 : 0), draw: (ctx) => { ctx.globalAlpha = b.fade * (b.state === 'flee' ? Math.max(0, 1 - b.t / 2) : 1); G.art.bug(ctx, b, t); ctx.globalAlpha = 1; } });
