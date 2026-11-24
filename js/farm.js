@@ -200,6 +200,20 @@
 
   G.on('time:minute', () => { if (G.world.map && G.game && G.game.started && !(G.net && G.net.guest)) F.tick(); });
   G.on('time:day', () => { if (G.world.map) F.ensurePlots(); });
+  // 자리 비운 동안: 촉촉했던 시간만큼 자란다(물기도 그만큼 마른다)
+  F.away = (mins) => {
+    const now = G.time.gmin(); let grew = 0;
+    for (const p of st.plots) {
+      if (!p.crop) continue;
+      const c = D.get('crops', p.crop); if (!c || p.prog >= c.grow) continue;
+      if (p.gp === undefined) p.gp = (p.prog || 0) * GROW_MIN;
+      const use = Math.max(0, Math.min(mins, (p.wet || 0) - now)); if (!use) continue;
+      p.gp += use; p.wet -= use; const np = Math.min(c.grow, Math.floor(p.gp / GROW_MIN));
+      if (np !== p.prog) { p.prog = np; grew++; }
+    }
+    if (grew) G.save.mark('farm');
+    return grew;
+  };
   G.on('house:stage', () => F.ensurePlots());
   G.save.section('farm', {
     v: 1, def: () => ({ plots: [], lastTick: -1, lastMin: -1, harvested: 0, giants: 0, seedGift: false }),

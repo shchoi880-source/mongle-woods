@@ -10,7 +10,7 @@
 
   let offset = 0;           // 개발용 시간 이동(ms)
   let lastMin = -1, lastHour = -1, lastDay = null;
-  const st = { lastMs: 0, maxDay: 0, playDays: 0, lastPlayDay: -1, tt: 0, vms: 0 };
+  const st = { lastMs: 0, maxDay: 0, playDays: 0, lastPlayDay: -1, tt: 0, vms: 0, realAt: 0 };
   const SPEED = 60; // 실제 1초 = 마을 1분
 
   const T = G.time = {
@@ -65,6 +65,14 @@
       if (st.lastPlayDay !== day) { st.lastPlayDay = day; st.playDays++; }
     },
     init() { lastDay = T.day(); T.markPlay(lastDay); },
+    // 자리를 비운 동안(앱을 닫거나 내린 동안): 마을 시계는 멈추지만, 작물·동물은 그만큼 자란다(오너 피드백: 물 주고 나갔다 오면 그대로라 답답)
+    // 실제 1초 = 마을 1분 몫. 최대 마을 하루(실제 24분)까지만
+    offlineCredit() {
+      const now = Date.now(), at = st.realAt || now; st.realAt = now;
+      const mins = Math.min(1440, Math.floor(Math.max(0, now - at) / 1000));
+      if (mins >= 2) G.emit('time:away', { mins });
+      return mins;
+    },
     // 시계를 갈아 끼운 뒤(친구 마을 방문·복귀): 경계 이벤트 없이 현재 값으로 맞춘다
     resync() { lastDay = T.day(); lastHour = T.hour(); lastMin = T.minute(); st.lastMs = T.now(); },
     // 조수: 12시간 25분 주기, 0 = 간조 ~ 1 = 만조
@@ -72,7 +80,7 @@
   };
 
   G.save.section('time', {
-    v: 1, def: () => ({ lastMs: 0, maxDay: 0, playDays: 0, lastPlayDay: -1, tt: 0, vms: 0 }),
+    v: 1, def: () => ({ lastMs: 0, maxDay: 0, playDays: 0, lastPlayDay: -1, tt: 0, vms: 0, realAt: 0 }),
     get: () => Object.assign({}, st), set: (d) => { Object.assign(st, d); lastDay = null; lastMin = -1; lastHour = -1; },
   });
 

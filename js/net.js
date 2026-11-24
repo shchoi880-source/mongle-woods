@@ -62,6 +62,36 @@
       .sort((a, b) => (b.open - a.open) || (b.friend - a.friend) || (b.at - a.at));
   };
   N.addFriend = (p) => { rememberFriend(p.code, p.name, p.town, p.uid); watchFriends(); G.audio.sfx('chime'); G.ui.toast(`${rl(p.name)} 친구로 추가했어요!`, { icon: '👫' }); };
+  // 놀러 가도 돼? (친구 마을이 닫혀 있을 때) → 친구에게 물어보고, 친구가 문을 열면 알림이 온다
+  N.knock = async (p) => {
+    need();
+    let uid = p.uid; if (!uid) uid = (await F.db.get(R('codes/' + p.code))).val();
+    if (!uid) throw new Error('친구를 찾지 못했어요.');
+    await F.db.set(R('knock/' + uid + '/' + F.uid), { name: (G.player.name || '?').slice(0, 8), at: F.db.serverTimestamp() });
+    rememberFriend(p.code, p.name, p.town, uid); knocked[uid] = Date.now(); watchFriends();
+    G.audio.sfx('chime');
+    G.ui.toast(`${p.name}에게 「놀러 가도 돼?」를 보냈어요! 마을 문을 열면 바로 알려 줄게요.`, { icon: '📮', ms: 4200 });
+  };
+  let knockOff = null; const knockSeen = new Set(), knocked = {};
+  function watchKnocks() {
+    if (knockOff) { try { knockOff(); } catch (e) { /* 무시 */ } knockOff = null; }
+    if (!fb()) return; F = fb();
+    knockOff = F.db.onValue(R('knock/' + F.uid), (snap) => {
+      const all = snap.val() || {};
+      for (const [from, k] of Object.entries(all)) {
+        const key = from + ':' + (k && k.at);
+        F.db.remove(R('knock/' + F.uid + '/' + from)).catch(() => {});
+        if (knockSeen.has(key) || !k || Date.now() - (+k.at || 0) > 10 * 60000) continue; knockSeen.add(key);
+        askOpen(String(k.name || '친구').slice(0, 8));
+      }
+    });
+  }
+  async function askOpen(name) {
+    if (N.mode === 'host') { G.ui.toast(`${ga(name)} 놀러 오고 싶대요! 마을 문이 열려 있으니 곧 올 거예요.`, { icon: '📮', ms: 4000 }); return; }
+    if (N.mode === 'guest' || G.ui.dialogOpen() || !G.game.started) { G.ui.toast(`${ga(name)} 놀러 오고 싶대요! 👫 친구 탭에서 「내 마을 열기」를 눌러 주세요.`, { icon: '📮', ms: 5000 }); return; }
+    G.audio.sfx('chime');
+    if (await G.ui.confirm(`${ga(name)} 놀러 오고 싶대요! 마을 문을 열까요?`, '문 열기', '나중에')) { try { await N.open(); } catch (e) { G.ui.netErr(e); } }
+  }
   N.removeFriend = (code) => { st.friends = st.friends.filter((f) => f.code !== code); G.save.mark('friend'); };
 
   // ---------- 채팅 필터 ----------
@@ -152,6 +182,7 @@
     backup = null;
     G.save.pause(false); G.save.now('home');
     afterSwap();
+    if (G.game.awayGrow) G.game.awayGrow(); // 놀러 간 동안에도 내 작물·동물은 자란다
   }
   function afterSwap() {
     G.art.season = G.time.season(); G.art.clearCache(); G.art.dropChunks && G.art.dropChunks();
@@ -338,7 +369,14 @@
       friendOffs.push(F.db.onValue(R('directory/' + f.uid + '/open'), (snap) => {
         const open = !!snap.val(), was = friendOpen[f.uid]; friendOpen[f.uid] = open;
         if (first) { first = false; return; }
-        if (open && !was && N.mode !== 'guest') { G.ui.toast(`${ga(f.name)} 마을 문을 열었어요! 잎첩 👫 친구 탭에서 놀러 갈 수 있어요.`, { icon: '🟢', ms: 4500 }); G.audio.sfx('chime'); }
+        if (open && !was && N.mode !== 'guest') {
+          G.audio.sfx('chime');
+          // 내가 「놀러 가도 돼?」를 보낸 친구면 바로 갈지 묻는다
+          if (knocked[f.uid] && Date.now() - knocked[f.uid] < 15 * 60000 && !G.ui.dialogOpen()) {
+            delete knocked[f.uid];
+            G.ui.confirm(`${ga(f.name)} 마을 문을 열었어요! 지금 놀러 갈까요?`, '놀러 가기', '나중에').then((yes) => { if (yes) N.visit(f.code).catch((e) => G.ui.netErr(e)); });
+          } else G.ui.toast(`${ga(f.name)} 마을 문을 열었어요! 잎첩 👫 친구 탭에서 놀러 갈 수 있어요.`, { icon: '🟢', ms: 4500 });
+        }
       }));
     }
   }
@@ -346,7 +384,7 @@
   // 이름·마을 이름을 바꾸면 목록에도 바로 반영
   G.on('player:look', () => { if (fb()) N.publish(N.mode === 'host').catch(() => {}); });
   // 로그인하면 목록에 내 이름을 올린다(다른 사람이 나를 친구로 고를 수 있게)
-  G.on('cloud:state', (s) => { if (s.phase === 'synced' && !N._published && fb()) { N._published = true; N.publish(N.mode === 'host').catch((e) => { N._published = false; G.log.err('net.publish', e); }); watchFriends(); } if (s.phase === 'signed-out' || s.phase === 'kicked') { N._published = false; N.code = ''; } });
+  G.on('cloud:state', (s) => { if (s.phase === 'synced' && !N._published && fb()) { N._published = true; N.publish(N.mode === 'host').catch((e) => { N._published = false; G.log.err('net.publish', e); }); watchFriends(); watchKnocks(); } if (s.phase === 'signed-out' || s.phase === 'kicked') { N._published = false; N.code = ''; } });
 
   G.modules.add('net');
 })(globalThis.G);

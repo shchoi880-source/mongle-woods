@@ -239,6 +239,24 @@
           ".validate": false
         }
       }
+    },
+    "knock": {
+      "$to": {
+        ".read": "auth !== null && auth.uid === $to",
+        "$from": {
+          ".write": "auth !== null && (auth.uid === $from || auth.uid === $to && !newData.exists())",
+          ".validate": "newData.hasChildren(['name','at'])",
+          "name": {
+            ".validate": "newData.isString() && newData.val().length <= 8"
+          },
+          "at": {
+            ".validate": "newData.isNumber() && newData.val() <= now"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
     }
   }
 }
