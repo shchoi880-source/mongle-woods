@@ -634,6 +634,7 @@
       if (ev.type === 'act') { doAction(); return true; }
       if (ev.type === 'tool') { pl.nextTool(); return true; }
       if (ev.type === 'menu') { G.ui.notebook(); return true; }
+      if (ev.type === 'map') { G.map.open(); return true; }
       if (ev.type === 'tapWorld' && ev.mouse) {
         // 마우스 클릭: 클릭한 쪽을 바라보고 행동
         const w = cam.toWorld(ev.cx, ev.cy);
@@ -810,7 +811,7 @@
       G.npc.pop(b, 'heart');
       await GM.introScript();
       b.x = b.homeX; b.y = b.homeY; b.dir = 0;
-      G.ui.hint(G.input.isTouch() ? '왼쪽 화면을 끌어서 걷기 · 오른쪽 아래 버튼으로 행동' : '방향키/WASD로 걷기 · Space로 행동 · Tab 잎첩');
+      G.ui.hint(G.input.isTouch() ? '왼쪽 화면을 끌어서 걷기 · 노란 버튼으로 행동 · 🗺️ 지도' : '방향키/WASD 걷기 · Space 행동 · M 지도 · Tab 잎첩');
       setTimeout(() => G.ui.hint(''), 6000);
     } else if (!fresh) {
       const k = G.time.st.playDays;

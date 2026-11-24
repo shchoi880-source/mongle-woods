@@ -27,6 +27,7 @@
         if (e.code === 'Space' || e.code === 'Enter' || e.code === 'KeyE' || e.code === 'KeyZ') { I.emit('act'); e.preventDefault(); }
         else if (e.code === 'KeyQ' || e.code === 'KeyR') I.emit('tool');
         else if (e.code === 'Tab' || e.code === 'KeyI' || e.code === 'KeyB') { I.emit('menu'); e.preventDefault(); }
+        else if (e.code === 'KeyM') I.emit('map');
         else if (e.code === 'Escape' || e.code === 'Backspace') I.emit('back');
       }
       I.keys.add(e.code);
