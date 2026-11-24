@@ -1,5 +1,5 @@
 // 서비스 워커: 오프라인 실행 (캐시 우선, 버전이 바뀌면 새 캐시)
-const CACHE = 'mongle-0.7.0-friends-1';
+const CACHE = 'mongle-0.7.1-lantern-1';
 const FILES = [
   './', 'index.html', 'manifest.webmanifest', 'icons/icon.svg', 'css/ui.css', 'fonts/jua-subset.woff2',
   'js/core.js', 'js/save.js', 'js/firebase-config.js', 'js/cloud.js', 'js/net.js', 'js/time.js', 'js/data.js', 'js/world.js', 'js/art.js', 'js/actors.js',
