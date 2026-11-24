@@ -1,0 +1,15 @@
+{
+  "name": "몽글숲 이야기",
+  "short_name": "몽글숲",
+  "description": "구름양 등 위의 작은 숲마을에서 천천히 사는 코지 라이프 게임",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#bfe7ff",
+  "theme_color": "#bfe7ff",
+  "lang": "ko",
+  "icons": [
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
