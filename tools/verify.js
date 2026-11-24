@@ -8,7 +8,7 @@ const ROOT = path.resolve(__dirname, '..');
 const N = +(process.argv[2] || 1000);
 
 // 브라우저 전용 파일(art·actors·input·audio·ui·dev·boot)은 로드하지 않는다. 나머지는 로드 시 DOM에 접근하지 않는다
-for (const f of ['core', 'save', 'firebase-config', 'cloud', 'net', 'time', 'data', 'world', 'sys', 'eco', 'npc', 'house', 'museum', 'mail', 'nest', 'requests', 'news', 'tide', 'lantern', 'story', 'events', 'farm', 'ranch', 'game']) require(path.join(ROOT, 'js', f + '.js'));
+for (const f of ['core', 'save', 'firebase-config', 'cloud', 'net', 'time', 'data', 'world', 'sys', 'eco', 'npc', 'house', 'museum', 'mail', 'nest', 'requests', 'news', 'tide', 'lantern', 'story', 'festival', 'events', 'farm', 'ranch', 'game']) require(path.join(ROOT, 'js', f + '.js'));
 const G = globalThis.G;
 let fails = 0;
 const ok = (name, cond, detail) => { console.log(`${cond ? '✔' : '✘'} ${name}${detail ? ' — ' + detail : ''}`); if (!cond) fails++; };
@@ -165,6 +165,9 @@ ok('채팅 욕설 필터', G.net.filter('야 시발 뭐해').indexOf('시발') <
 // 이웃 이야기: 8명 × 4장, 선물 아이템이 모두 존재
 { let bad = []; for (const [id, arr] of Object.entries(G.story.S)) { if (arr.length !== 4) bad.push(id + ':len'); for (const sc of arr) if (sc.gift && !G.items.get(sc.gift.split('#')[0])) bad.push(sc.gift); }
   ok('이웃 이야기 8명×4장·선물 확인', Object.keys(G.story.S).length === 8 && !bad.length, bad.join(',')); }
+
+// 축제: 4개, 조각 아이템·모자 잠금 번호
+ok('축제 4개·조각 아이템', G.fest.FESTS.length === 4 && G.fest.FESTS.every((f) => G.items.get(f.token) && f.hat >= 13 && f.hat <= 16));
 
 // 가방: 쌓기·가득 참
 G.inv.slots.length = 0;

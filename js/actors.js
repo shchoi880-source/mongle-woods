@@ -20,14 +20,16 @@
     { k: 'shirt', cat: 'wear', name: '옷 색', colors: SHIRT },
     { k: 'shirt2', cat: 'wear', name: '포인트 색', colors: SHIRT },
     { k: 'shoes', cat: 'wear', name: '신발', colors: SHOES },
-    { k: 'hat', cat: 'acc', name: '모자·장식', names: ['없음', '비니', '야구모자', '밀짚모자', '리본', '화관', '고양이 귀', '토끼 귀', '새싹', '왕관', '베레모', '별 핀', '헤드폰'] },
+    { k: 'hat', cat: 'acc', name: '모자·장식', names: ['없음', '비니', '야구모자', '밀짚모자', '리본', '화관', '고양이 귀', '토끼 귀', '새싹', '왕관', '베레모', '별 핀', '헤드폰', '벚꽃 핀', '수박 모자', '호박 모자', '눈송이 왕관', '황금 왕관'],
+      locks: { 13: 'blossom', 14: 'summer', 15: 'autumn', 16: 'winter', 17: 'gold' } }, // 축제 보상(잠금)
     { k: 'hatC', cat: 'acc', name: '장식 색', colors: SHIRT },
     { k: 'glasses', cat: 'acc', name: '안경', names: ['없음', '동그란', '네모', '선글라스', '하트'] },
   ];
   const CATS = [['face', '얼굴'], ['hair', '머리'], ['wear', '옷'], ['acc', '소품']];
   A.LOOK = { SKIN, HAIRC, SHIRT, SHOES, HAIRS: 15, PARTS, CATS,
     count: (pt) => (pt.colors || pt.names).length,
-    random(R = Math.random) { const l = {}; for (const pt of PARTS) l[pt.k] = Math.floor(R() * A.LOOK.count(pt)); if (R() < 0.5) l.hat = 0; if (R() < 0.7) l.glasses = 0; return l; },
+    isLocked: (pt, i) => !!(pt.locks && pt.locks[i] && !(G.player && G.player.unlocks && G.player.unlocks[pt.k + i])),
+    random(R = Math.random) { const l = {}; for (const pt of PARTS) { const i = Math.floor(R() * A.LOOK.count(pt)); l[pt.k] = A.LOOK.isLocked(pt, i) ? 0 : i; } if (R() < 0.5) l.hat = 0; if (R() < 0.7) l.glasses = 0; return l; },
     def: () => ({ skin: 0, hair: 0, hairC: 0, shirt: 0, eyes: 0, mouth: 0, cheek: 0, outfit: 0, shirt2: 5, shoes: 0, hat: 0, hatC: 8, glasses: 0 }),
   };
 
@@ -297,6 +299,10 @@
       if (h === 9) { ctx.fillStyle = '#ffd24d'; ctx.beginPath(); ctx.moveTo(-7, -9); ctx.lineTo(-7, -17); ctx.lineTo(-3.5, -13); ctx.lineTo(0, -19); ctx.lineTo(3.5, -13); ctx.lineTo(7, -17); ctx.lineTo(7, -9); ctx.closePath(); ctx.fill(); ctx.stroke(); P.blob(ctx, 0, -12, 1.5, 1.5, c); }
       if (h === 10) { ctx.save(); ctx.rotate(-0.18); P.blob(ctx, 1, -10, 14, 5.5, c, LINE, 1.3); P.blob(ctx, 1, -15.5, 1.5, 1.8, c, LINE, 1); ctx.restore(); }
       if (h === 11 && !back) { ctx.save(); ctx.translate(side ? -4 : -8, -7); ctx.fillStyle = c; ctx.beginPath(); for (let k = 0; k < 10; k++) { const r = k % 2 ? 1.6 : 3.8, an = -Math.PI / 2 + k * Math.PI / 5; ctx.lineTo(Math.cos(an) * r, Math.sin(an) * r); } ctx.closePath(); ctx.fill(); ctx.lineWidth = 0.9; ctx.stroke(); ctx.restore(); }
+      if (h === 13 && !back) { const x0 = side ? -6 : -9; for (let k = 0; k < 5; k++) { const a = k / 5 * Math.PI * 2; P.blob(ctx, x0 + Math.cos(a) * 2.6, -8 + Math.sin(a) * 2.6, 2.2, 2.2, '#ffc2d6', LINE, 0.8); } P.blob(ctx, x0, -8, 1.2, 1.2, '#ffe28a'); }
+      if (h === 14) { ctx.fillStyle = '#5aa548'; ctx.beginPath(); ctx.ellipse(0, -6, 14, 11, 0, Math.PI, Math.PI * 2); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.strokeStyle = '#2f6a3a'; ctx.lineWidth = 1.6; ctx.beginPath(); for (const x of [-8, 0, 8]) { ctx.moveTo(x, -16 + Math.abs(x) * 0.4); ctx.quadraticCurveTo(x + 2, -11, x, -6); } ctx.stroke(); ctx.strokeStyle = LINE; P.rrect(ctx, -14, -8, 28, 4, 2, '#ff6b6b', LINE, 1.2); }
+      if (h === 15) { P.blob(ctx, 0, -10, 13, 8, '#ff9a3a', LINE, 1.4); ctx.strokeStyle = '#d0702a'; ctx.lineWidth = 1.2; ctx.beginPath(); for (const x of [-6, 0, 6]) { ctx.moveTo(x, -17); ctx.quadraticCurveTo(x * 1.3, -10, x, -3); } ctx.stroke(); P.rrect(ctx, -1.5, -21, 3, 5, 1.5, '#5aa548', LINE, 1); P.blob(ctx, 3, -20, 3, 1.6, '#7cc35a'); }
+      if (h === 16 || h === 17) { const gold = h === 17; ctx.fillStyle = gold ? '#ffd24d' : '#e6f3ff'; ctx.beginPath(); ctx.moveTo(-9, -9); for (let k = 0; k <= 4; k++) { const x = -9 + k * 4.5; ctx.lineTo(x, k % 2 ? -14 : -20); } ctx.lineTo(9, -9); ctx.closePath(); ctx.fill(); ctx.stroke(); P.blob(ctx, 0, -12, 2, 2, gold ? '#ff6b8b' : '#8fd3ff', LINE, 0.8); if (gold) { P.blob(ctx, -4.5, -11, 1.2, 1.2, '#8fd3ff'); P.blob(ctx, 4.5, -11, 1.2, 1.2, '#7cc35a'); } else for (const x of [-9, 0, 9]) P.blob(ctx, x, x ? -14 : -20, 1.3, 1.3, '#ffffff'); }
       if (h === 12) { ctx.strokeStyle = '#5b4636'; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.ellipse(0, -2, 14, 12, 0, Math.PI * 1.05, Math.PI * 1.95); ctx.stroke(); for (const s of side ? [0] : [-1, 1]) P.rrect(ctx, (side ? -3 : s * 14) - 3, -4, 6, 9, 3, c, LINE, 1.2); }
     },
     hair(ctx, L, side, back) {

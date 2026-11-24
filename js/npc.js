@@ -232,6 +232,7 @@
         await G.ui.say([{ who: 'bori', text: `${v.name}${G.josa(v.name, '을/를').slice(-1)} 아직 못 만났니? ${v.tool === 'rod' ? '물가를 좋아하는 수달이란다. 강이나 연못, 바닷가를 찾아보렴.' : '꽃을 좋아하는 고양이란다. 집 앞 꽃밭이나 광장에 있을 게다.'} 콕!` }]);
         return;
       }
+      if (G.fest && await G.fest.boriTalk()) return; // 축제 조각 교환
       const i = await G.ui.choose({ who: 'bori', text: '무슨 일이냐, 우편지기?' }, ['둥지 약정 (집)', '이야기하기', '그만두기']);
       if (i === 0) { await G.nest.talk(); return; }
       if (i === 2) return;

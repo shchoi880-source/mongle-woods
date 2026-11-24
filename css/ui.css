@@ -336,3 +336,4 @@ input, select, textarea { font: inherit; color: var(--ink); }
 .pweye { align-self: flex-start; }
 .upmark { position: absolute; top: 4px; right: 6px; font-style: normal; background: #ffd24d; border-radius: 8px; padding: 0 4px; font-size: 12px; } .buycard { position: relative; } .boxgrid { max-height: 40vh; overflow-y: auto; }
 .tap { max-width: min(90vw, 460px); text-align: center; line-height: 1.5; } .tap small { font-weight: 600; opacity: .8; }
+.chip.locked { opacity: .55; border-style: dashed; }

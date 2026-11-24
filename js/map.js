@@ -41,6 +41,13 @@
       const [text, pos] = map[card.id] || [card.text, null];
       return { text, pos };
     }
+    // 3.2) 계절 축제 (6차 회의 C)
+    if (G.fest) {
+      const f = G.fest.FESTS.find((x) => G.inv.count(x.token) >= G.fest.NEED && !(G.player.unlocks || {})['hat' + x.hat]);
+      if (f) return { text: `${f.icon} ${f.tname} ${G.fest.NEED}개 모았어요! 보리 할멈에게 가져가기`, pos: npcAt('bori') || plotAt('post') };
+      const nf = G.fest.now();
+      if (nf && !(G.player.unlocks || {})['hat' + nf.hat]) return { text: `${nf.icon} ${nf.name}! 마을에 떨어진 ${nf.tname} 모으기 (${G.inv.count(nf.token)}/${G.fest.NEED})`, pos: null };
+    }
     // 3.3) 이웃 생일·새 이야기 (6차 회의 B)
     if (G.story) {
       const yr = G.time.dayDate(G.time.day()).y;
