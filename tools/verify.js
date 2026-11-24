@@ -107,6 +107,13 @@ ok('클라우드 양쪽 변경 시 충돌', dc('local', true, { fingerprint: 'se
 ok('계정 아이디 소문자 정규화', G.cloud._accountId('  Mongle_12 ') === 'mongle_12');
 ok('계정 아이디 형식 검증', G.cloud._validAccountId('mongle_12') && !G.cloud._validAccountId('몽글12') && !G.cloud._validAccountId('abc'));
 ok('실제 이메일을 만들지 않는 내부 식별자', G.cloud._accountEmail('Mongle_12') === 'mongle_12@accounts.mongle.invalid');
+{
+  const prevUI = G.ui, prevAudio = G.audio;
+  G.ui = { itemPop() {} }; G.audio = { sfx() {} }; G.player.tool = 'net';
+  G.game.gain('branch', 1, null, { keepTool: true, sfx: false });
+  ok('곤충 포획 뒤 잠자리채 유지', G.player.tool === 'net' && !G.player.hold && G.player.holdT === 0);
+  G.ui = prevUI; G.audio = prevAudio;
+}
 ok('곤충: 채를 들고 걸으면 덜 놀람', G.eco._scareScale({ mode: 'walk', tool: 'net' }) < G.eco._scareScale({ mode: 'walk', tool: 'hand' }));
 ok('곤충: 달리면 여전히 도망', G.eco._scareScale({ mode: 'run', tool: 'net' }) > G.eco._scareScale({ mode: 'walk', tool: 'net' }));
 ok('곤충: 포획 판정 완화', G.eco._bugTune.catchRadius >= 34 && G.eco._bugTune.catchGrace >= 0.5 && G.eco._bugTune.fleeSpeed < 140);
