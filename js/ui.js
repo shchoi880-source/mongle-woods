@@ -58,6 +58,13 @@
       if (pane) setPane(pane);
     });
     G.on('cloud:error', (p) => UI.toast(p.message || '계정 연결을 확인해 주세요.', { icon: '☁️', ms: 4500 }));
+    // 로그인했는데 이 기기 마을과 서버 마을이 다르면: 설정에 숨겨 두지 말고 바로 고르게 한다 (오너 제보: 폰에서 로그인이 안 되는 것처럼 보임)
+    let askedConflict = false;
+    G.on('cloud:state', (s) => {
+      if (s.phase !== 'conflict' || !s.conflict) { if (s.phase === 'synced') askedConflict = false; return; }
+      if (askedConflict) return; askedConflict = true;
+      setTimeout(() => UI.conflictPick(), 300);
+    });
     // 다른 기기에서 로그인 → 이 기기는 로그아웃 (닫을 수 없는 안내)
     G.on('cloud:kicked', () => {
       if (UI.open) UI.open.close();
@@ -248,7 +255,9 @@
       const form = $('form', 'accountform');
       const id = input('아이디 (영문·숫자·밑줄 4~20자)', 'text', 20);
       const pw = input('비밀번호 (8자 이상)', 'password', 72);
-      form.append(id, pw);
+      const eye = $('button', 'btn small ghost pweye', '👁 비밀번호 보기'); eye.type = 'button';
+      eye.onclick = () => { const show = pw.type === 'password'; pw.type = show ? 'text' : 'password'; if (pw2) pw2.type = pw.type; eye.textContent = show ? '🙈 가리기' : '👁 비밀번호 보기'; };
+      form.append(id, pw, eye);
       let pw2 = null, character = null;
       if (mode === 'signup') {
         pw2 = input('비밀번호 확인', 'password', 72);
@@ -287,6 +296,18 @@
     };
     render(); return wrap;
   }
+  UI.conflictPick = () => {
+    const s = G.cloud.view(); if (s.phase !== 'conflict' || !s.conflict) return;
+    if (UI.open) UI.open.close();
+    UI.modal('어느 마을로 할까요?', (body, close) => {
+      body.append($('div', 'slot-info', '로그인됐어요! 그런데 <b>이 기기에 있던 마을</b>과 <b>계정(서버)에 저장된 마을</b>이 달라요.<br>다른 기기(PC 등)에서 하던 마을을 이어 하려면 <b>「서버 마을 불러오기」</b>를 고르세요.'));
+      const choices = $('div', 'cloudchoices'); choices.append(cloudSummary(s.conflict.remote, '서버(계정) 마을'), cloudSummary(s.conflict.local, '이 기기 마을'));
+      const remote = $('button', 'btn big', '서버 마을 불러오기 (추천)'); remote.onclick = () => { close(); G.cloud.resolve('remote'); };
+      const local = $('button', 'btn ghost', '이 기기 마을로 계정 덮어쓰기');
+      local.onclick = async () => { if (await UI.confirm('계정에 저장된 마을을 이 기기 마을로 바꿀까요? (기존 서버 저장은 이 기기에 복구용으로 남겨요)', '바꿀래요', '취소')) { close(); G.cloud.resolve('local'); } };
+      body.append(choices, remote, local, $('div', 'muted small', '어느 쪽을 골라도 다른 쪽은 이 기기에 복구용으로 남아요. (설정 → 이전 저장 복구)'));
+    });
+  };
   UI.account = (mode = 'login', onSuccess) => UI.modal('계정 연결', (body, close) => {
     body.append(accountForm(mode, close, onSuccess));
   });

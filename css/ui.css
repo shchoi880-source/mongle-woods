@@ -330,3 +330,4 @@ input, select, textarea { font: inherit; color: var(--ink); }
   .chatlog.under { display: none; }
   .chatline { font-size: 14px; }
 }
+.pweye { align-self: flex-start; }
