@@ -110,6 +110,14 @@
       const c = G.items.get(seed.id).ref;
       G.inv.removeAt(G.inv.slots.indexOf(seed), 1);
       Object.assign(p, { crop: c.id, prog: 0, gp: 0, wet: 0, water: -1, giant: false });
+      // 한 줄 심기 (6차 회의): 같은 줄에 붙어 있는 빈 칸까지 같은 씨앗으로
+      let more = 0;
+      for (let dir of [1, -1]) for (let k = 1; k < 12; k++) {
+        const q = F.at(p.tx + dir * k, p.ty); if (!q || q.crop) break;
+        if (!G.inv.count('seed:' + c.id)) break;
+        G.inv.removeId('seed:' + c.id, 1); Object.assign(q, { crop: c.id, prog: 0, gp: 0, wet: 0, water: -1, giant: false }); more++;
+      }
+      if (more) G.ui.toast(`${c.name} 씨앗을 이 줄에 ${more + 1}칸 심었어요!`, { icon: '🌱' });
       pl.squash = 0.12; G.audio.sfx('dig'); G.emit('farm:plant', { crop: c.id });
       if (c.season !== SEASON_OF(G.time.month())) G.ui.toast(`${c.name}는 ${({ spring: '봄', summer: '여름', autumn: '가을', winter: '겨울' })[c.season]} 작물이라 천천히 자랄지도 몰라요. (그래도 자라요!)`, { icon: '🌱' });
       if (!pl.hasTool('can')) G.ui.toast('물뿌리개는 땅굴상점에서 팔아요.', { icon: '🚿' });
@@ -121,7 +129,8 @@
       p.wet = G.time.gmin() + WET_MIN; pl.swing = 0.001; pl.busy = 0.35; G.audio.sfx('plop');
       for (let k = 0; k < 8; k++) G.game.fx.push({ x: p.tx * TILE + 16 + (Math.random() - 0.5) * 16, y: p.ty * TILE + 10, vx: (Math.random() - 0.5) * 30, vy: 40 + Math.random() * 30, t: 0, life: 0.5, kind: 'drop', c: '#a7e3ff' });
       // 옆 칸도 물이 안 줬으면 같이 (물뿌리개는 넓게 뿌린다)
-      for (const q of st.plots) if (q !== p && q.crop && Math.abs(q.tx - p.tx) <= 1 && q.ty === p.ty) q.wet = G.time.gmin() + WET_MIN;
+      const big = pl.up && pl.up.can; // 큰 물뿌리개 = 주변 5×3
+      for (const q of st.plots) if (q !== p && q.crop && Math.abs(q.tx - p.tx) <= (big ? 2 : 1) && (big ? Math.abs(q.ty - p.ty) <= 1 : q.ty === p.ty)) q.wet = G.time.gmin() + WET_MIN;
       G.emit('farm:water', {}); G.save.mark('farm'); return;
     }
     if (tg.act === 'harvest') {

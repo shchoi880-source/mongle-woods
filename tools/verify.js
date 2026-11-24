@@ -162,8 +162,13 @@ ok('채팅 욕설 필터', G.net.filter('야 시발 뭐해').indexOf('시발') <
 // 가방: 쌓기·가득 참
 G.inv.slots.length = 0;
 ok('가방 쌓기', G.inv.add('branch', 45) === 0 && G.inv.slots.length === 2 && G.inv.count('branch') === 45);
-for (let i = 0; i < 25; i++) G.inv.add('fish:carp', 1, { size: 30 + i, v: 0 });
-ok('가방 20칸 상한', G.inv.slots.length === 20 && !G.inv.canFit('fish:carp', { size: 1 }));
+for (let i = 0; i < 35; i++) G.inv.add('fish:carp', 1, { size: 30 + i, v: 0 });
+ok('가방 30칸 상한', G.inv.slots.length === G.inv.size && G.inv.size === 30 && !G.inv.canFit('fish:carp', { size: 1 }));
+
+// 보관함: 넣고 빼기
+{ G.inv.slots.length = 0; G.inv.add('branch', 25); G.storage.slots.length = 0;
+  ok('보관함 넣기', G.storage.put(0) && G.inv.count('branch') === 0 && G.storage.slots[0].n === 25);
+  ok('보관함 꺼내기', G.storage.take(0) && G.inv.count('branch') === 25 && G.storage.slots.length === 0); }
 
 // 시간: 05:00 경계
 const d1 = G.time.dayOf(new Date(2026, 10, 23, 4, 59).getTime()), d2 = G.time.dayOf(new Date(2026, 10, 23, 5, 0).getTime());

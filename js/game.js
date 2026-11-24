@@ -40,6 +40,7 @@
     kind: 'player', species: 'human', x: 0, y: 0, dir: 0, r: 9.6, walk: 0, moving: false, mode: 'walk', seed: 0,
     look: { skin: 0, hair: 0, hairC: 0, shirt: 0 }, name: '', town: '', tools: ['hand'], tool: 'hand',
     swing: 0, busy: 0, hold: null, holdT: 0, squash: 0, stepT: 0, idleT: 0,
+    up: {}, // 도구 업그레이드 {net, rod, can} (6차 회의)
     hasTool(t) { return this.tools.includes(t); },
     giveTool(t) { if (!this.tools.includes(t)) this.tools.push(t); G.save.mark('tool'); G.ui.refreshHud(); },
     setTool(t) { if (!this.hasTool(t)) return; this.tool = t;
@@ -50,9 +51,9 @@
   G.player = pl;
   G.save.section('player', {
     v: 2,
-    def: () => ({ x: 0, y: 0, dir: 0, look: { skin: 0, hair: 0, hairC: 0, shirt: 0 }, name: '', town: '', tools: ['hand'], tool: 'hand', ring: [] }),
-    get: () => ({ x: Math.round(pl.x), y: Math.round(pl.y), dir: pl.dir, look: pl.look, name: pl.name, town: pl.town, tools: pl.tools, tool: pl.tool, ring: pl.ring || [] }),
-    set: (d) => { Object.assign(pl, { x: d.x, y: d.y, dir: d.dir, look: d.look, name: d.name, town: d.town, tools: d.tools, tool: d.tool, ring: d.ring }); },
+    def: () => ({ x: 0, y: 0, dir: 0, look: { skin: 0, hair: 0, hairC: 0, shirt: 0 }, name: '', town: '', tools: ['hand'], tool: 'hand', ring: [], up: {} }),
+    get: () => ({ x: Math.round(pl.x), y: Math.round(pl.y), dir: pl.dir, look: pl.look, name: pl.name, town: pl.town, tools: pl.tools, tool: pl.tool, ring: pl.ring || [], up: pl.up || {} }),
+    set: (d) => { Object.assign(pl, { x: d.x, y: d.y, dir: d.dir, look: d.look, name: d.name, town: d.town, tools: d.tools, tool: d.tool, ring: d.ring, up: d.up || {} }); },
     // v1 → v2: 도구 즐겨찾기(ring) 필드 추가 (마이그레이션 시험 1건, r2-제작범위 M-a)
     migrate: { 1: (d) => Object.assign({}, d, { ring: (d.tools || []).slice(0, 8) }) },
   });
