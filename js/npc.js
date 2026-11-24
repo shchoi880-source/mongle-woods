@@ -271,6 +271,7 @@
         G.save.mark('talk'); return;
       }
       if (id === 'hotteok' && G.events.raceDay() && await G.events.raceTalk()) return;
+      if (G.story && await G.story.onTalk(n)) { G.save.mark('talk'); return; } // 생일·하트 이야기
       if (await G.requests.onTalk(n)) { G.save.mark('talk'); return; }
       // 선물 (하루 한 번): 오늘 인사를 이미 했고 가방에 줄 만한 게 있으면 고르게 한다
       const giftable = G.inv.slots.filter((x) => { const it = G.items.get(x.id); return it && !it.nosell && ['crop', 'dish', 'bug', 'fish', 'sea', 'shell', 'fossil', 'furn', 'mat', 'ranch'].includes(it.cat); });
