@@ -33,7 +33,7 @@
     },
     "rooms": {
       "$room": {
-        ".read": "auth !== null",
+        ".read": false,
         ".write": false
       }
     }

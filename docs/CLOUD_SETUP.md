@@ -2,17 +2,20 @@
 
 결제수단을 등록하지 않고 Firebase **Spark(무료)** 요금제만 사용한다. Cloud Functions, 유료 서버, Blaze 전환은 사용하지 않는다.
 
-## Firebase 콘솔에서 한 번만 할 일
+## Firebase 콘솔 상태
 
-1. Firebase 콘솔에서 기존 Google Cloud 프로젝트 `mongle-woods-1539`에 Firebase를 추가하고 약관에 동의한다.
-2. **Build → Realtime Database → Create Database**에서 `asia-southeast1`과 **잠금 모드**를 선택한다.
-3. **Build → Authentication → Sign-in method**에서 Google 로그인을 활성화한다.
-4. **Project settings → Your apps → Web**에서 웹 앱 `mongle-woods-web`을 등록한다.
-5. 표시된 `firebaseConfig`를 `js/firebase-config.js`의 `G.FIREBASE_CONFIG`에 넣는다. `databaseURL`이 포함되어야 한다.
-6. Realtime Database의 **Rules**에 `firebase.database.rules.json` 내용을 붙여 넣고 게시한다.
-7. Authentication의 **Authorized domains**에 `shchoi880-source.github.io`가 있는지 확인한다.
+- 완료: Firebase 프로젝트 `mongle-woods-1539` 연결
+- 완료: Realtime Database `asia-southeast1` 생성
+- 완료: 웹 앱 `mongle-woods-web` 등록 및 `js/firebase-config.js` 연결
+- 완료: `firebase.database.rules.json` 게시
+- 대기: **Authentication → Sign-in method**에서 Google 로그인 활성화
+- 대기: Authentication의 **Authorized domains**에 `shchoi880-source.github.io` 등록
+
+Google 로그인을 활성화하려면 OAuth 동의 화면에 공개되는 지원 이메일이 필요하다. 개인 이메일을 선택하지 말고, 별도의 공개용 지원 주소를 만든 뒤 설정한다.
 
 Firebase 웹 설정값은 비밀키가 아니다. 실제 데이터 보호는 Database Rules가 담당하며, 현재 규칙은 `users/{uid}`를 해당 Google 계정 본인만 읽고 쓰게 한다.
+
+Google 로그인 정보는 인증에만 사용한다. 게임 코드와 Realtime Database에는 Google 이메일·이름·프로필 사진을 저장하지 않으며, 설정과 멀티플레이에서는 게임 속 캐릭터 이름만 표시한다. Firebase Authentication 관리자 콘솔에는 서비스 운영상 로그인 계정 이메일이 보일 수 있으므로 프로젝트 접근 권한은 오너에게만 둔다. OAuth 지원 이메일은 개인 주소가 아닌 별도의 공개용 지원 주소를 사용한다.
 
 ## 동기화 원칙
 
@@ -28,4 +31,4 @@ Firebase 웹 설정값은 비밀키가 아니다. 실제 데이터 보호는 Dat
 
 `users/{uid}/save`에 MG1 세이브 문자열, 상태 지문, 서버 revision, 요약 정보만 저장한다. 비밀번호나 Google 토큰은 게임 데이터에 저장하지 않는다.
 
-멀티플레이용 `rooms/`는 아직 쓰기 금지다. 친구 마을 기능을 구현할 때 별도의 크기·형식 검증 규칙과 초당 전송 제한을 추가한다.
+멀티플레이용 `rooms/`는 아직 읽기·쓰기 모두 금지다. 친구 마을 기능을 구현할 때 캐릭터 이름·외형·위치만 노출하고 Google 계정 정보는 넣지 않으며, 별도의 멤버·크기·형식 검증과 초당 전송 제한을 추가한다.

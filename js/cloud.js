@@ -135,7 +135,8 @@
   async function handleUser(user) {
     const run = ++authRun;
     if (!user) { userRef = null; state('signed-out', { user: null, conflict: null }); return; }
-    st.user = { uid: user.uid, name: user.displayName || '', email: user.email || '', photo: user.photoURL || '' };
+    // Google 이름·이메일·사진은 게임 상태에 보관하지 않는다. 인증에는 내부 uid만 사용한다.
+    st.user = { uid: user.uid };
     state('checking', { user: st.user, conflict: null });
     try {
       userRef = api.db.ref(db, 'users/' + user.uid + '/save');

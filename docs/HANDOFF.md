@@ -24,24 +24,25 @@
 - 작게 커밋·푸시하고, 묶음이 끝나면 `main`에 PR로 합쳐 Pages에 반영.
 - 코지 원칙: 벌 없음(물 안 줘도 안 시듦, 동물 안 아픔), 동물을 잡지 않음. 도구 아이콘은 이모지 대신 직접 그린 그림.
 
-## 진행 중인 일: 계정 연결(클라우드 저장) + 멀티플레이 — 콘솔 연결·실기기 검증 대기
+## 진행 중인 일: 계정 연결(클라우드 저장) + 멀티플레이 — Google 인증·실기기 검증 대기
 오너 요청: ①친구 10명 정도가 **같은 마을에서 만나 물건을 주고받기** ②**PC·모바일을 같은 계정으로 이어 하기(계정 연결)**. 둘 다 Firebase(무료 Spark)로 하기로 함.
 
 ### Firebase 현재 상태 (2026-11-24 기준)
-- Google Cloud 프로젝트 **`mongle-woods-1539`** 생성 완료 (오너 계정 소유, 결제 미등록 = 무료).
-- API 활성화 완료: firebase, firebasedatabase, identitytoolkit.
-- **Firebase 추가는 실패**: `projects/mongle-woods-1539:addFirebase`가 "caller does not have permission". 오너가 **Firebase 약관에 아직 동의하지 않아서**로 추정.
-  → 오너가 https://console.firebase.google.com/ → 프로젝트 만들기 → **「기존 Google Cloud 프로젝트에 Firebase 추가」 → mongle-woods-1539** 선택 → 약관 동의 → Spark(무료) 유지하면 해결될 것.
-- 작업용으로 받았던 gcloud 로그인은 **해제(revoke)함**. 다음 작업자는 오너에게 다시 권한을 받거나, 오너가 콘솔에서 직접 하게 안내할 것.
+- 프로젝트 **`mongle-woods-1539`** Firebase 연결 완료. 결제수단 없는 **Spark 무료($0/월)** 요금제.
+- Realtime Database를 싱가포르(`asia-southeast1`)에 만들고 보안 규칙 게시 완료.
+- 웹 앱 **`mongle-woods-web`** 등록 및 `js/firebase-config.js` 연결 완료.
+- 게임은 Google 계정의 내부 uid만 사용한다. Google 이메일·이름·프로필 사진은 게임 상태나 Database에 저장하지 않는다.
+- 설정 화면과 향후 멀티플레이에는 캐릭터 이름만 표시한다. 현재 `rooms/`는 읽기·쓰기 모두 차단했다.
+- Google 로그인 공급자는 아직 비활성 상태다. OAuth 동의 화면에 개인 이메일이 공개되지 않도록 별도 공개용 지원 주소를 준비한 뒤 활성화해야 한다.
 
 ### 남은 단계
-1. Firebase 추가(위) → **Realtime Database** 만들기(asia-southeast1, 잠금 모드) → **웹 앱 등록**해서 `firebaseConfig` 받기. 순서는 `docs/CLOUD_SETUP.md` 참고.
-2. **Authentication → Google 로그인 사용 설정**(무료). `firebase.database.rules.json`을 Database Rules에 게시.
-3. `js/firebase-config.js`에 콘솔의 설정을 넣고 PC·폰에서 같은 계정으로 기존 세이브 업로드→새 기기 복원→양쪽 수정 충돌 선택을 실검증.
+1. 개인 이메일 대신 쓸 공개용 지원 주소를 준비하고 **Authentication → Google 로그인 사용 설정**.
+2. Authentication의 Authorized domains에 `shchoi880-source.github.io` 등록.
+3. PC·폰에서 같은 계정으로 기존 세이브 업로드→새 기기 복원→양쪽 수정 충돌 선택을 실검증.
 4. **계정 연결 구현 완료**: Firebase JS SDK 13.4.0 지연 로드, 로컬 A/B 세이브 유지, 서버 revision 트랜잭션, 양쪽 변경 시 선택, 덮어쓰기 전 로컬 복구 백업, 5초 디바운스. Firebase 미설정·오프라인이면 기존 게임만 정상 실행.
 5. **멀티플레이(방식 A: 친구 마을 놀러 가기 먼저)**: 호스트 마을 시드로 같은 지도 생성(지도는 시드로 결정적) → `rooms/{hostUid}/players/{uid}`에 위치·방향·외형 초당 5회 이하 → 말풍선 채팅·감정 표현 → 바닥에 물건 내려놓기/줍기로 주고받기(`rooms/{room}/drops`, 줍기는 트랜잭션). 개인 가방·돈·집은 각자, 마을의 일일 자원(조개·화석 자리)은 호스트 기준.
-6. **멀티플레이 보안 규칙**: 현재 `rooms/` 쓰기는 잠겨 있다. 구현할 때 로그인·방 멤버·크기·형식·업데이트 주기 검증을 추가.
+6. **멀티플레이 보안 규칙**: 현재 `rooms/` 읽기·쓰기는 잠겨 있다. 구현할 때 로그인·방 멤버·크기·형식·업데이트 주기 검증을 추가. 다른 플레이어에게는 캐릭터 이름·외형·위치만 보이고 Google 이메일·이름·사진은 게임에 저장하거나 표시하지 않는다.
 
 ## 기타
 - 무료 한도(대략, 바뀔 수 있음): Realtime Database 동시 접속 100, 저장 1GB, 월 다운로드 10GB — 친구 10명 규모 충분.
-- 세이브는 지금 각 기기 브라우저에만 저장된다(잎첩 설정의 내보내기/가져오기로 옮김).
+- Google 인증을 켜기 전까지 세이브는 각 기기 브라우저에만 저장된다(잎첩 설정의 내보내기/가져오기로 옮김).

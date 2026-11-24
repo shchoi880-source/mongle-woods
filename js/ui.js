@@ -401,7 +401,7 @@
     }
     const busy = { loading: '클라우드 기능을 준비하는 중…', checking: '서버 마을을 확인하는 중…', 'signing-in': '구글 로그인 중…', redirecting: '로그인 화면으로 이동하는 중…', syncing: '마을을 안전하게 동기화하는 중…', reloading: '서버 마을을 적용하는 중…', ready: '동기화를 준비하는 중…' };
     if (busy[s.phase]) box.append($('div', 'cloudstatus', `<span class="cloudspin">☁️</span>${busy[s.phase]}`));
-    if (s.user) box.append($('div', 'clouduser', `<b>${esc(s.user.name || '연결된 계정')}</b><small>${esc(s.user.email || '')}</small>`));
+    if (s.user) box.append($('div', 'clouduser', `<b>${esc(G.player.name || '우편지기')}</b><small>계정 연결됨 · 다른 사람에게는 캐릭터 이름만 보여요</small>`));
     if (s.phase === 'waiting-local') box.append($('div', 'muted small', '계정이 연결됐어요. 마을 만들기를 마치면 첫 세이브를 자동으로 서버에 올려요.'));
     if (s.phase === 'synced') {
       const when = s.lastSyncAt ? new Date(s.lastSyncAt).toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' }) : '방금';
