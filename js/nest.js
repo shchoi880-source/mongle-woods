@@ -18,6 +18,9 @@
     { id: 'tent', name: '텐트', cost: 5000, room: { w: 7, h: 6 } },
     { id: 'cabin', name: '오두막', cost: 28000, room: { w: 9, h: 7 }, days: 5, active: 3, cond: () => Object.keys(G.npc.VILLAGERS).filter((id) => G.npc.isResident(id)).length >= 4, condText: '주민 4명 입주' },
     { id: 'house', name: '작은 집', cost: 98000, room: { w: 11, h: 8 }, days: 14, active: 9, cond: () => G.museum.total() >= 15, condText: '박물관 기증 15점' },
+    // 2차 확장(2026-11): 돈 쓸 곳 + 긴 목표
+    { id: 'bighouse', name: '큰 집', cost: 240000, room: { w: 13, h: 9 }, days: 20, active: 14, cond: () => G.museum.total() >= 40, condText: '박물관 기증 40점' },
+    { id: 'dreamhouse', name: '꿈의 집', cost: 520000, room: { w: 15, h: 10 }, days: 30, active: 20, cond: () => G.museum.total() >= 70, condText: '박물관 기증 70점' },
   ];
   const st = { stage: 0, debt: 5000, paidTotal: 0, building: -1, badges: 0 };
 
@@ -63,10 +66,10 @@
       const lines = [];
       if (st.building >= 0) { await G.ui.say([say(`${nx.name} 공사는 오늘 밤에 끝난단다. 다음 아침(약 ${G.time.minsToMorning()}분 뒤)에 보러 가렴. 콕!`)]); return; }
       if (st.debt > 0) {
-        const opts = [`전부 갚기 (${G.fmt.money(Math.min(st.debt, G.wallet.get()))})`, '1,000몽 갚기', '다음에요'];
+        const opts = [`전부 갚기 (${G.fmt.money(Math.min(st.debt, G.wallet.get()))})`, st.debt > 20000 ? '10,000몽 갚기' : '1,000몽 갚기', '다음에요'];
         const i = await G.ui.choose(say(`${c.name} 약정이 ${G.fmt.money(st.debt)} 남았구나. 이자도 기한도 없단다. 갚고 싶은 만큼만 갚으렴.`), opts);
         if (i === 2) return;
-        const paid = NS.pay(i === 0 ? st.debt : 1000);
+        const paid = NS.pay(i === 0 ? st.debt : st.debt > 20000 ? 10000 : 1000);
         if (!paid) { await G.ui.say([say('몽이 없구나. 괜찮다, 천천히 하렴.')]); return; }
         G.audio.sfx('coin');
         if (st.debt === 0) {

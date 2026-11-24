@@ -99,7 +99,7 @@
   };
   G.shop = {
     // 오늘의 진열 (가판대 단계: 도구만)
-    // 오늘의 진열: 도구 + 가구 4점(날마다 결정적으로 바뀜, 하루 한 번씩만 판매)
+    // 오늘의 진열: 도구 + 가구 6점(날마다 결정적으로 바뀜, 하루 한 번씩만 판매)
     stock(day) {
       const d = day === undefined ? G.time.day() : day;
       const list = [{ kind: 'tool', id: 'shovel', name: G.TOOLS.shovel.name, price: G.TOOLS.shovel.price, key: 'shovel' }];
@@ -116,7 +116,7 @@
       if (!G.house) return list;
       const R = G.rng.stream(G.rng.KEYS.SHOP, d, 2);
       const forms = G.house.SHOP_FORMS.slice();
-      for (let k = 0; k < 4 && forms.length; k++) {
+      for (let k = 0; k < 6 && forms.length; k++) {
         const f = forms.splice(Math.floor(R() * forms.length), 1)[0];
         const c = f.col ? Math.floor(R() * G.house.COLS.length) : 0;
         list.push({ kind: 'furn', id: f.id, c, name: G.items.name('furn:' + f.id, { c }), price: f.val, key: 'f' + k });

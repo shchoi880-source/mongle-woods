@@ -391,6 +391,39 @@
       for (const [x, c] of [[6, '#ff9fbf'], [84, '#ffd24d']]) { P.blob(g, ox + x, oy + 60, 6, 4, '#7cc35a'); P.blob(g, ox + x, oy + 57, 2.5, 2.5, c); }
       return;
     }
+    if (kind === 'bighouse') { // 큰 집: 2층 + 굴뚝 + 발코니
+      P.shadow(g, ox + 48, oy + 62, 124, 0.25);
+      P.rrect(g, ox - 4, oy + 4, 104, 58, 8, '#fff0d8', C.line);
+      P.rrect(g, ox + 10, oy - 26, 76, 34, 6, '#fff6e6', C.line);
+      g.fillStyle = '#e8907a'; g.strokeStyle = C.line; g.lineWidth = 1.5;
+      g.beginPath(); g.moveTo(ox + 2, oy - 22); g.lineTo(ox + 48, oy - 42); g.lineTo(ox + 94, oy - 22); g.closePath(); g.fill(); g.stroke();
+      g.beginPath(); g.moveTo(ox - 12, oy + 8); g.lineTo(ox + 10, oy - 4); g.lineTo(ox + 86, oy - 4); g.lineTo(ox + 108, oy + 8); g.closePath(); g.fill(); g.stroke();
+      P.rrect(g, ox + 72, oy - 44, 10, 18, 2, '#b8a090', C.line, 1.2);
+      roofSnow(g, ox + 26, oy - 38, 44);
+      P.rrect(g, ox + 22, oy - 18, 18, 16, 8, win, C.line); P.rrect(g, ox + 56, oy - 18, 18, 16, 8, win, C.line);
+      g.strokeStyle = C.line; g.lineWidth = 1.2; g.beginPath(); for (let x = ox + 18; x <= ox + 78; x += 6) { g.moveTo(x, oy + 2); g.lineTo(x, oy - 4); } g.stroke();
+      P.rrect(g, ox + 38, oy + 26, 20, 36, [10, 10, 1, 1], '#c97a5a', C.line); P.blob(g, ox + 54, oy + 45, 1.6, 1.6, '#ffe28a');
+      P.rrect(g, ox + 6, oy + 24, 24, 20, 6, win, C.line); P.rrect(g, ox + 66, oy + 24, 24, 20, 6, win, C.line);
+      for (const [x, c] of [[0, '#ff9fbf'], [96, '#c9b3ff'], [30, '#ffd24d']]) { P.blob(g, ox + x, oy + 60, 6, 4, '#7cc35a'); P.blob(g, ox + x, oy + 57, 2.5, 2.5, c); }
+      return;
+    }
+    if (kind === 'dreamhouse') { // 꿈의 집: 둥근 탑 + 깃발
+      P.shadow(g, ox + 48, oy + 62, 132, 0.25);
+      P.rrect(g, ox - 6, oy + 2, 108, 60, 10, '#f3ecff', C.line);
+      P.rrect(g, ox + 66, oy - 14, 30, 76, 12, '#fff6fb', C.line);
+      g.fillStyle = '#b8a0f0'; g.strokeStyle = C.line; g.lineWidth = 1.5;
+      g.beginPath(); g.moveTo(ox + 60, oy - 10); g.lineTo(ox + 81, oy - 34); g.lineTo(ox + 102, oy - 10); g.closePath(); g.fill(); g.stroke();
+      g.beginPath(); g.roundRect(ox - 14, oy - 18, 86, 26, [22, 22, 6, 6]); g.fill(); g.stroke();
+      g.strokeStyle = C.line; g.beginPath(); g.moveTo(ox + 81, oy - 34); g.lineTo(ox + 81, oy - 43); g.stroke();
+      g.fillStyle = '#ff8fb1'; g.beginPath(); g.moveTo(ox + 81, oy - 43); g.lineTo(ox + 95, oy - 39); g.lineTo(ox + 81, oy - 35); g.closePath(); g.fill(); g.stroke();
+      roofSnow(g, ox - 4, oy - 22, 64);
+      P.rrect(g, ox + 74, oy - 4, 14, 16, 7, win, C.line); P.rrect(g, ox + 74, oy + 20, 14, 16, 7, win, C.line);
+      P.rrect(g, ox + 26, oy + 24, 22, 38, [11, 11, 1, 1], '#a88ad8', C.line); P.blob(g, ox + 44, oy + 44, 1.6, 1.6, '#ffe28a');
+      P.rrect(g, ox + 0, oy + 22, 20, 20, 10, win, C.line); P.rrect(g, ox + 52, oy + 26, 12, 14, 6, win, C.line);
+      for (let k = 0; k < 6; k++) P.blob(g, ox - 6 + k * 20, oy + 60, 5, 3.5, '#7cc35a');
+      for (const [x, c] of [[4, '#ff9fbf'], [44, '#ffd24d'], [84, '#8fd3ff']]) P.blob(g, ox + x, oy + 57, 2.5, 2.5, c);
+      return;
+    }
     if (kind === 'tent') { // 텐트 (3×2)
       P.shadow(g, ox + 48, oy + 62, 100, 0.25);
       g.strokeStyle = C.line; g.lineWidth = 1.5;

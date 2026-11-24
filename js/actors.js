@@ -436,6 +436,41 @@
         P.blob(ctx, 0, 0, 2.2, 3.4, col[1]); P.blob(ctx, 0, 2.5, 1.8, 1.8, col[0]);
         break;
       }
+      case 'bee': {
+        const w = 0.4 + Math.abs(flap) * 0.6;
+        ctx.fillStyle = 'rgba(235,248,255,0.85)'; ctx.strokeStyle = 'rgba(91,70,54,0.5)'; ctx.lineWidth = 0.8;
+        for (const x of [-3, 3]) { ctx.beginPath(); ctx.ellipse(x * w, -4, 3.4 * w, 2.4, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
+        P.blob(ctx, 0, 0.5, 4.2, 3.4, col[0], LINE, 1.1); ctx.fillStyle = col[1]; ctx.fillRect(-1.6, -2.6, 1.4, 6.2); ctx.fillRect(1.2, -2.6, 1.4, 6.2);
+        P.blob(ctx, 4.6, -0.2, 2, 2, col[1]); break;
+      }
+      case 'cicada': {
+        const buzz = Math.sin(t * 40 + b.seed) * 0.4;
+        ctx.fillStyle = 'rgba(225,245,235,0.75)'; ctx.strokeStyle = 'rgba(91,70,54,0.55)'; ctx.lineWidth = 0.8;
+        for (const s2 of [-1, 1]) { ctx.beginPath(); ctx.ellipse(s2 * 2.6, 2, 2.6, 6.5, s2 * (0.25 + buzz * 0.1), 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
+        P.blob(ctx, 0, -1, 3.2, 4.6, col[0], LINE, 1.1); P.blob(ctx, 0, -5, 3.4, 2, col[1], LINE, 1); P.blob(ctx, -2.2, -5.4, 0.9, 0.9, '#ff5a4a'); P.blob(ctx, 2.2, -5.4, 0.9, 0.9, '#ff5a4a'); break;
+      }
+      case 'mantis': {
+        ctx.strokeStyle = col[1]; ctx.lineWidth = 1.1; ctx.beginPath(); for (const x of [-2, 1]) { ctx.moveTo(x, 1); ctx.lineTo(x - 1.5, 4); ctx.moveTo(x, -1); ctx.lineTo(x - 1.5, -4); } ctx.stroke();
+        P.rrect(ctx, -7, -1.6, 10, 3.2, 1.6, col[0], LINE, 1); P.blob(ctx, 4.5, -2.5, 2.2, 2, col[0], LINE, 1);
+        ctx.strokeStyle = col[0]; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(3, -1); ctx.lineTo(6, -5 + flap * 0.4); ctx.lineTo(8, -3); ctx.stroke();
+        P.blob(ctx, 5.4, -3.2, 0.7, 0.7, '#2d2430'); break;
+      }
+      case 'stag': {
+        P.blob(ctx, 0, 2, 4.8, 5.4, col[0], LINE, 1.2); P.blob(ctx, 0, -4, 3, 2.2, col[1], LINE, 1);
+        ctx.strokeStyle = col[0]; ctx.lineWidth = 1.5; ctx.beginPath(); for (const s2 of [-1, 1]) { ctx.moveTo(s2 * 1.6, -5.4); ctx.quadraticCurveTo(s2 * 4.5, -9, s2 * 1.2, -11); } ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(0, -1); ctx.lineTo(0, 7); ctx.stroke(); break;
+      }
+      case 'snail': {
+        if (b.state === 'curl') { P.blob(ctx, 0, -1, 4, 4, col[0], LINE, 1.1); ctx.strokeStyle = '#a07850'; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.arc(0, -1, 2, 0, 5); ctx.stroke(); break; }
+        P.rrect(ctx, -6, 0.5, 11, 3, 1.5, col[1], LINE, 1); P.blob(ctx, -1, -2, 4, 3.8, col[0], LINE, 1.1);
+        ctx.strokeStyle = '#a07850'; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.arc(-1, -2, 2, 0, 5); ctx.stroke();
+        ctx.strokeStyle = col[1]; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(4, 1); ctx.lineTo(5.5, -2.5); ctx.moveTo(4.6, 1); ctx.lineTo(6.6, -1.5); ctx.stroke(); break;
+      }
+      case 'caterpillar': {
+        for (let k = 0; k < 5; k++) P.blob(ctx, -5 + k * 2.4, Math.sin(t * 4 + k + b.seed) * 0.6, 1.9, 1.9, col[0], k === 4 ? LINE : null, 0.8);
+        for (let k = 0; k < 4; k++) P.blob(ctx, -5 + k * 2.4, -0.3, 0.5, 0.5, col[1]);
+        P.blob(ctx, 5.6, -0.6, 0.5, 0.5, '#2d2430'); break;
+      }
       default: P.blob(ctx, 0, 0, 4, 3, col[0], LINE, 1);
     }
     // 줄무늬 변이: 날개·몸에 띠
@@ -467,7 +502,25 @@
   };
 
   // ---------- 아이콘 (32×32 좌표계) ----------
-  const FISHCOL = { pale_chub: ['#cfe0f0', '#ff9a8a'], minnow: ['#c8c39a', '#8b8a64'], catfish: ['#6b6258', '#4a433c'], medaka: ['#f3e2b0', '#c9b27a'], crucian: ['#c9b37a', '#9c8550'], carp: ['#f39a5a', '#fff2e0'], smelt: ['#e8f0ff', '#a8b8d8'], horse_mackerel: ['#a9c3d6', '#e9eef2'], mackerel: ['#6a9fc0', '#2f5a7a'], red_seabream: ['#ff8c8c', '#ffd1c4'] };
+  const FISHCOL = { mandarin_fish: ['#d9c07a', '#5a4a2a'], kkeokji: ['#8a7a5a', '#c9b88a'], sweetfish: ['#c8d8a0', '#f0e8c0'], bagrid: ['#c9a04a', '#5a4a3a'], eel: ['#5a6a4a', '#c9c8a0'], cherry_salmon: ['#b8c0d0', '#ff9aa8'], gold_minnow: ['#ffd27a', '#c99a3a'], loach: ['#a89a6a', '#d8ccaa'], snakehead: ['#4a4a3a', '#8a8a6a'], goldfish: ['#ff7a3a', '#fff2e0'], bitterling: ['#b8c8e0', '#ff8fb0'], pond_turtle: ['#7a8a5a', '#c9c8a0'], flounder: ['#a8906a', '#f3e8d0'], rockfish: ['#6a5a4a', '#a89a8a'], hairtail: ['#e8eef8', '#b8c8d8'], puffer: ['#e8d088', '#ffffff'], squid: ['#f3c6b8', '#ff9a8a'], octopus: ['#e0705a', '#ffb8a8'], jellyfish: ['#cfe8ff', '#ffc2e0'], yellowtail: ['#7a9fc0', '#ffe066'], sunfish: ['#a8b8c8', '#e8eef2'], blue_crab: ['#5a8ab8', '#ff8a6a'], filefish: ['#c9b07a', '#8a7a5a'], tuna: ['#3a5a8a', '#c8d8e8'], pale_chub: ['#cfe0f0', '#ff9a8a'], minnow: ['#c8c39a', '#8b8a64'], catfish: ['#6b6258', '#4a433c'], medaka: ['#f3e2b0', '#c9b27a'], crucian: ['#c9b37a', '#9c8550'], carp: ['#f39a5a', '#fff2e0'], smelt: ['#e8f0ff', '#a8b8d8'], horse_mackerel: ['#a9c3d6', '#e9eef2'], mackerel: ['#6a9fc0', '#2f5a7a'], red_seabream: ['#ff8c8c', '#ffd1c4'] };
+  // 물고기 모양 변형 (아이콘, 원점 = 가운데). true = 다 그렸음
+  A.fishShape = (g, shp, c1, c2, vv) => {
+    const eye = (x, y) => { P.blob(g, x, y, 1.5, 1.5, vv === 2 ? '#e0405a' : '#2d2430'); P.blob(g, x - 0.5, y - 0.6, 0.55, 0.55, '#fff'); };
+    g.fillStyle = c1; g.strokeStyle = LINE; g.lineWidth = 1.4;
+    if (shp === 'eel' || shp === 'long') {
+      const th = shp === 'eel' ? 3.6 : 5;
+      g.beginPath(); g.moveTo(13, 0); g.bezierCurveTo(8, -th * 1.6, -2, th * 1.4, -14, -th * 0.4); g.lineTo(-14, th * 0.6); g.bezierCurveTo(-2, th * 2.6, 8, th * 0.2, 13, 0); g.closePath(); g.fill(); g.stroke(); eye(9.5, -1.2); return true;
+    }
+    if (shp === 'flat') { g.beginPath(); g.moveTo(13, 0); g.quadraticCurveTo(2, -12, -9, 0); g.quadraticCurveTo(2, 12, 13, 0); g.fill(); g.stroke(); g.beginPath(); g.moveTo(-8, 0); g.lineTo(-14, -5); g.lineTo(-14, 5); g.closePath(); g.fill(); g.stroke(); P.blob(g, 0, 2, 3, 2, c2); eye(7, -3); eye(9, 0.5); return true; }
+    if (shp === 'puffer') { for (let k = 0; k < 12; k++) { const a = k / 12 * Math.PI * 2; g.beginPath(); g.moveTo(Math.cos(a) * 9, Math.sin(a) * 9); g.lineTo(Math.cos(a) * 12, Math.sin(a) * 12); g.stroke(); } P.blob(g, 0, 0, 10, 9.5, c1, LINE, 1.4); P.blob(g, 0, 4, 7, 4, c2); eye(4, -3); P.blob(g, 9, 1, 1.4, 1, '#ff8a8a'); return true; }
+    if (shp === 'squid') { P.rrect(g, -3, -13, 10, 17, [5, 5, 2, 2], c1, LINE, 1.3); g.beginPath(); g.moveTo(-3, -10); g.lineTo(-8, -13); g.lineTo(-3, -5); g.moveTo(7, -10); g.lineTo(12, -13); g.lineTo(7, -5); g.fill(); g.stroke(); for (let k = 0; k < 5; k++) { g.strokeStyle = c2; g.lineWidth = 1.8; g.beginPath(); g.moveTo(-2 + k * 2.2, 4); g.quadraticCurveTo(-3 + k * 2.6, 9, -2 + k * 2.4, 13); g.stroke(); } eye(0, 0); eye(4.6, 0); return true; }
+    if (shp === 'octo') { P.blob(g, 0, -5, 9, 8, c1, LINE, 1.4); for (let k = -3; k <= 3; k++) { g.strokeStyle = c1; g.lineWidth = 2.8; g.lineCap = 'round'; g.beginPath(); g.moveTo(k * 2.2, 2); g.quadraticCurveTo(k * 3.4, 8, k * 3.6 + 1.5, 12); g.stroke(); } P.blob(g, -3, -4, 1.5, 1.8, '#2d2430'); P.blob(g, 3, -4, 1.5, 1.8, '#2d2430'); P.blob(g, 0, -1, 1.6, 1.2, c2); return true; }
+    if (shp === 'jelly') { g.globalAlpha = 0.85; g.beginPath(); g.ellipse(0, -3, 10, 8, 0, Math.PI, Math.PI * 2); g.lineTo(10, -2); g.quadraticCurveTo(0, 1, -10, -2); g.closePath(); g.fill(); g.stroke(); g.strokeStyle = c2; g.lineWidth = 1.6; g.beginPath(); for (let k = -2; k <= 2; k++) { g.moveTo(k * 3.5, -1); g.quadraticCurveTo(k * 3.5 + 2, 6, k * 3.5, 13); } g.stroke(); g.globalAlpha = 1; P.blob(g, -3, -6, 1, 1.3, '#2d2430'); P.blob(g, 3, -6, 1, 1.3, '#2d2430'); return true; }
+    if (shp === 'crab') { g.strokeStyle = c1; g.lineWidth = 2; g.beginPath(); for (const s of [-1, 1]) for (let k = 0; k < 3; k++) { g.moveTo(s * 6, 2 + k * 2); g.lineTo(s * 13, 3 + k * 3.5); } g.stroke(); for (const s of [-1, 1]) P.blob(g, s * 10, -6, 3.5, 3, c2, LINE, 1.2); P.blob(g, 0, 1, 9, 6.5, c1, LINE, 1.4); P.blob(g, -2.5, -5, 1.1, 1.6, '#2d2430'); P.blob(g, 2.5, -5, 1.1, 1.6, '#2d2430'); return true; }
+    if (shp === 'turtle') { for (const [x, y] of [[-8, -5], [8, -5], [-8, 6], [8, 6]]) P.blob(g, x, y, 3, 2.4, c2, LINE, 1); P.blob(g, 12, 0, 3.6, 3, c2, LINE, 1.2); P.blob(g, 0, 0, 10, 8, c1, LINE, 1.4); g.strokeStyle = 'rgba(60,70,40,0.5)'; g.beginPath(); g.ellipse(0, 0, 5, 4, 0, 0, 6.3); g.stroke(); P.blob(g, 13.5, -0.8, 0.8, 0.8, '#2d2430'); return true; }
+    if (shp === 'sunfish') { P.blob(g, 0, 0, 11, 10, c1, LINE, 1.4); g.beginPath(); g.moveTo(-2, -9); g.lineTo(0, -15); g.lineTo(3, -9); g.moveTo(-2, 9); g.lineTo(0, 15); g.lineTo(3, 9); g.fill(); g.stroke(); P.rrect(g, -13, -6, 4, 12, 2, c1, LINE, 1.2); P.blob(g, 2, 3, 6, 3.5, c2); eye(6, -2.5); return true; }
+    return false;
+  };
   A.drawIcon = (g, id, t = 0) => {
     if (id.startsWith('furn:')) { const [k, c] = id.slice(5).split('#'); G.house.drawIcon(g, k, { c: +c || 0 }); return; }
     let vv = 0, vs = '';
@@ -482,6 +535,8 @@
       const [c1, c2] = A.vcol(FISHCOL[key] || ['#9fc5e0', '#ffffff'], vv, vs);
       g.translate(16, 17);
       g.fillStyle = c1; g.strokeStyle = LINE; g.lineWidth = 1.4;
+      const shp = (G.data.get('fish', key) || {}).shape;
+      if (shp && A.fishShape(g, shp, c1, c2, vv)) { g.restore(); return; }
       g.beginPath(); g.ellipse(1, 0, 11, 6.5, 0, 0, Math.PI * 2); g.fill(); g.stroke();
       g.beginPath(); g.moveTo(-9, 0); g.lineTo(-15, -6); g.lineTo(-15, 6); g.closePath(); g.fill(); g.stroke();
       g.fillStyle = c2; g.beginPath(); g.ellipse(2, 2.5, 7, 2.5, 0, 0, Math.PI * 2); g.fill();
@@ -495,6 +550,14 @@
       if (key === 'ammonite') { for (let a = 0, r = 1; a < 12; a += 0.3, r += 0.2) g.lineTo(16 + Math.cos(a) * r * 0.9, 18 + Math.sin(a) * r * 0.75); }
       else if (key === 'trilobite') { g.ellipse(16, 18, 5, 7, 0, 0, Math.PI * 2); for (let k = -1; k <= 1; k++) { g.moveTo(11, 18 + k * 3); g.lineTo(21, 18 + k * 3); } }
       else if (key === 'fern_fossil') { g.moveTo(16, 10); g.lineTo(16, 26); for (let k = 0; k < 5; k++) { g.moveTo(16, 12 + k * 3); g.lineTo(11, 10 + k * 3); g.moveTo(16, 12 + k * 3); g.lineTo(21, 10 + k * 3); } }
+      else if (key === 'dino_egg') { g.ellipse(16, 18, 6, 8, 0, 0, Math.PI * 2); g.moveTo(12, 16); g.lineTo(15, 18); g.lineTo(13, 21); }
+      else if (key === 'shark_tooth') { g.moveTo(10, 13); g.lineTo(22, 13); g.lineTo(16, 25); g.closePath(); g.moveTo(12, 15); g.lineTo(20, 15); }
+      else if (key === 'leaf_fossil') { g.ellipse(16, 18, 4, 8, 0.5, 0, Math.PI * 2); g.moveTo(12, 25); g.lineTo(20, 11); }
+      else if (key === 'amber') { g.stroke(); P.blob(g, 16, 18, 8, 7, '#f0a830', LINE, 1.3); P.blob(g, 16, 18, 2, 1.4, '#5a3a22'); P.blob(g, 13, 15, 2.4, 1.4, 'rgba(255,255,255,0.6)'); g.beginPath(); }
+      else if (key === 'sea_lily') { g.moveTo(16, 27); g.lineTo(16, 16); for (let k = -2; k <= 2; k++) { g.moveTo(16, 16); g.quadraticCurveTo(16 + k * 3, 12, 16 + k * 4, 9); } }
+      else if (key === 'mammoth_tooth') { g.rect(10, 13, 12, 11); for (let k = 0; k < 4; k++) { g.moveTo(11 + k * 3, 13); g.lineTo(11 + k * 3, 24); } }
+      else if (key === 'pterosaur_claw') { g.moveTo(11, 24); g.quadraticCurveTo(12, 12, 22, 11); g.quadraticCurveTo(16, 15, 15, 24); }
+      else if (key === 'dino_footprint') { g.ellipse(16, 20, 3, 4, 0, 0, Math.PI * 2); for (const a of [-0.6, 0, 0.6]) { g.moveTo(16 + Math.sin(a) * 5, 16 - Math.cos(a) * 5); g.lineTo(16 + Math.sin(a) * 9, 18 - Math.cos(a) * 10); } }
       else { g.moveTo(12, 24); g.quadraticCurveTo(16, 8, 20, 24); g.closePath(); }
       g.stroke();
     } else if (cat === 'shell') {
@@ -502,6 +565,10 @@
       if (key === 'conch') { P.blob(g, 16, 18, 8, 10, sh.col, LINE, 1.4); g.strokeStyle = '#d9a87a'; g.beginPath(); g.arc(16, 15, 4, 0, Math.PI * 1.5); g.stroke(); }
       else if (key === 'coral') { g.strokeStyle = sh.col; g.lineWidth = 3.5; g.lineCap = 'round'; g.beginPath(); g.moveTo(16, 27); g.lineTo(16, 12); g.moveTo(16, 19); g.lineTo(10, 12); g.moveTo(16, 17); g.lineTo(22, 10); g.stroke(); }
       else if (key === 'urchin_shell') { P.blob(g, 16, 18, 10, 8, sh.col, LINE, 1.4); for (let k = 0; k < 8; k++) P.blob(g, 16 + Math.cos(k) * 6, 18 + Math.sin(k) * 4.5, 1, 1, '#fff'); }
+      else if (key === 'moon_snail') { P.blob(g, 16, 18, 10, 9, sh.col, LINE, 1.4); g.strokeStyle = '#b89a70'; g.lineWidth = 1.3; g.beginPath(); for (let a = 0, r = 1; a < 9; a += 0.3, r += 0.25) g.lineTo(16 + Math.cos(a) * r, 18 + Math.sin(a) * r * 0.85); g.stroke(); }
+      else if (key === 'sea_glass') { g.globalAlpha = 0.85; g.fillStyle = sh.col; g.strokeStyle = LINE; g.lineWidth = 1.2; g.beginPath(); g.moveTo(9, 15); g.lineTo(18, 9); g.lineTo(25, 17); g.lineTo(19, 25); g.lineTo(10, 23); g.closePath(); g.fill(); g.stroke(); g.globalAlpha = 1; P.blob(g, 15, 14, 3, 1.2, 'rgba(255,255,255,0.7)'); }
+      else if (key === 'sand_dollar') { P.blob(g, 16, 18, 11, 10, sh.col, LINE, 1.4); g.strokeStyle = '#c9b48a'; g.lineWidth = 1.3; g.beginPath(); for (let k = 0; k < 5; k++) { const a = k / 5 * Math.PI * 2 - Math.PI / 2; g.moveTo(16, 18); g.lineTo(16 + Math.cos(a) * 6, 18 + Math.sin(a) * 6); } g.stroke(); }
+      else if (key === 'abalone') { P.blob(g, 16, 18, 12, 8.5, '#9a8a7a', LINE, 1.4); P.blob(g, 16, 18, 9, 6, sh.col); P.blob(g, 13, 16, 4, 2, '#e8c8f0'); for (let k = 0; k < 5; k++) P.blob(g, 8 + k * 3.5, 12.5 + Math.abs(k - 2) * 0.6, 0.9, 0.9, '#5b4636'); }
       else if (key === 'pearl_oyster') { P.blob(g, 16, 19, 11, 7, '#bfb6d6', LINE, 1.4); P.blob(g, 16, 16, 4.5, 4.5, sh.col, LINE, 1); P.blob(g, 14.6, 14.6, 1.4, 1.4, '#fff'); }
       else { g.fillStyle = sh.col; g.strokeStyle = LINE; g.lineWidth = 1.4; g.beginPath(); g.moveTo(16, 27); g.lineTo(5, 15); g.quadraticCurveTo(16, 2, 27, 15); g.closePath(); g.fill(); g.stroke(); g.beginPath(); for (let k = -2; k <= 2; k++) { g.moveTo(16, 26); g.lineTo(16 + k * 4.5, 9 + Math.abs(k) * 2); } g.strokeStyle = 'rgba(150,100,70,0.5)'; g.stroke(); }
     } else if (id === 'letter_noaddr') {
