@@ -811,8 +811,15 @@
       }; box.append(restore);
     }
     if (s.user && !['signing-in', 'redirecting'].includes(s.phase)) {
-      const out = $('button', 'btn small ghost', '이 기기에서 계정 연결 해제'); out.onclick = async () => {
-        if (await UI.confirm('이 기기의 계정 연결만 해제할까요? 로컬과 서버의 마을은 지워지지 않아요.', '연결 해제', '취소')) G.cloud.signOut();
+      // 로그아웃 = 서버에 마지막 저장 → 이 기기의 마을은 지운다(오너 요청: 로그아웃해도 데이터가 남아 있으면 이상하다)
+      const out = $('button', 'btn small ghost', '로그아웃'); out.onclick = async () => {
+        if (!(await UI.confirm('로그아웃할까요? 마을을 계정(서버)에 저장한 뒤, 이 기기에서는 지워요. 다시 로그인하면 그대로 돌아와요.', '로그아웃', '취소'))) return;
+        out.disabled = true; out.textContent = '저장하는 중…';
+        const r = await G.cloud.logoutClear(false);
+        if (!r.ok) {
+          if (await UI.confirm('서버에 마지막 저장을 하지 못했어요(인터넷 확인). 그래도 이 기기에서 지우고 로그아웃할까요? 마지막 진행 일부가 사라질 수 있어요.', '그래도 로그아웃', '취소')) await G.cloud.logoutClear(true);
+          else { out.disabled = false; out.textContent = '로그아웃'; }
+        }
       }; box.append(out);
     }
     return box;
