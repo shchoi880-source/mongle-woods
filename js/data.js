@@ -76,7 +76,7 @@
     hand: { name: '맨손', icon: '✋' },
     net: { name: '잠자리채', icon: '🪲' },
     rod: { name: '낚싯대', icon: '🎣' },
-    shovel: { name: '삽', icon: '⛏️', price: 500 },
+    shovel: { name: '삽', icon: '', price: 500 }, // 아이콘은 그린 그림(tool:shovel)을 쓴다
   };
 
   // 유행 바람 태그 (하루 1개, 판매가 ×1.2)

@@ -87,7 +87,7 @@
     const p = F.at(Math.floor(fx / TILE), Math.floor(fy / TILE)); if (!p) return null;
     const s = F.stage(p);
     if (s === 3) return { kind: 'farm', ref: p, act: 'harvest', icon: '🧺', label: '수확', name: D.get('crops', p.crop).name };
-    if (s >= 0) return { kind: 'farm', ref: p, act: F.watered(p) ? 'look' : 'water', icon: F.watered(p) ? '🌱' : '🚿', label: F.watered(p) ? '보기' : '물 주기', name: D.get('crops', p.crop).name };
+    if (s >= 0) return { kind: 'farm', ref: p, act: F.watered(p) ? 'look' : 'water', icon: F.watered(p) ? '🌱' : 'tool:can', label: F.watered(p) ? '보기' : '물 주기', name: D.get('crops', p.crop).name };
     return { kind: 'farm', ref: p, act: 'plant', icon: '🌰', label: '심기', name: '텃밭' };
   };
   F.act = async (tg) => {

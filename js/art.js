@@ -448,7 +448,7 @@
     }
   }
   // 소품
-  A.prop = (kind, season, night) => A.sprite('p:' + kind + ':' + season + ':' + (night ? 1 : 0), 64, 80, (g) => {
+  A.prop = (kind, season, night) => A.sprite('p2:' + kind + ':' + season + ':' + (night ? 1 : 0), 96, 80, (g) => {
     const ox = 16, oy = 48; // 부지 (0,0) → (16,48)
     if (kind === 'lamp') {
       P.shadow(g, ox + 16, oy + 28, 18);
