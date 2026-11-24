@@ -742,57 +742,28 @@
   let createEl = null;
   G.scene.define('create', {
     enter() {
-      const look = { skin: 0, hair: 0, hairC: 0, shirt: 0 };
+      const look = A.LOOK.def();
       createEl = document.createElement('div'); createEl.className = 'create';
-      const preview = document.createElement('canvas'); preview.width = 220; preview.height = 220; preview.className = 'cpreview';
-      const parts = [['skin', '피부', A.LOOK.SKIN.length], ['hair', '머리 모양', A.LOOK.HAIRS], ['hairC', '머리 색', A.LOOK.HAIRC.length], ['shirt', '옷 색', A.LOOK.SHIRT.length]];
       createEl.innerHTML = '<h2>어떤 우편지기인가요?</h2>';
       const wrap = document.createElement('div'); wrap.className = 'cwrap';
-      const left = document.createElement('div'); left.append(preview);
-      const right = document.createElement('div'); right.className = 'cparts';
-      const actorP = { species: 'human', look, x: 0, y: 0, dir: 0, tool: 'hand', seed: 0 };
-      let pose = 0;
-      for (const [k, nm, n] of parts) {
-        const row = document.createElement('div'); row.className = 'crow';
-        row.innerHTML = `<span>${nm}</span>`;
-        const prev = document.createElement('button'); prev.className = 'btn small ghost'; prev.textContent = '◀';
-        const nx = document.createElement('button'); nx.className = 'btn small ghost'; nx.textContent = '▶';
-        const val = document.createElement('b'); val.textContent = '1';
-        const upd = (d) => { look[k] = (look[k] + d + n) % n; val.textContent = look[k] + 1; pose = 0.35; G.audio.sfx('pop'); };
-        prev.onclick = () => upd(-1); nx.onclick = () => upd(1);
-        row.append(prev, val, nx); right.append(row);
-        row.upd = () => { val.textContent = look[k] + 1; };
-      }
-      const rnd = document.createElement('button'); rnd.className = 'btn ghost'; rnd.textContent = '🎲 랜덤';
-      rnd.onclick = () => { for (const [k, , n] of parts) look[k] = Math.floor(Math.random() * n); right.querySelectorAll('.crow').forEach((r) => r.upd()); pose = 0.35; G.audio.sfx('pop'); };
-      right.append(rnd);
+      const pv = G.ui.lookPreview(look, 190);
+      const left = document.createElement('div'); left.className = 'cleft'; left.append(pv.el);
       const nameIn = document.createElement('input'); nameIn.placeholder = '이름 (최대 8자)'; nameIn.maxLength = 8; nameIn.value = pl.name || '';
       const townIn = document.createElement('input'); townIn.placeholder = '마을 이름 (최대 8자)'; townIn.maxLength = 8; townIn.value = '몽글숲';
-      right.append(nameIn, townIn);
-      const note = document.createElement('div'); note.className = 'muted small'; note.textContent = '모습은 나중에 거울에서 바꿀 수 있어요.';
+      const ins = document.createElement('div'); ins.className = 'cparts'; ins.append(nameIn, townIn); left.append(ins);
+      const right = document.createElement('div'); right.className = 'cright';
+      right.append(G.ui.lookEditor(look, () => pv.poke()));
+      const note = document.createElement('div'); note.className = 'muted small'; note.textContent = '이름과 모습은 나중에 잎첩 「🪞 나」에서 언제든 바꿀 수 있어요.';
       right.append(note);
       wrap.append(left, right); createEl.append(wrap);
       const next = document.createElement('button'); next.className = 'btn big'; next.textContent = '다음: 지도 고르기';
       createEl.append(next);
       G.ui.root.append(createEl);
-      const pctx = preview.getContext('2d');
-      let raf = 0; const t0 = performance.now();
-      const loop = () => {
-        const t = (performance.now() - t0) / 1000;
-        pctx.setTransform(1, 0, 0, 1, 0, 0); pctx.clearRect(0, 0, 220, 220);
-        pctx.fillStyle = '#fff6e6'; pctx.beginPath(); pctx.arc(110, 120, 96, 0, 6.28); pctx.fill();
-        pose = Math.max(0, pose - 1 / 60);
-        pctx.setTransform(2.9, 0, 0, 2.9, 110, 200);
-        actorP.hop = pose > 0 ? Math.sin((1 - pose / 0.35) * Math.PI) * 6 : 0;
-        A.actor.draw(pctx, actorP, t);
-        A.kongal(pctx, 0, -53, { blink: A.actor.blink(kg, t) }, t);
-        raf = requestAnimationFrame(loop);
-      };
-      loop();
+      const raf = { stop: () => pv.stop() };
       next.onclick = () => {
         const name = nameIn.value.trim(), town = townIn.value.trim() || '몽글숲';
         if (!name) { nameIn.focus(); nameIn.classList.add('shake'); setTimeout(() => nameIn.classList.remove('shake'), 400); G.audio.sfx('error'); return; }
-        cancelAnimationFrame(raf);
+        raf.stop();
         pl.look = Object.assign({}, look); pl.name = name; pl.town = town;
         G.audio.sfx('chime');
         chooseMap(createEl);
