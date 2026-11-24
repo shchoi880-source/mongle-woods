@@ -459,7 +459,7 @@
         // 부탁이 있는 주민: 머리 위 작은 「!」 (폰에서도 보이게 통통 튐)
         const k = Math.abs(Math.sin(t * 3 + n.seed)) * 3;
         A.paint.blob(ctx, n.x, hy - k, 6.5, 6.5, G.requests.fresh(n.id) || !G.npc.st[n.id].met ? '#ffd24d' : '#ffffff', A.C.line, 1.2);
-        ctx.fillStyle = A.C.line; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(G.npc.st[n.id] && !G.npc.st[n.id].met ? '?' : '!', n.x, hy - k + 0.5);
+        ctx.fillStyle = A.C.line; ctx.font = G.fontPx(10); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(G.npc.st[n.id] && !G.npc.st[n.id].met ? '?' : '!', n.x, hy - k + 0.5);
       }
     }
     if (pl.hold) drawHeld(t);
@@ -562,7 +562,7 @@
   }
   function bubble(x, y, text, a) {
     ctx.save(); ctx.globalAlpha = a;
-    ctx.font = 'bold 11px sans-serif'; const w = ctx.measureText(text).width + 14;
+    ctx.font = G.fontPx(11); const w = ctx.measureText(text).width + 14;
     A.paint.rrect(ctx, x - w / 2, y - 18, w, 18, 9, '#ffffff', A.C.line, 1.2);
     ctx.fillStyle = '#5b4636'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(text, x, y - 9);
     ctx.restore();
@@ -861,6 +861,8 @@
     G.loop.start();
     if (G.dev && G.devpanel) G.devpanel();
     registerSW();
+    // 둥근 폰트 로드 후 글자가 들어간 그림 캐시를 다시 굽는다
+    if (document.fonts && document.fonts.load) document.fonts.load('16px Jua').then(() => { G.fontReady = true; G.art.clearCache(); G.art.iconReset && G.art.iconReset(); }).catch(() => {});
   };
   function registerSW() {
     if (!('serviceWorker' in navigator) || location.protocol === 'file:' || G.dev) return;

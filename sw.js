@@ -1,7 +1,7 @@
 // 서비스 워커: 오프라인 실행 (캐시 우선, 버전이 바뀌면 새 캐시)
-const CACHE = 'mongle-0.2.0-mb-7';
+const CACHE = 'mongle-0.2.0-mb-8';
 const FILES = [
-  './', 'index.html', 'manifest.webmanifest', 'icons/icon.svg', 'css/ui.css',
+  './', 'index.html', 'manifest.webmanifest', 'icons/icon.svg', 'css/ui.css', 'fonts/jua-subset.woff2',
   'js/core.js', 'js/save.js', 'js/time.js', 'js/data.js', 'js/world.js', 'js/art.js', 'js/actors.js',
   'js/input.js', 'js/audio.js', 'js/sys.js', 'js/eco.js', 'js/npc.js', 'js/house.js', 'js/museum.js', 'js/mail.js', 'js/nest.js', 'js/requests.js', 'js/news.js', 'js/tide.js', 'js/ui.js', 'js/game.js', 'js/dev.js', 'js/boot.js',
 ];

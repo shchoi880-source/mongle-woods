@@ -357,7 +357,7 @@
       G.art.paint.blob(ctx, bx, by - 5 + dip + bob, 3.4, 2.4, '#ff6b6b');
       ctx.restore();
       if (F.state === 'bite') {
-        ctx.fillStyle = '#ff8a3a'; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillStyle = '#ff8a3a'; ctx.font = G.fontPx(16); ctx.textAlign = 'center';
         ctx.fillText('!', bx, by - 16 - Math.sin(F.t * 20) * 2);
       }
     },
@@ -366,7 +366,7 @@
       if (F.state === 'reel') {
         const s = 1 + (F.pop || 0) * 0.35;
         ctx.save(); ctx.translate(p.x, p.y - 100); ctx.scale(s, s);
-        ctx.font = 'bold 15px sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 3.5; ctx.strokeStyle = '#5b4636'; ctx.fillStyle = '#fff';
+        ctx.font = G.fontPx(15); ctx.textAlign = 'center'; ctx.lineWidth = 3.5; ctx.strokeStyle = '#5b4636'; ctx.fillStyle = '#fff';
         const txt = '영차!' + ' ●'.repeat(F.reel) + ' ○'.repeat(3 - F.reel);
         ctx.strokeText(txt, 0, 0); ctx.fillText(txt, 0, 0); ctx.restore();
       }

@@ -258,7 +258,7 @@
     ctx.strokeStyle = LINE; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(-3, 7); ctx.lineTo(0, 11); ctx.lineTo(3, 7); ctx.stroke();
     if (kind === 'heart') { ctx.fillStyle = '#ff6b8b'; ctx.beginPath(); ctx.moveTo(0, 4); ctx.bezierCurveTo(-7, -1, -4, -7, 0, -3); ctx.bezierCurveTo(4, -7, 7, -1, 0, 4); ctx.fill(); }
     else if (kind === 'note') { ctx.fillStyle = '#6b8bff'; ctx.fillRect(0, -6, 1.6, 8); P.blob(ctx, -1.5, 2, 2.6, 2, '#6b8bff'); ctx.fillRect(0, -6, 4, 1.6); }
-    else { ctx.fillStyle = kind === 'q' ? '#4a90e2' : '#ff8a3a'; ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(kind === 'q' ? '?' : kind === 'zz' ? 'z' : '!', 0, -1); }
+    else { ctx.fillStyle = kind === 'q' ? '#4a90e2' : '#ff8a3a'; ctx.font = G.fontPx(13); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(kind === 'q' ? '?' : kind === 'zz' ? 'z' : '!', 0, -1); }
     ctx.restore();
   };
 
@@ -385,7 +385,7 @@
     } else if (id === 'fossil_raw') {
       P.blob(g, 16, 19, 12, 9, '#cdb894', LINE, 1.4); P.blob(g, 12, 16, 4, 2.4, '#e2d2b0');
       g.strokeStyle = '#9a8566'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(8, 22); g.lineTo(13, 20); g.moveTo(20, 24); g.lineTo(24, 20); g.stroke();
-      g.fillStyle = '#8a7466'; g.font = 'bold 12px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('?', 17, 19);
+      g.fillStyle = '#8a7466'; g.font = G.fontPx(12); g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('?', 17, 19);
     } else if (id === 'branch') {
       g.strokeStyle = '#a7724a'; g.lineWidth = 3.4; g.lineCap = 'round'; g.beginPath(); g.moveTo(6, 26); g.lineTo(26, 8); g.moveTo(16, 17); g.lineTo(20, 24); g.stroke();
       P.blob(g, 21, 25, 3, 2, '#8fd16a');
@@ -409,6 +409,7 @@
   };
   // DOM용 아이콘 캔버스 (캐시)
   const iconCache = new Map();
+  A.iconReset = () => iconCache.clear();
   A.iconURL = (id, px = 64) => {
     const k = id + '@' + px; if (iconCache.has(k)) return iconCache.get(k);
     const c = document.createElement('canvas'); c.width = c.height = px;

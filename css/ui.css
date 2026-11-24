@@ -1,10 +1,12 @@
 /* 몽글숲 이야기 UI — 말랑한 스티커 톤 */
+@font-face { font-family: 'Jua'; src: url('../fonts/jua-subset.woff2') format('woff2'); font-display: swap; }
 :root {
   --ink: #5b4636; --ink2: #8a7466; --paper: #fffaf1; --paper2: #fff3e0; --line: #e9d8c2;
   --mint: #7fd3b8; --pink: #ff9fbf; --sky: #8fd3ff; --sun: #ffd24d; --shadow: 0 4px 0 rgba(91, 70, 54, .18);
   --safe-t: env(safe-area-inset-top, 0px); --safe-b: env(safe-area-inset-bottom, 0px);
   --safe-l: env(safe-area-inset-left, 0px); --safe-r: env(safe-area-inset-right, 0px);
-  font-family: "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", "Nanum Gothic", system-ui, sans-serif;
+  font-family: "Jua", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", "Nanum Gothic", system-ui, sans-serif;
+  font-synthesis: none; /* Jua는 한 굵기뿐 — 가짜 굵게 금지 */
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; height: 100%; overflow: hidden; background: #bfe7ff; color: var(--ink); overscroll-behavior: none; touch-action: none; user-select: none; -webkit-user-select: none; }
@@ -13,6 +15,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #bfe7ff; col
 #ui > * { pointer-events: auto; }
 button { font: inherit; color: inherit; cursor: pointer; border: 0; }
 input, select, textarea { font: inherit; color: var(--ink); }
+.letter, .exportbox textarea, .devpanel { font-family: "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", system-ui, sans-serif; }
 
 /* ---- HUD ---- */
 .hud-top, .hud-br, .hud-target, .hud-hint { opacity: 0; transition: opacity .3s; pointer-events: none !important; }

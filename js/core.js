@@ -146,6 +146,9 @@
     all(name) { const t = tables[name]; return t ? t.rows : []; },
     maxIx(name) { let m = -1; for (const r of this.all(name)) if (r.ix > m) m = r.ix; return m; },
   };
+  // 글꼴: 둥근 한글 폰트(Jua, OFL)가 준비되면 캔버스 글자도 그것으로
+  G.fontReady = false;
+  G.fontPx = (n) => (G.fontReady ? `${n}px Jua, sans-serif` : `bold ${n}px sans-serif`);
   G.str = (tpl, vars) => tpl.replace(/\{(\w+)\}/g, (_, k) => vars && vars[k] !== undefined ? vars[k] : '{' + k + '}');
 
   // 한국어 조사: josa('딸랑','이/가')

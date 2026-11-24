@@ -343,7 +343,7 @@
       g.lineWidth = 1.5; g.strokeStyle = C.line; g.strokeRect(ox + 4, oy + 12, 120, 12);
       if (season === 'winter') P.rrect(g, ox + 6, oy + 8, 116, 6, 3, '#ffffff');
       P.rrect(g, ox + 34, oy - 8, 60, 18, 6, '#fff4dc', C.line);
-      g.fillStyle = '#7a4f2e'; g.font = 'bold 11px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('땅굴상점', ox + 64, oy + 1.5);
+      g.fillStyle = '#7a4f2e'; g.font = G.fontPx(11); g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('땅굴상점', ox + 64, oy + 1.5);
       P.blob(g, ox + 28, oy + 50, 6, 5, '#ff9a8a', C.line, 1); P.blob(g, ox + 44, oy + 50, 5, 5, '#ffd66b', C.line, 1); P.rrect(g, ox + 80, oy + 44, 14, 10, 3, '#a7d8ff', C.line, 1);
       return;
     }
@@ -421,11 +421,11 @@
       P.rrect(g, ox + 50, oy + 56, 28, 36, [14, 14, 2, 2], night ? '#ffe7a0' : '#5d6f68', C.line);
       for (const [x, y, r, c] of [[34, 48, 9, '#c9d3da'], [48, 44, 7, '#e8d2b8'], [80, 44, 7, '#d6c6e8'], [94, 48, 9, '#cfe3d3']]) P.blob(g, ox + x, oy + y, r, r * 0.75, c, C.line, 1.2);
       P.rrect(g, ox + 30, oy + 26, 68, 16, 7, '#fff8ea', C.line);
-      g.fillStyle = '#5d6f68'; g.font = 'bold 10px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('조약돌 박물관', ox + 64, oy + 34.5);
+      g.fillStyle = '#5d6f68'; g.font = G.fontPx(10); g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('조약돌 박물관', ox + 64, oy + 34.5);
       if (kind === 'museum_closed') {
         g.strokeStyle = '#ff8a7a'; g.lineWidth = 4; g.beginPath(); g.moveTo(ox + 44, oy + 60); g.lineTo(ox + 84, oy + 86); g.moveTo(ox + 84, oy + 60); g.lineTo(ox + 44, oy + 86); g.stroke();
         P.rrect(g, ox + 34, oy + 70, 60, 14, 6, '#ffffff', C.line, 1.2);
-        g.fillStyle = '#ff6b6b'; g.font = 'bold 9px sans-serif'; g.fillText('내일 개관!', ox + 64, oy + 77.5);
+        g.fillStyle = '#ff6b6b'; g.font = G.fontPx(9); g.fillText('내일 개관!', ox + 64, oy + 77.5);
       }
       return;
     }
