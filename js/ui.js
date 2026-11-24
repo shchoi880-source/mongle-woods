@@ -462,7 +462,7 @@
     } else if (N.mode === 'host') {
       top.append($('div', 'netstate', `🟢 내 마을 문이 열려 있어요 · 손님 ${N.count()}명`));
       const cl = $('button', 'btn ghost', '🚪 마을 문 닫기'); cl.onclick = async () => { await N.close(); friendsPane(pane); }; top.append(cl);
-      for (const o of Object.values(N.others)) { const r = $('div', 'personrow', `<span>🧑 <b>${esc(o.name)}</b></span>`); const k = $('button', 'btn small ghost', '내보내기'); k.onclick = async () => { if (await UI.confirm(`${o.name}를 집으로 돌려보낼까요?`, '돌려보내기', '아니요')) { await N.kick(o.uid); friendsPane(pane); } }; r.append(k); top.append(r); }
+      for (const o of Object.values(N.others)) { const r = $('div', 'personrow', `<span>🧑 <b>${esc(o.name)}</b></span>`); const k = $('button', 'btn small ghost', '내보내기'); k.onclick = async () => { if (await UI.confirm(`${o.name}${G.josa(o.name, '을/를').slice(-1)} 집으로 돌려보낼까요?`, '돌려보내기', '아니요')) { await N.kick(o.uid); friendsPane(pane); } }; r.append(k); top.append(r); }
     } else {
       const op = $('button', 'btn', '🚪 내 마을 열기 (친구가 놀러 올 수 있게)');
       op.onclick = async () => { try { await N.open(); friendsPane(pane); } catch (e) { UI.toast(e.message, { icon: '⚠️' }); } };
@@ -473,19 +473,34 @@
     const list = $('div', 'netlist');
     const head = $('div', 'pane-head', '<span>👫 가입한 사람들 — 골라서 친구 추가하거나 놀러 가요</span>');
     const rf = $('button', 'btn small ghost', '새로고침'); rf.onclick = () => friendsPane(pane); head.append(rf);
-    pane.append(head, list);
+    const tools = $('div', 'row wrap nettools');
+    const q = $('input', 'codein'); q.placeholder = '🔍 이름 찾기'; q.maxLength = 8; q.value = UI._netQ || '';
+    const only = $('button', 'tab' + (UI._netOnly ? ' on' : ''), '친구만');
+    tools.append(q, only);
+    pane.append(head, tools, list);
     list.innerHTML = '<div class="muted small">불러오는 중…</div>';
     let people = [];
     try { people = await N.people(); } catch (e) { list.innerHTML = '<div class="muted small">목록을 불러오지 못했어요. 잠시 뒤 새로고침해 주세요.</div>'; }
     if (people.length || !list.querySelector('.muted')) list.innerHTML = '';
-    for (const p of people) {
+    const all = people;
+    const draw = () => {
+      list.innerHTML = '';
+      const qq = (UI._netQ || '').trim();
+      const shown = all.filter((p) => (!UI._netOnly || p.friend) && (!qq || p.name.includes(qq) || p.town.includes(qq)));
+      if (!shown.length) list.append($('div', 'muted small', all.length ? '찾는 사람이 없어요.' : '아직 다른 가입자가 없어요. 친구에게 몽글숲을 알려 주세요!'));
+      for (const p of shown) row(p);
+    };
+    q.oninput = () => { UI._netQ = q.value; draw(); };
+    only.onclick = () => { UI._netOnly = !UI._netOnly; only.classList.toggle('on', UI._netOnly); draw(); };
+    const row = (p) => {
       const r = $('div', 'personrow' + (p.friend ? ' friend' : ''), `<span>${p.open ? '🟢' : '⚪'} <b>${esc(p.name)}</b> <small class="muted">${esc(p.town)}${p.friend ? ' · 친구' : ''}</small></span>`);
       const btns = $('div', 'row');
-      if (!p.friend) { const a = $('button', 'btn small', '＋ 친구'); a.onclick = () => { N.addFriend(p); friendsPane(pane); }; btns.append(a); }
+      if (!p.friend) { const a = $('button', 'btn small', '＋ 친구'); a.onclick = () => { N.addFriend(p); p.friend = true; draw(); }; btns.append(a); }
       if (p.open && N.mode !== 'host') { const v = $('button', 'btn small', '놀러 가기'); v.onclick = async () => { try { await N.visit(p.code); UI.open && UI.open.close(); } catch (e) { UI.toast(e.message, { icon: '⚠️', ms: 3500 }); } }; btns.append(v); }
+      if (p.friend) { const d = $('button', 'btn small ghost', '－'); d.title = '친구 빼기'; d.onclick = () => { N.removeFriend(p.code); p.friend = false; draw(); }; btns.append(d); }
       r.append(btns); list.append(r);
-    }
-    if (!people.length && !list.innerHTML) list.append($('div', 'muted small', '아직 다른 가입자가 없어요. 친구에게 몽글숲을 알려 주세요!'));
+    };
+    if (!list.querySelector('.muted') || all.length) draw();
     // 코드로 찾기
     const cf = $('div', 'row wrap');
     const ci = $('input', 'codein'); ci.placeholder = '친구 코드 6자리'; ci.maxLength = 8;
@@ -573,9 +588,9 @@
   function todoPane(pane) {
     // 등불 (메타 목표)
     const lit = G.lantern.count(), next = lit + 1;
-    pane.append($('div', 'pane-head', `<span>🏮 등불 ${lit}/10 — 다음: ${next}번 기둥</span>`));
+    pane.append($('div', 'pane-head', lit >= 10 ? '<span>🏮 등불 10/10 — 큰솜이가 깨어났어요!</span>' : `<span>🏮 등불 ${lit}/10 — 다음: ${next}번 기둥</span>`));
     const lb = $('div', 'todo');
-    for (const c of G.lantern.conds(next)) lb.append($('div', 'card' + (c.ok ? ' done' : ''), `<span class="chk">${c.ok ? '✔' : ''}</span>${esc(c.text)} <small class="muted">(${Math.min(c.cur, c.need)}/${c.need})</small>`));
+    for (const c of G.lantern.conds(next)) lb.append($('div', 'card' + (c.ok ? ' done' : ''), `<span class="chk">${c.ok ? '✔' : ''}</span>${esc(c.text)} <small class="muted">(${G.fmt.num(Math.min(c.cur, c.need))}/${G.fmt.num(c.need)})</small>`));
     pane.append(lb);
     if (G.lantern.st.pages) { const bb = $('button', 'btn small ghost', '📖 큰솜이 그림책 보기'); bb.onclick = () => { G.ui.open.close(); setTimeout(() => G.lantern.book(), 50); }; pane.append(bb); }
     const rq = G.requests.st;

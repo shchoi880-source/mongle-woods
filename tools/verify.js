@@ -125,6 +125,10 @@ ok('실제 이메일을 만들지 않는 내부 식별자', G.cloud._accountEmai
   G.ranch.st.animals = []; G.weather.override(null);
 }
 
+// 등불 1~10 조건이 모두 정의돼 있다
+{ let okAll = true; for (let n = 1; n <= 10; n++) { const c = G.lantern.conds(n); if (!(c.length === 2 && c.every((x) => typeof x.text === 'string' && x.need > 0))) okAll = false; } ok('등불 1~10 조건', okAll); }
+ok('채팅 욕설 필터', G.net.filter('야 시발 뭐해').indexOf('시발') < 0 && G.net.filter('안녕 반가워') === '안녕 반가워');
+
 // 가방: 쌓기·가득 참
 G.inv.slots.length = 0;
 ok('가방 쌓기', G.inv.add('branch', 45) === 0 && G.inv.slots.length === 2 && G.inv.count('branch') === 45);

@@ -313,3 +313,4 @@ input, select, textarea { font: inherit; color: var(--ink); }
 .personrow.friend { background: #fff4dd; }
 .personrow .row { gap: 6px; flex-wrap: nowrap; }
 .codein { border: 2px solid var(--line); border-radius: 14px; padding: 7px 10px; font: inherit; font-weight: 700; width: 9em; text-transform: uppercase; user-select: text; -webkit-user-select: text; }
+.nettools { margin-bottom: 8px; gap: 6px; } .nettools .codein { flex: 1; min-width: 8em; text-transform: none; }

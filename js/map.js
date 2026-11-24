@@ -61,7 +61,7 @@
     }
     // 5) 등불
     const n = G.lantern.count() + 1;
-    if (n <= 2) { const c = G.lantern.conds(n).find((x) => !x.ok); const o = m.objs.find((x) => x.kind === 'lantern' && x.n === n); if (c) return { text: `${n}번 등불까지: ${c.text} (${Math.min(c.cur, c.need)}/${c.need})`, pos: o ? at(o.tx * TILE + 16, o.ty * TILE + 16) : null }; if (o) return { text: `${n}번 등불 기둥에 불 켜기!`, pos: at(o.tx * TILE + 16, o.ty * TILE + 16) }; }
+    if (n <= 10) { const c = G.lantern.conds(n).find((x) => !x.ok); const o = m.objs.find((x) => x.kind === 'lantern' && x.n === n); if (c) return { text: `${n}번 등불까지: ${c.text} (${Math.min(c.cur, c.need)}/${c.need})`, pos: o ? at(o.tx * TILE + 16, o.ty * TILE + 16) : null }; if (o) return { text: `${n}번 등불 기둥에 불 켜기!`, pos: at(o.tx * TILE + 16, o.ty * TILE + 16) }; }
     return { text: '자유롭게 마을 산책하기 🌿', pos: null };
   };
 
