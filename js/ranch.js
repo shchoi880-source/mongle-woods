@@ -246,7 +246,7 @@
     };
   }
 
-  G.on('time:minute', () => { if (G.game && G.game.started) RC.tick(); });
+  G.on('time:minute', () => { if (G.game && G.game.started && !(G.net && G.net.guest)) RC.tick(); });
   G.save.section('ranch', {
     v: 1, def: () => ({ pen: null, animals: [], trough: -1, troughUntil: 0, seq: 0, lastTick: -1, collected: 0, riding: null }),
     get: () => ({ pen: st.pen, animals: st.animals.map((a) => ({ id: a.id, kind: a.kind, name: a.name, x: Math.round(a.x), y: Math.round(a.y), born: a.born, love: a.love, pet: a.pet, petAt: a.petAt || 0, fed: a.fed, ready: a.ready, gold: a.gold, double: a.double })), trough: st.trough, troughUntil: st.troughUntil || 0, seq: st.seq, lastTick: st.lastTick, collected: st.collected, riding: st.riding }),

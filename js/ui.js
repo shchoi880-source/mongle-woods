@@ -19,7 +19,12 @@
     hud.menu.onclick = () => { press(hud.menu); G.input.emit('menu'); };
     hud.map = $('button', 'btn-round btn-map', '🗺️'); hud.map.title = '지도 (M)';
     hud.map.onclick = () => { press(hud.map); G.input.emit('map'); };
+    hud.chat = $('button', 'btn-round btn-chat hidden', '💬'); hud.chat.title = '채팅 (T)';
+    hud.chat.onclick = () => { press(hud.chat); UI.chat(); };
     top.append(hud.map, hud.menu);
+    hud.log = $('div', 'chatlog'); root.append(hud.log);
+    G.on('net:change', () => UI.refreshNet());
+    G.on('net:chat', () => showLog());
     // 지금 할 일 (누르면 지도)
     hud.goal = $('button', 'hud-goal'); hud.goal.onclick = () => { press(hud.goal); G.input.emit('map'); };
     root.append(hud.goal);
@@ -31,7 +36,7 @@
     hud.tool.onclick = () => { press(hud.tool); G.input.emit('tool'); };
     hud.act = $('button', 'btn-act', '<span class="act-ico">✋</span><span class="act-lbl"></span>'); hud.act.title = '행동 (Space)';
     hud.act.addEventListener('pointerdown', (e) => { e.preventDefault(); press(hud.act); G.input.emit('act'); });
-    br.append(hud.tool, hud.act);
+    br.append(hud.chat, hud.tool, hud.act);
     root.append(br);
     hud.target = $('div', 'hud-target'); root.append(hud.target);
     hud.stick = $('div', 'stick', '<div class="nub"></div>'); root.append(hud.stick);
@@ -301,13 +306,13 @@
   // 잎첩: 탭 4개
   UI.notebook = (tab = 'bag') => UI.modal('잎첩', (body, close, card) => {
     const tabs = $('div', 'tabs');
-    const TABS = [['bag', '🎒 가방'], ['me', '🪞 나'], ['dex', '📖 도감'], ['folk', '🐾 이웃'], ['todo', '✅ 할 일'], ['set', '⚙️ 설정']];
+    const TABS = [['bag', '🎒 가방'], ['me', '🪞 나'], ['friends', '👫 친구'], ['dex', '📖 도감'], ['folk', '🐾 이웃'], ['todo', '✅ 할 일'], ['set', '⚙️ 설정']];
     const pane = $('div', 'pane');
     const show = (id) => {
       tab = id; tabs.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.t === id));
       pane.innerHTML = '';
       if (UI._previewStop) { UI._previewStop(); UI._previewStop = null; }
-      ({ bag: bagPane, me: mePane, dex: dexPane, folk: folkPane, todo: todoPane, set: setPane })[id](pane, close);
+      ({ bag: bagPane, me: mePane, friends: friendsPane, dex: dexPane, folk: folkPane, todo: todoPane, set: setPane })[id](pane, close);
     };
     for (const [id, nm] of TABS) { const b = $('button', 'tab', nm); b.dataset.t = id; b.onclick = () => { G.audio.sfx('tap'); show(id); }; tabs.append(b); }
     body.append(tabs, pane); show(tab);
@@ -384,6 +389,111 @@
     // 미리보기 + 분류 탭은 스크롤해도 위에 붙어 있게
     const stick = $('div', 'mestick'); stick.append(top, ed.firstChild);
     pane.append(stick, ed, $('div', 'muted small', '언제든 다시 바꿀 수 있어요. 돈은 들지 않아요.'));
+  }
+
+  // ---------- 멀티플레이 UI (친구 탭 · 채팅 · 선물) ----------
+  UI.refreshNet = () => {
+    if (!hud.chat) return;
+    const on = G.net && G.net.active;
+    hud.chat.classList.toggle('hidden', !on);
+    if (!on) { closeChat(); hud.log.innerHTML = ''; }
+    const pane = UI.open && UI.open.body.querySelector('.pane[data-friends="1"]');
+    if (pane) friendsPane(pane);
+  };
+  let logSeen = new Set();
+  function showLog() {
+    const N = G.net; if (!N) return;
+    for (const m of N.chat.slice(-4)) {
+      if (logSeen.has(m.id)) continue; logSeen.add(m.id);
+      const row = $('div', 'chatline', `<b>${esc(m.name)}</b> ${esc(m.text)}`);
+      hud.log.append(row); while (hud.log.children.length > 4) hud.log.firstChild.remove();
+      setTimeout(() => row.classList.add('fade'), 7000); setTimeout(() => row.remove(), 8000);
+    }
+    if (chatEl) renderChatLog();
+  }
+  let chatEl = null;
+  function renderChatLog() {
+    const box = chatEl && chatEl.querySelector('.chatfull'); if (!box) return;
+    box.innerHTML = G.net.chat.slice(-30).map((m) => `<div class="chatline${G.cloud._fb() && m.uid === G.cloud._fb().uid ? ' me' : ''}"><b>${esc(m.name)}</b> ${esc(m.text)}</div>`).join('') || '<div class="muted small">아직 대화가 없어요. 인사해 볼까요? 👋</div>';
+    box.scrollTop = box.scrollHeight;
+  }
+  function closeChat() { if (chatEl) { chatEl.remove(); chatEl = null; G.input.unlock('chat'); } }
+  UI.chat = () => {
+    if (!G.net || !G.net.active) return;
+    if (chatEl) { closeChat(); return; }
+    chatEl = $('div', 'chatbar');
+    const full = $('div', 'chatfull'); chatEl.append(full);
+    const row = $('div', 'chatrow');
+    const inp = $('input'); inp.maxLength = 60; inp.placeholder = '말하기 (60자)'; inp.enterKeyHint = 'send';
+    const send = $('button', 'btn small', '보내기');
+    const x = $('button', 'btn small ghost', '✕');
+    const go = async () => { const v = inp.value; if (!v.trim()) return; if (await G.net.say(v)) { inp.value = ''; } };
+    send.onclick = go; x.onclick = closeChat;
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); go(); } else if (e.key === 'Escape') { e.preventDefault(); closeChat(); } e.stopPropagation(); });
+    row.append(inp, send, x); chatEl.append(row);
+    const em = $('div', 'emotes');
+    for (const [ico, text] of G.net.EMOTES) { const b = $('button', 'emote', ico); b.title = text; b.onclick = () => G.net.say(ico + ' ' + text); em.append(b); }
+    chatEl.append(em);
+    inp.onfocus = () => G.input.lock('chat'); inp.onblur = () => G.input.unlock('chat');
+    UI.root.append(chatEl);
+    renderChatLog();
+    if (!G.input.isTouch()) setTimeout(() => inp.focus(), 50);
+  };
+  // 친구에게 선물: 가방에서 하나 골라 보낸다
+  UI.giftTo = (o) => UI.modal(`${o.name}에게 선물하기`, (body, close) => {
+    body.append($('div', 'pane-head', '<span>줄 물건을 눌러요 (한 개씩 보내요)</span>'));
+    body.append(slotGrid(async (i) => { const ok = await G.net.gift(o.uid, i, 1); if (ok) close(); }));
+  });
+  async function friendsPane(pane) {
+    pane.dataset.friends = '1'; pane.innerHTML = '';
+    const N = G.net;
+    if (!N || !N.ready()) {
+      pane.append($('div', 'slot-info', '친구와 함께 놀려면 먼저 <b>계정 연결(로그인)</b>이 필요해요.<br>로그인하면 가입한 친구들 목록이 보이고, 서로 마을에 놀러 갈 수 있어요.'));
+      const b = $('button', 'btn', '로그인 / 회원가입'); b.onclick = () => UI.account('login', () => setTimeout(() => UI.notebook('friends'), 1200)); pane.append(b);
+      return;
+    }
+    const top = $('div', 'netbox');
+    let code = '…'; try { code = await N.myCode(); } catch (e) { code = '?'; if (/PERMISSION/i.test(String(e && (e.code || e.message)))) { pane.append($('div', 'slot-info', '친구 기능을 쓰려면 서버 설정(규칙) 업데이트가 필요해요. 관리자에게 알려 주세요!')); return; } }
+    top.innerHTML = `<div><small class="muted">내 친구 코드</small><div class="mycode">${esc(code)}</div></div>`;
+    // 상태: 내 마을 열기 / 친구 마을에 있음
+    if (N.mode === 'guest') {
+      top.append($('div', 'netstate', `🧳 지금 <b>${esc(N.hostName)}</b>의 마을에 놀러 와 있어요 · 함께 ${N.count() + 1}명`));
+      const home = $('button', 'btn', '🏡 집으로 돌아가기'); home.onclick = async () => { await N.home(); UI.open && UI.open.close(); }; top.append(home);
+    } else if (N.mode === 'host') {
+      top.append($('div', 'netstate', `🟢 내 마을 문이 열려 있어요 · 손님 ${N.count()}명`));
+      const cl = $('button', 'btn ghost', '🚪 마을 문 닫기'); cl.onclick = async () => { await N.close(); friendsPane(pane); }; top.append(cl);
+      for (const o of Object.values(N.others)) { const r = $('div', 'personrow', `<span>🧑 <b>${esc(o.name)}</b></span>`); const k = $('button', 'btn small ghost', '내보내기'); k.onclick = async () => { if (await UI.confirm(`${o.name}를 집으로 돌려보낼까요?`, '돌려보내기', '아니요')) { await N.kick(o.uid); friendsPane(pane); } }; r.append(k); top.append(r); }
+    } else {
+      const op = $('button', 'btn', '🚪 내 마을 열기 (친구가 놀러 올 수 있게)');
+      op.onclick = async () => { try { await N.open(); friendsPane(pane); } catch (e) { UI.toast(e.message, { icon: '⚠️' }); } };
+      top.append(op);
+    }
+    pane.append(top);
+    // 친구 목록
+    const list = $('div', 'netlist');
+    const head = $('div', 'pane-head', '<span>👫 가입한 사람들 — 골라서 친구 추가하거나 놀러 가요</span>');
+    const rf = $('button', 'btn small ghost', '새로고침'); rf.onclick = () => friendsPane(pane); head.append(rf);
+    pane.append(head, list);
+    list.innerHTML = '<div class="muted small">불러오는 중…</div>';
+    let people = [];
+    try { people = await N.people(); } catch (e) { list.innerHTML = '<div class="muted small">목록을 불러오지 못했어요. 잠시 뒤 새로고침해 주세요.</div>'; }
+    if (people.length || !list.querySelector('.muted')) list.innerHTML = '';
+    for (const p of people) {
+      const r = $('div', 'personrow' + (p.friend ? ' friend' : ''), `<span>${p.open ? '🟢' : '⚪'} <b>${esc(p.name)}</b> <small class="muted">${esc(p.town)}${p.friend ? ' · 친구' : ''}</small></span>`);
+      const btns = $('div', 'row');
+      if (!p.friend) { const a = $('button', 'btn small', '＋ 친구'); a.onclick = () => { N.addFriend(p); friendsPane(pane); }; btns.append(a); }
+      if (p.open && N.mode !== 'host') { const v = $('button', 'btn small', '놀러 가기'); v.onclick = async () => { try { await N.visit(p.code); UI.open && UI.open.close(); } catch (e) { UI.toast(e.message, { icon: '⚠️', ms: 3500 }); } }; btns.append(v); }
+      r.append(btns); list.append(r);
+    }
+    if (!people.length && !list.innerHTML) list.append($('div', 'muted small', '아직 다른 가입자가 없어요. 친구에게 몽글숲을 알려 주세요!'));
+    // 코드로 찾기
+    const cf = $('div', 'row wrap');
+    const ci = $('input', 'codein'); ci.placeholder = '친구 코드 6자리'; ci.maxLength = 8;
+    const cb = $('button', 'btn small', '코드로 놀러 가기');
+    cb.onclick = async () => { try { await N.visit(ci.value); UI.open && UI.open.close(); } catch (e) { UI.toast(e.message, { icon: '⚠️', ms: 3500 }); } };
+    cf.append(ci, cb);
+    pane.append($('div', 'pane-head', '<span>🔑 친구 코드로 찾기</span>'), cf);
+    pane.append($('div', 'muted small', '🟢 = 지금 마을 문을 열어 둔 사람 · 다른 사람에게는 캐릭터 이름과 마을 이름만 보여요.'));
   }
 
   function bagPane(pane) {
