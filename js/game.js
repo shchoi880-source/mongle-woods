@@ -129,6 +129,8 @@
       const sx = s.tx * TILE + 16, sy = s.ty * TILE + 18;
       if (u.dist(sx, sy, f.x, f.y) < 22 || u.dist(sx, sy, pl.x, pl.y) < 18) return { kind: 'shell', ref: s, icon: '🤲', label: '줍기', name: G.items.name(s.item) };
     }
+    // 2.2) 마당에 놓은 가구 → 치우기
+    if (G.yard) { const yo = G.yard.at(Math.floor(f.x / TILE), Math.floor(f.y / TILE)); if (yo) return { kind: 'yard', ref: yo, icon: '🎒', label: '치우기', name: G.items.name('furn:' + yo.f, { c: yo.c }) }; }
     // 2.3) 목장
     const rk = G.ranch.target(f.x, f.y, pl.x, pl.y);
     if (rk) return rk;
@@ -208,6 +210,7 @@
     switch (tg.kind) {
       case 'npc': await G.npc.talk(tg.ref); break;
       case 'friend': G.ui.giftTo(tg.ref); break;
+      case 'yard': G.yard.pickup(tg.ref); break;
       case 'guestno': G.ui.toast('친구 마을에서는 구경만 해요. 벌레·물고기·조개·바다생물은 잡을 수 있어요!', { icon: '👀', ms: 2600 }); break;
       case 'drop': {
         const d = tg.ref;
@@ -538,7 +541,7 @@
     R.length = 0;
     collectObjects(rect, t);
     G.eco.collect(R, rect, t);
-    if (!guest) { G.farm.collect(R, rect, t); G.ranch.collect(R, rect, t); }
+    if (!guest) { G.farm.collect(R, rect, t); G.ranch.collect(R, rect, t); if (G.yard) G.yard.collect(R, rect, t); }
     if (G.net && G.net.active) G.net.collect(R, rect, t);
     for (const n of G.npc.list) if (n.vis && n.x > rect.x - 60 && n.x < rect.x + rect.w + 60) R.push({ sy: n.y, draw: (c) => { if (n.alpha !== undefined && n.alpha < 1) { c.globalAlpha = n.alpha; A.actor.draw(c, n, t); c.globalAlpha = 1; } else A.actor.draw(c, n, t); } });
     R.push({ sy: pl.y, draw: (c) => drawPlayer(c, t) });
