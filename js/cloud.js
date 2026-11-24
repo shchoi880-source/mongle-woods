@@ -304,6 +304,20 @@
       } catch (e) { fail(e); }
     },
     async signOut() { if (sessionOff) { sessionOff(); sessionOff = null; } if (auth) await api.auth.signOut(auth); },
+    // 로그아웃 + 이 기기 마을 지우기: 먼저 서버에 저장(실패하면 force일 때만 진행)
+    async logoutClear(force) {
+      let ok = false;
+      try { G.save.now('logout'); ok = await upload(false); } catch (e) { ok = false; }
+      if (!ok && st.phase === 'synced') ok = true;
+      if (!ok && !force) return { ok: false };
+      if (sessionOff) { sessionOff(); sessionOff = null; }
+      try { if (auth) await api.auth.signOut(auth); } catch (e) { /* 무시 */ }
+      G.save.pause(true); // 지우는 동안 다시 저장되지 않게
+      G.save.wipe();
+      try { G.store.removeItem(META_KEY); G.store.removeItem(BACKUP_KEY); G.store.removeItem('mg.admin'); } catch (e) { /* 무시 */ }
+      if (typeof location !== 'undefined' && location.reload) location.reload();
+      return { ok: true };
+    },
     async retry() { if (st.user) await handleUser(auth.currentUser); else if (auth) state('signed-out'); else { initialized = false; await cloud.init(); } },
     async resolve(which) {
       if (!st.conflict) return;
