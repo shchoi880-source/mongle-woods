@@ -17,7 +17,13 @@
     top.append(hud.time, hud.money);
     hud.menu = $('button', 'btn-round btn-menu', '🍃'); hud.menu.title = '잎첩 (Tab)';
     hud.menu.onclick = () => { press(hud.menu); G.input.emit('menu'); };
-    top.append(hud.menu);
+    hud.map = $('button', 'btn-round btn-map', '🗺️'); hud.map.title = '지도 (M)';
+    hud.map.onclick = () => { press(hud.map); G.input.emit('map'); };
+    top.append(hud.map, hud.menu);
+    // 지금 할 일 (누르면 지도)
+    hud.goal = $('button', 'hud-goal'); hud.goal.onclick = () => { press(hud.goal); G.input.emit('map'); };
+    root.append(hud.goal);
+    setInterval(() => UI.refreshGoal(), 1000);
     root.append(top);
     // 오른쪽 아래: 액션·도구
     const br = $('div', 'hud-br');
@@ -44,6 +50,15 @@
   function press(el) { el.classList.remove('pressed'); void el.offsetWidth; el.classList.add('pressed'); G.audio.sfx('tap'); }
   function bump(el) { el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); }
   UI.hud = (on) => { UI.root.classList.toggle('hud-on', !!on); };
+  let lastGoal = '';
+  UI.refreshGoal = () => {
+    if (!hud.goal) return;
+    const o = G.map && G.map.objective && G.map.objective();
+    const txt = o ? o.text : '';
+    if (txt === lastGoal) return; lastGoal = txt;
+    hud.goal.innerHTML = txt ? `<span>📌</span>${esc(txt)}` : '';
+    hud.goal.classList.toggle('on', !!txt);
+  };
   UI.refreshHud = () => {
     if (!G.time || !hud.time) return;
     const l = G.time.label(), w = G.weather.now();
@@ -173,7 +188,7 @@
   });
   UI.modalInput = (ev) => {
     if (!UI.open) return false;
-    if (ev.type === 'back' || ev.type === 'menu') UI.open.close();
+    if (ev.type === 'back' || ev.type === 'menu' || ev.type === 'map') UI.open.close();
     return true;
   };
   UI.confirm = (msg, yes = '네', no = '아니요') => new Promise((resolve) => {
@@ -349,7 +364,7 @@
     const r1 = $('div', 'row wrap'); r1.append(b1, b2, b3, b4);
     box.append(r1);
     pane.append(box);
-    pane.append($('div', 'muted small', `몽글숲 이야기 ${G.VERSION} · 키보드: 방향키/WASD 이동, Shift 달리기, C 살금, Space 행동, Q 도구, Tab 잎첩`));
+    pane.append($('div', 'muted small', `몽글숲 이야기 ${G.VERSION} · 키보드: 방향키/WASD 이동, Shift 달리기, C 살금, Space 행동, Q 도구, Tab 잎첩, M 지도`));
   }
 
   function exportSave() {

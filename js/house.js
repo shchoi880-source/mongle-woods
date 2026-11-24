@@ -237,6 +237,7 @@
       if (H.editing) return editInput(ev);
       if (ev.type === 'tool') { startEdit(); return true; }
       if (ev.type === 'menu') { G.ui.notebook(); return true; }
+      if (ev.type === 'map') { G.map.open(); return true; }
       if (ev.type === 'act') { act(); return true; }
       if (ev.type === 'back') { H.exit(); return true; }
       if (ev.type === 'tapWorld' && ev.mouse) { const p = toRoom(ev.cx, ev.cy); const pl = G.player; pl.dir = G.npc.faceDir(p.x - pl.x, p.y - pl.y); act(); return true; }

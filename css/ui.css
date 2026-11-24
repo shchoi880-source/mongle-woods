@@ -209,3 +209,13 @@ input, select, textarea { font: inherit; color: var(--ink); }
 .book { background: linear-gradient(#eaf6ff, #fff8f1); border: 2px solid #d8e8f2; border-radius: 18px; padding: 16px; text-align: center; line-height: 1.8; font-size: 15px; word-break: keep-all; margin-bottom: 10px; }
 .bk-no { font-size: 12px; color: var(--ink2); } .bk-pic { font-size: 56px; margin: 6px 0; position: relative; } .bk-pic .z { position: absolute; font-size: 16px; margin-left: -8px; color: #8fb4ff; animation: nb 1.6s infinite; }
 .book p { margin: 4px 0; }
+
+/* ---- 지도·지금 할 일 ---- */
+.hud-goal { position: absolute; top: calc(70px + var(--safe-t)); left: calc(10px + var(--safe-l)); max-width: min(78vw, 420px); background: rgba(255,250,241,.94); border-radius: 14px; padding: 6px 12px; box-shadow: var(--shadow); font-size: 13px; text-align: left; display: none; gap: 6px; align-items: center; line-height: 1.35; word-break: keep-all; }
+.hud-on .hud-goal.on { display: flex; } .hud-goal span { flex: none; }
+.btn-map { margin-left: 2px; }
+.hud-top .hud-money { margin-left: auto; }
+.mapwrap { background: #5cbde2; border-radius: 16px; overflow: hidden; border: 3px solid #f3e4cf; touch-action: none; }
+.mapcv { display: block; width: 100%; height: auto; }
+.mapinfo { margin-top: 8px; } .maplegend { margin-top: 6px; line-height: 1.5; }
+.toasts { top: calc(112px + var(--safe-t)); }
