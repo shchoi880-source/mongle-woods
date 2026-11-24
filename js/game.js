@@ -729,7 +729,7 @@
         const actions = document.createElement('div'); actions.className = 'title-account';
         const login = document.createElement('button'); login.className = 'btn ghost'; login.textContent = '기존 계정으로 이어하기';
         const signup = document.createElement('button'); signup.className = 'btn'; signup.textContent = '회원가입하고 시작';
-        login.onclick = (e) => { e.stopPropagation(); G.audio.unlock(); G.ui.account('login'); };
+        login.onclick = (e) => { e.stopPropagation(); G.audio.unlock(); G.ui.account('login', () => go()); };
         signup.onclick = (e) => { e.stopPropagation(); G.audio.unlock(); G.ui.account('signup', (mode) => { if (mode === 'signup') go(); }); };
         actions.append(login, signup); titleEl.insertBefore(actions, titleEl.querySelector('.ver'));
       }

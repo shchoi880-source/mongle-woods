@@ -71,6 +71,9 @@
     const raw = err && (err.code || err.message) || String(err || '알 수 없는 오류');
     const known = {
       'auth/popup-closed-by-user': '로그인 창이 닫혔어요.', 'auth/cancelled-popup-request': '로그인이 취소됐어요.',
+      'auth/popup-blocked': 'Google 로그인 창이 차단됐어요. 브라우저의 팝업을 허용하거나 아이디와 비밀번호로 로그인해 주세요.',
+      'auth/operation-not-supported-in-this-environment': '이 브라우저에서는 Google 로그인을 열 수 없어요. Safari나 Chrome에서 다시 열거나 아이디와 비밀번호로 로그인해 주세요.',
+      'auth/web-storage-unsupported': '이 브라우저의 개인정보 보호 설정 때문에 Google 로그인을 유지할 수 없어요. 아이디와 비밀번호로 로그인해 주세요.',
       'auth/unauthorized-domain': '이 주소가 Firebase 로그인 허용 주소에 등록되지 않았어요.',
       'auth/email-already-in-use': '이미 사용 중인 아이디예요.',
       'auth/invalid-credential': '아이디 또는 비밀번호가 맞지 않아요.',
@@ -147,6 +150,16 @@
   function scheduleUpload(ms = 5000) {
     if (!st.user || st.phase === 'conflict' || st.phase === 'reloading') return;
     clearTimeout(uploadTimer); uploadTimer = setTimeout(() => upload(false), ms);
+  }
+  async function waitForUser(uid, timeout = 30000) {
+    const end = Date.now() + timeout;
+    while (Date.now() < end) {
+      if (st.phase === 'error') return false;
+      if (st.user && st.user.uid === uid && !WAIT.has(st.phase)) return true;
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    fail(new Error('로그인은 되었지만 서버 마을 확인이 늦어지고 있어요. 인터넷 연결을 확인한 뒤 다시 로그인해 주세요.'));
+    return false;
   }
   async function handleUser(user) {
     const run = ++authRun;
@@ -260,7 +273,10 @@
       if (!st.configured) return fail(new Error('Firebase 설정이 아직 끝나지 않았어요.'));
       if (!auth) { await cloud.init(); if (!auth) return; }
       state('signing-in');
-      try { return await api.auth.signInWithEmailAndPassword(auth, accountEmail(id), password); }
+      try {
+        const result = await api.auth.signInWithEmailAndPassword(auth, accountEmail(id), password);
+        return await waitForUser(result.user.uid) ? result : undefined;
+      }
       catch (e) { fail(e); }
     },
     async signInGoogle() {
@@ -268,12 +284,10 @@
       if (!auth) { await cloud.init(); if (!auth) return; }
       state('signing-in'); G.save.pause(false);
       const provider = new api.auth.GoogleAuthProvider(); provider.setCustomParameters({ prompt: 'select_account' });
-      try { return await api.auth.signInWithPopup(auth, provider); }
-      catch (e) {
-        if (['auth/popup-blocked', 'auth/operation-not-supported-in-this-environment', 'auth/web-storage-unsupported'].includes(e.code)) {
-          state('redirecting'); await api.auth.signInWithRedirect(auth, provider);
-        } else fail(e);
-      }
+      try {
+        const result = await api.auth.signInWithPopup(auth, provider);
+        return await waitForUser(result.user.uid) ? result : undefined;
+      } catch (e) { fail(e); }
     },
     async linkGoogle() {
       if (!auth || !auth.currentUser) return fail(new Error('먼저 아이디로 로그인해 주세요.'));
@@ -282,11 +296,7 @@
       try {
         const result = await api.auth.linkWithPopup(auth.currentUser, provider);
         await handleUser(result.user); return result;
-      } catch (e) {
-        if (['auth/popup-blocked', 'auth/operation-not-supported-in-this-environment', 'auth/web-storage-unsupported'].includes(e.code)) {
-          state('redirecting'); await api.auth.linkWithRedirect(auth.currentUser, provider);
-        } else fail(e);
-      }
+      } catch (e) { fail(e); }
     },
     async signOut() { if (sessionOff) { sessionOff(); sessionOff = null; } if (auth) await api.auth.signOut(auth); },
     async retry() { if (st.user) await handleUser(auth.currentUser); else if (auth) state('signed-out'); else { initialized = false; await cloud.init(); } },
