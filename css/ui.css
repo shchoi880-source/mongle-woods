@@ -331,3 +331,4 @@ input, select, textarea { font: inherit; color: var(--ink); }
   .chatline { font-size: 14px; }
 }
 .pweye { align-self: flex-start; }
+.upmark { position: absolute; top: 4px; right: 6px; font-style: normal; background: #ffd24d; border-radius: 8px; padding: 0 4px; font-size: 12px; } .buycard { position: relative; } .boxgrid { max-height: 40vh; overflow-y: auto; }

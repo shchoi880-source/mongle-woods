@@ -1,4 +1,4 @@
-// 시스템: 가방(20칸)·지갑(몽)·판매/구매·유행 바람·도감·첫날 할 일
+// 시스템: 가방(30칸)·지갑(몽)·판매/구매·유행 바람·도감·첫날 할 일
 (function (G) {
   'use strict';
   const u = G.u;
@@ -27,7 +27,7 @@
   };
 
   // ---------- 가방 ----------
-  const inv = { size: 20, slots: [] };
+  const inv = { size: 30, slots: [] };
   G.inv = {
     get size() { return inv.size; },
     get slots() { return inv.slots; },
@@ -61,10 +61,35 @@
     },
   };
   G.save.section('inv', {
-    v: 1, def: () => ({ size: 20, slots: [] }),
+    v: 1, def: () => ({ size: 30, slots: [] }),
     get: () => ({ size: inv.size, slots: inv.slots.map((s) => [s.id, s.n, s.x]) }),
-    set: (d) => { inv.size = d.size || 20; inv.slots = (d.slots || []).filter((s) => G.items.get(s[0])).map((s) => ({ id: s[0], n: s[1], x: s[2] || null })); },
+    set: (d) => { inv.size = Math.max(d.size || 20, 30); // 6차 회의: 20→30칸
+      inv.slots = (d.slots || []).filter((s) => G.items.get(s[0])).map((s) => ({ id: s[0], n: s[1], x: s[2] || null })); },
   });
+  // ---------- 📦 집 보관함 100칸 (6차 회의) ----------
+  const box = { size: 100, slots: [] };
+  G.storage = {
+    get slots() { return box.slots; }, get size() { return box.size; },
+    // 가방 i번 칸 → 보관함 (같은 물건은 쌓는다)
+    put(i) {
+      const s = G.inv.slots[i]; if (!s) return false;
+      const it = G.items.get(s.id), max = (it && it.stack) || 1;
+      if (it && it.cat === 'letter') return false; // 배달할 편지는 가방에
+      let n = s.n;
+      if (max > 1 && !s.x) for (const b of box.slots) { if (b.id === s.id && !b.x && b.n < max) { const k = Math.min(max - b.n, n); b.n += k; n -= k; if (!n) break; } }
+      if (n > 0) { if (box.slots.length >= box.size) { if (n === s.n) return false; } else { box.slots.push({ id: s.id, n, x: s.x ? Object.assign({}, s.x) : null }); n = 0; } }
+      G.inv.removeAt(i, s.n - n); G.save.mark('storage'); return true;
+    },
+    take(i) {
+      const b = box.slots[i]; if (!b) return false;
+      if (!G.inv.canFit(b.id, b.x)) return false;
+      const left = G.inv.add(b.id, b.n, b.x);
+      if (left) b.n = left; else box.slots.splice(i, 1);
+      G.save.mark('storage'); return true;
+    },
+  };
+  G.save.section('storage', { v: 1, def: () => ({ slots: [] }), get: () => ({ slots: box.slots.map((s) => [s.id, s.n, s.x]) }), set: (d) => { box.slots = (d.slots || []).filter((s) => G.items.get(s[0])).map((s) => ({ id: s[0], n: s[1], x: s[2] || null })); } });
+
 
   // ---------- 지갑·상점·유행 바람 ----------
   const econ = { money: 1000, salesTotal: 0, soldDays: 0, firstSale: false, bought: {} };
@@ -110,6 +135,10 @@
         for (const c of G.data.all('crops').filter((x) => x.season === season)) list.push({ kind: 'seed', id: c.id, name: c.name + ' 씨앗 3개', price: c.seed * 3, key: 'seed_' + c.id });
         if (G.TOOLS.can && !G.player.hasTool('can')) list.push({ kind: 'tool', id: 'can', name: G.TOOLS.can.name, price: G.TOOLS.can.price, key: 'can' });
       }
+      // 도구 업그레이드 (한 번 사면 영구)
+      for (const [t, nm, pr] of [['net', '튼튼 잠자리채', 3000], ['rod', '튼튼 낚싯대', 3000], ['can', '큰 물뿌리개', 2500]]) {
+        if (G.player.hasTool(t) && !(G.player.up && G.player.up[t])) list.push({ kind: 'up', id: t, name: nm, price: pr, key: 'up_' + t });
+      }
       if (G.ranch) {
         for (const [k, v] of Object.entries(G.ranch.KINDS)) list.push({ kind: 'animal', id: k, name: v.baby, price: v.price, key: 'an_' + k });
       }
@@ -131,6 +160,12 @@
         G.player.giveTool(entry.id);
         G.emit('shop:buy', { id: entry.id, price: entry.price });
         return { ok: true };
+      }
+      if (entry.kind === 'up') {
+        if (G.player.up && G.player.up[entry.id]) return { ok: false, why: '이미 좋은 걸 가지고 있어요.' };
+        if (!G.wallet.spend(entry.price, 'buy')) return { ok: false, why: '몽이 조금 모자라요.' };
+        G.player.up = Object.assign({}, G.player.up, { [entry.id]: 1 }); G.save.mark('up');
+        G.emit('shop:buy', { id: 'up_' + entry.id, price: entry.price }); return { ok: true };
       }
       if (entry.kind === 'animal') { const r = G.ranch.buy(entry.id); if (r.ok) G.emit('shop:buy', { id: entry.id, price: entry.price }); return r; }
       if (entry.kind === 'seed') {

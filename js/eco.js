@@ -138,7 +138,7 @@
       for (const b of bugs) {
         if (b.state === 'held' || b.fade < 0.5) continue;
         const d = u.dist(b.x, b.y - (b.alt || 0) * 0.4, tx, ty);
-        if (d < BUG_TUNE.catchRadius && d < bd) { bd = d; best = b; }
+        if (d < BUG_TUNE.catchRadius * (p.up && p.up.net ? 1.35 : 1) && d < bd) { bd = d; best = b; }
       }
       if (best && best.state !== 'flee') { bugs.splice(bugs.indexOf(best), 1); return best; }
       if (best && best.state === 'flee' && best.t < BUG_TUNE.catchGrace) { bugs.splice(bugs.indexOf(best), 1); return best; } // 막 날아오른 순간은 넉넉히 봐준다
@@ -287,7 +287,7 @@
       if (F.state === 'wait') {
         // 3타일 안의 물고기가 관심
         if (F.t > 0.6 && !F.target) {
-          let best = null, bd = TILE * 3.2;
+          let best = null, bd = TILE * (G.player.up && G.player.up.rod ? 4.6 : 3.2);
           for (const f of fish) { if (f.state !== 'swim') continue; const d = u.dist(f.x, f.y, b.x, b.y); if (d < bd) { bd = d; best = f; } }
           if (best) { F.target = best; best.state = 'approach'; F.state = 'approach'; F.t = 0; }
         }
@@ -302,7 +302,7 @@
         f.ang = a; const d = u.dist(f.x, f.y, b.x, b.y);
         const front = 8 + f.shadow * 2;
         if (d > front) { f.x += Math.cos(a) * 18 * dt; f.y += Math.sin(a) * 18 * dt; }
-        else { F.state = 'nibble'; F.t = 0; F.nibbles = Math.floor(Math.random() * 4); F.nibbleT = 0.6 + Math.random() * 0.8; }
+        else { F.state = 'nibble'; F.t = 0; F.nibbles = Math.floor(Math.random() * (G.player.up && G.player.up.rod ? 2 : 4)); F.nibbleT = 0.6 + Math.random() * 0.8; }
         return;
       }
       if (F.state === 'nibble') {
@@ -317,7 +317,7 @@
           } else {
             // 덥석! 판정창: ★1 800ms ~ ★5 350ms, 터치 +80ms
             F.state = 'bite'; F.t = 0;
-            F.window = (800 - (f.sp.tier - 1) * 112 + (G.input.lastTouch ? 80 : 0)) / 1000;
+            F.window = (800 - (f.sp.tier - 1) * 112 + (G.input.lastTouch ? 80 : 0) + (G.player.up && G.player.up.rod ? 160 : 0)) / 1000;
             b.dip = 7; b.ring.push({ t: 0, big: true }, { t: -0.12, big: true });
             G.audio.sfx('bite'); G.emit('fishing:bite', {});
             if (G.settings.get('vibrate') && navigator.vibrate) navigator.vibrate(40);

@@ -561,13 +561,45 @@
     pane.append($('div', 'muted small', '🟢 = 지금 마을 문을 열어 둔 사람 · 다른 사람에게는 캐릭터 이름과 마을 이름만 보여요.'));
   }
 
+  // 📦 보관함: 집 안이거나 집(텐트) 문 근처일 때만, 손님일 땐 안 됨
+  UI.storageOk = () => {
+    if (G.net && G.net.guest) return false;
+    if (G.house && G.house.inside) return true;
+    const m = G.world.map; if (!m) return false;
+    const d = m.plots.tent.door, pl = G.player;
+    return Math.abs(pl.x - (d.x * 32 + 16)) < 32 * 4 && Math.abs(pl.y - (d.y * 32 + 16)) < 32 * 4;
+  };
+  function storagePane(pane) {
+    pane.innerHTML = '';
+    const head = $('div', 'pane-head', `<span>📦 집 보관함 ${G.storage.slots.length}/${G.storage.size} · 누르면 옮겨요</span>`);
+    const back = $('button', 'btn small ghost', '◀ 가방'); back.onclick = () => bagPane(pane); head.append(back);
+    const allIn = $('button', 'btn small', '가방 물건 다 넣기');
+    allIn.onclick = () => { for (let i = G.inv.slots.length - 1; i >= 0; i--) { const it = G.items.get(G.inv.slots[i].id); if (it && it.cat !== 'letter') G.storage.put(i); } G.audio.sfx('pop'); storagePane(pane); };
+    head.append(allIn);
+    pane.append(head, $('div', 'muted small', `🎒 가방 ${G.inv.slots.length}/${G.inv.size} — 눌러서 보관함에 넣기`));
+    // 빈 칸은 빼고 찬 칸만 (폰에서 보관함이 한눈에 보이게)
+    const filled = (slots, onTap, empty) => {
+      const grid = $('div', 'grid boxgrid');
+      slots.forEach((s, i) => {
+        const c = $('button', 'slot', `<img src="${G.art.iconURL(G.items.icon(s.id, s.x), 64)}" alt="">${s.n > 1 ? `<b>${s.n}</b>` : ''}${s.x && s.x.v ? `<i class="giant v${s.x.v}">${G.VARIANTS[s.x.v].name}</i>` : ''}`);
+        c.title = G.items.name(s.id, s.x); c.onclick = () => onTap(i); grid.append(c);
+      });
+      if (!slots.length) grid.append($('div', 'muted small', empty));
+      return grid;
+    };
+    pane.append(filled(G.inv.slots, (i) => { if (!G.storage.put(i)) { UI.toast(G.items.get(G.inv.slots[i].id).cat === 'letter' ? '편지는 가방에 두고 배달해요.' : '보관함이 꽉 찼어요.', { icon: '📦' }); G.audio.sfx('error'); return; } G.audio.sfx('pop'); storagePane(pane); }, '가방이 비어 있어요.'));
+    pane.append($('div', 'muted small', `📦 보관함 ${G.storage.slots.length}/${G.storage.size} — 눌러서 가방으로 꺼내기`));
+    pane.append(filled(G.storage.slots, (i) => { if (!G.storage.take(i)) { UI.toast('가방이 꽉 찼어요.', { icon: '🎒' }); G.audio.sfx('error'); return; } G.audio.sfx('pop'); storagePane(pane); }, '아직 비어 있어요.'));
+  }
   function bagPane(pane) {
     const info = $('div', 'slot-info', '<span class="muted">칸을 누르면 자세히 볼 수 있어요.</span>');
     const render = () => {
       pane.innerHTML = '';
       const head = $('div', 'pane-head', `<span>${G.inv.slots.length} / ${G.inv.size}칸</span>`);
       const sortB = $('button', 'btn small ghost', '정리'); sortB.onclick = () => { G.inv.sort(); G.audio.sfx('tap'); render(); };
-      head.append(sortB);
+      const boxB = $('button', 'btn small', `📦 보관함 ${G.storage.slots.length}/${G.storage.size}`);
+      boxB.onclick = () => { if (!UI.storageOk()) { UI.toast('보관함은 집 안이나 집 앞에서 열 수 있어요.', { icon: '📦' }); return; } G.audio.sfx('open'); storagePane(pane); };
+      head.append(sortB, boxB);
       const tools = $('div', 'toolrow');
       for (const t of G.player.tools) { const b = $('button', 'chip' + (G.player.tool === t ? ' on' : ''), `${UI.toolIcon(t)} ${G.TOOLS[t].name}`); b.onclick = () => { G.player.setTool(t); render(); }; tools.append(b); }
       pane.append(head, tools, slotGrid((i, s) => {
@@ -844,7 +876,7 @@
       const buy = $('div', 'buyrow');
       for (const e of G.shop.stock()) {
         const own = e.kind === 'tool' ? G.player.hasTool(e.id) : G.shop.soldOut(e);
-        const ico = e.kind === 'tool' ? `<img src="${G.art.iconURL('tool:' + e.id, 64)}" alt="">` : e.kind === 'seed' ? `<img src="${G.art.iconURL('seed:' + e.id, 64)}" alt="">` : e.kind === 'animal' ? `<img src="${G.art.iconURL('animal:' + e.id, 64)}" alt="">` : `<img src="${G.art.iconURL('furn:' + e.id + '#' + e.c, 64)}" alt="">`;
+        const ico = e.kind === 'tool' || e.kind === 'up' ? `<img src="${G.art.iconURL('tool:' + e.id, 64)}" alt="">${e.kind === 'up' ? '<i class="upmark">⬆</i>' : ''}` : e.kind === 'seed' ? `<img src="${G.art.iconURL('seed:' + e.id, 64)}" alt="">` : e.kind === 'animal' ? `<img src="${G.art.iconURL('animal:' + e.id, 64)}" alt="">` : `<img src="${G.art.iconURL('furn:' + e.id + '#' + e.c, 64)}" alt="">`;
         const b = $('button', 'buycard' + (own ? ' off' : ''), `${ico}<b>${esc(e.name)}</b><small>${own ? (e.kind === 'tool' ? '가지고 있음' : '다 팔림') : G.fmt.money(e.price)}</small>`);
         b.onclick = async () => {
           if (own) return;
@@ -856,6 +888,7 @@
           if (e.kind === 'animal') { tip(r.first ? `${e.name}가 집 옆 목장에 왔어요! 쓰다듬으면 몇 분 뒤 선물을 줘요.` : `${e.name}가 목장에 도착했어요!`, '🐣', 4000); }
           else if (r.gift) { tip('씨앗 첫 손님 덤으로 물뿌리개를 받았어요! 텃밭은 집 옆에 있어요.', '🚿', 4000); }
           else if (e.kind === 'tool') { G.player.setTool(e.id); tip(e.id === 'axe' ? '도끼를 샀어요! 나무를 찍으면 목재가 나와요.' : e.id === 'can' ? '물뿌리개를 샀어요! 텃밭에 물을 줘요.' : '삽을 샀어요! 땅의 금(✕)을 파 보세요.', '🧰'); }
+          else if (e.kind === 'up') tip({ net: '튼튼 잠자리채! 채가 더 넓게 닿아요.', rod: '튼튼 낚싯대! 물고기가 더 멀리서 오고, 당기기가 넉넉해져요.', can: '큰 물뿌리개! 주변 5×3 칸에 한 번에 물을 줘요.' }[e.id], '⬆️', 3600);
           else if (e.kind === 'seed') tip(`${e.name}를 샀어요! 집 옆 텃밭에 심어요.`, '🌱');
           else tip(`${e.name}을(를) 샀어요! 집에서 꾸미기로 놓아 보세요.`, '🛋️');
           render();
