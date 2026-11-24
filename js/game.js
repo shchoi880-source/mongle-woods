@@ -423,11 +423,13 @@
     pl.squash = Math.max(0, pl.squash - dt * 0.8);
     const canMove = pl.busy <= 0 && !pl.hold;
     if (mv.mag > 0 && canMove) {
-      const speed = (inMode === 'run' ? 6.5 : inMode === 'sneak' ? 1.6 : 4.0) * TILE * (G.house && G.house.inside ? 1 : G.ranch.speedMul());
+      const speed = (inMode === 'run' ? 9.5 : inMode === 'sneak' ? 1.6 : 4.0) * TILE // 달리기 6.5→9.5 (오너: 별로 안 빠르다)
+        * (G.house && G.house.inside ? 1 : G.ranch.speedMul());
       const s = speed * (stick ? Math.max(0.35, mv.mag) : 1) * dt;
       if (G.fishing.state !== 'idle') G.fishing.cancel(true);
       const ox = pl.x, oy = pl.y;
-      (GM.mover || G.world.move)(pl, mv.x * s, mv.y * s);
+      // 빠를 때 벽을 뚫지 않게 잘게 나눠 움직인다
+      { const n = Math.max(1, Math.ceil(s / 10)); for (let k = 0; k < n; k++) (GM.mover || G.world.move)(pl, mv.x * s / n, mv.y * s / n); }
       pl.dir = Math.abs(mv.x) > Math.abs(mv.y) * 1.1 ? (mv.x < 0 ? 1 : 3) : (mv.y < 0 ? 2 : 0);
       const moved = Math.hypot(pl.x - ox, pl.y - oy);
       pl.moving = moved > 0.05;
