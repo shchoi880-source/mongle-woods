@@ -291,6 +291,17 @@
   }
 
   function todoPane(pane) {
+    const rq = G.requests.st;
+    if (rq.day === G.time.day() && rq.list.length) {
+      pane.append($('div', 'pane-head', `<span>오늘의 부탁 (${rq.list.filter((r) => r.state === 'done').length}/${rq.list.length}) — 머리 위 「!」인 이웃에게 말을 걸어요</span>`));
+      const box = $('div', 'todo');
+      for (const r of rq.list) {
+        const nm = G.npc.VILLAGERS[r.who].name, done = r.state === 'done';
+        const txt = r.state === 'new' ? `${nm}에게 무슨 부탁이 있대요` : `${nm}: ${G.requests.whatText(r)}`;
+        box.append($('div', 'card' + (done ? ' done' : ''), `<span class="chk">${done ? '✔' : ''}</span>${esc(txt)} <small class="muted">· ${G.fmt.money(r.reward)}</small>`));
+      }
+      pane.append(box);
+    }
     pane.append($('div', 'pane-head', `<span>첫날 할 일 — 순서는 자유! (${G.quest.doneCount()}/${G.quest.CARDS.length})</span>`));
     const list = $('div', 'todo');
     for (const c of G.quest.CARDS) {

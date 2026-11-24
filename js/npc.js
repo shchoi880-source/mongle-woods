@@ -29,6 +29,7 @@
   const N = G.npc = {
     list, st, VILLAGERS,
     get: (id) => list.find((n) => n.id === id),
+    isResident(id) { const v = VILLAGERS[id]; if (!v) return false; if (!v.moveIn) return true; const created = (G.save.sections.get('meta').get() || {}).created || 0; return G.time.day() >= created + v.moveIn; },
     level(id) { const fs = (st[id] || {}).fs || 0; let l = 0; for (let i = 1; i < LV.length; i++) if (fs >= LV[i]) l = i; return l; },
     init() {
       list.length = 0;
@@ -190,6 +191,7 @@
         G.emit('quest:letter', {});
         G.save.mark('talk'); return;
       }
+      if (await G.requests.onTalk(n)) { G.save.mark('talk'); return; }
       const seq = [];
       if (s.greetDay !== day) {
         s.greetDay = day;

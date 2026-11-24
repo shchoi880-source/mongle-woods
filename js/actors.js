@@ -348,6 +348,8 @@
       else if (key === 'urchin_shell') { P.blob(g, 16, 18, 10, 8, sh.col, LINE, 1.4); for (let k = 0; k < 8; k++) P.blob(g, 16 + Math.cos(k) * 6, 18 + Math.sin(k) * 4.5, 1, 1, '#fff'); }
       else if (key === 'pearl_oyster') { P.blob(g, 16, 19, 11, 7, '#bfb6d6', LINE, 1.4); P.blob(g, 16, 16, 4.5, 4.5, sh.col, LINE, 1); P.blob(g, 14.6, 14.6, 1.4, 1.4, '#fff'); }
       else { g.fillStyle = sh.col; g.strokeStyle = LINE; g.lineWidth = 1.4; g.beginPath(); g.moveTo(16, 27); g.lineTo(5, 15); g.quadraticCurveTo(16, 2, 27, 15); g.closePath(); g.fill(); g.stroke(); g.beginPath(); for (let k = -2; k <= 2; k++) { g.moveTo(16, 26); g.lineTo(16 + k * 4.5, 9 + Math.abs(k) * 2); } g.strokeStyle = 'rgba(150,100,70,0.5)'; g.stroke(); }
+    } else if (id === 'parcel') {
+      P.rrect(g, 5, 9, 22, 18, 3, '#d9a877', LINE, 1.4); g.fillStyle = '#ff8a7a'; g.fillRect(14, 9, 4, 18); g.fillRect(5, 16, 22, 4); P.blob(g, 16, 8, 4, 2.5, '#ff8a7a', LINE, 1);
     } else if (id === 'wood') {
       P.rrect(g, 5, 10, 22, 9, 4, '#c98e5a', LINE, 1.3); P.rrect(g, 7, 18, 22, 9, 4, '#b67a48', LINE, 1.3); P.blob(g, 27, 22.5, 2.5, 3.5, '#e8c494', LINE, 1); P.blob(g, 25, 14.5, 2.5, 3.5, '#e8c494', LINE, 1);
     } else if (id === 'stone') {
@@ -368,8 +370,12 @@
     } else if (cat === 'letter' || id.startsWith('letter')) {
       P.rrect(g, 4, 9, 24, 16, 2, '#ffffff', LINE, 1.4); g.strokeStyle = '#ff8a7a'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(4, 9); g.lineTo(16, 19); g.lineTo(28, 9); g.stroke(); P.blob(g, 16, 20, 2.4, 2.4, '#ff6b8b');
     } else if (cat === 'tool') {
-      g.translate(16, 28);
-      A.actor.tool(g, { tool: key, swing: 0.27 }, 0, false, false);
+      // 도구 아이콘: 손잡이 (6,28) → (21,11) 대각선 + 머리
+      g.strokeStyle = '#a7724a'; g.lineWidth = 3; g.lineCap = 'round'; g.beginPath(); g.moveTo(6, 28); g.lineTo(key === 'rod' ? 26 : 20, key === 'rod' ? 5 : 12); g.stroke();
+      if (key === 'net') { g.save(); g.translate(23, 9); g.rotate(0.7); P.blob(g, 0, 0, 7, 8.5, 'rgba(255,255,255,0.85)', LINE, 1.5); g.strokeStyle = 'rgba(91,70,54,0.35)'; g.lineWidth = 0.8; g.beginPath(); for (const k of [-3, 0, 3]) { g.moveTo(k, -7); g.lineTo(k, 7); g.moveTo(-6, k); g.lineTo(6, k); } g.stroke(); g.restore(); }
+      else if (key === 'rod') { P.blob(g, 10, 24, 3, 3, '#ff7a7a', LINE, 1); g.strokeStyle = 'rgba(91,70,54,0.6)'; g.lineWidth = 0.8; g.beginPath(); g.moveTo(26, 5); g.quadraticCurveTo(29, 16, 26, 24); g.stroke(); P.blob(g, 26, 25, 2.2, 2.6, '#ff6b6b', LINE, 1); }
+      else if (key === 'shovel') { g.save(); g.translate(22, 10); g.rotate(0.75); P.rrect(g, -6, -10, 12, 13, [2, 2, 6, 6], '#c9d3da', LINE, 1.4); g.restore(); }
+      else if (key === 'axe') { g.fillStyle = '#c9d3da'; g.strokeStyle = LINE; g.lineWidth = 1.4; g.beginPath(); g.moveTo(17, 9); g.lineTo(25, 2); g.quadraticCurveTo(30, 9, 27, 16); g.lineTo(21, 15); g.closePath(); g.fill(); g.stroke(); }
     } else if (id === 'money') {
       P.blob(g, 16, 18, 10, 10, '#a7e3ff', LINE, 1.4); g.fillStyle = '#ffffff'; g.beginPath(); g.ellipse(13, 14, 3, 2, -0.5, 0, Math.PI * 2); g.fill();
     } else {

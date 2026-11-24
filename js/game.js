@@ -445,7 +445,17 @@
     if (dark > 0.25) drawLights(rect, camX, camY, dark, t);
     // 레이어 8: 감정 팝·말풍선·들어 올린 아이템
     ctx.setTransform(cam.PX, 0, 0, cam.PX, -camX * cam.PX, -camY * cam.PX);
-    for (const n of G.npc.list) if (n.vis && n.emote) A.emote(ctx, n.x, n.y - 62 - (n.species === 'rabbit' ? 10 : 0), n.emote, Math.min(1, n.emoteT / 0.3));
+    for (const n of G.npc.list) {
+      if (!n.vis) continue;
+      const hy = n.y - 62 - (n.species === 'rabbit' ? 10 : 0);
+      if (n.emote) A.emote(ctx, n.x, hy, n.emote, Math.min(1, n.emoteT / 0.3));
+      else if (G.requests.pending(n.id) || (n.villager && !G.npc.st[n.id].met)) {
+        // 부탁이 있는 주민: 머리 위 작은 「!」 (폰에서도 보이게 통통 튐)
+        const k = Math.abs(Math.sin(t * 3 + n.seed)) * 3;
+        A.paint.blob(ctx, n.x, hy - k, 6.5, 6.5, G.requests.fresh(n.id) || !G.npc.st[n.id].met ? '#ffd24d' : '#ffffff', A.C.line, 1.2);
+        ctx.fillStyle = A.C.line; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(G.npc.st[n.id] && !G.npc.st[n.id].met ? '?' : '!', n.x, hy - k + 0.5);
+      }
+    }
     if (pl.hold) drawHeld(t);
     if (kg.sayT > 0 && !G.ui.dialogOpen()) bubble(pl.x, pl.y - 74 - kg.jump, kg.say, Math.min(1, kg.sayT * 3));
     G.fishing.drawPost(ctx, pl);
@@ -770,6 +780,7 @@
     A.clearCache();
     G.world.refresh(G.time.day());
     if (G.nest.tick(G.time.day())) setTimeout(() => G.ui.toast(`${G.nest.cur().name} 공사가 끝났어요! 집이 넓어졌어요.`, { icon: '🏡', ms: 4000 }), 1500);
+    G.requests.daily(G.time.day());
     GM.drops = (G.world.state.drops || []).map((d) => Object.assign({ vy: 0, h: 0, t: 0 }, d));
     G.npc.init();
     G.eco.clear();
@@ -806,7 +817,7 @@
     G.save.mark('day');
   });
   G.on('quest:done', (p) => { G.ui.toast(`할 일 완료: ${p.text}`, { icon: '✅' }); G.audio.sfx('chime'); fxSparkle(pl.x, pl.y - 50, 8); });
-  G.on('stamp:earn', () => { setTimeout(async () => { G.audio.sfx('stamp'); kongalReact('jump'); await G.ui.say([{ who: 'kongal', text: '꼬물꼬물! (오늘 멋졌어!)' }, { who: 'sys', text: '반짝 도장을 하나 받았어요! 내일은 박물관이 문을 열고, 새 이웃도 온대요.' }]); }, 1400); });
+  G.on('stamp:earn', (p) => { setTimeout(async () => { G.audio.sfx('stamp'); kongalReact('jump'); await G.ui.say([{ who: 'kongal', text: '꼬물꼬물! (오늘 멋졌어!)' }, { who: 'sys', text: p.id === 'daily' ? '오늘의 부탁을 모두 들어줬어요! 반짝 도장을 하나 받았어요.' : '반짝 도장을 하나 받았어요! 내일은 박물관이 문을 열고, 새 이웃도 온대요.' }]); }, 1400); });
   G.on('dex:new', (p) => { if (p.newSp) fxSparkle(pl.x, pl.y - 60, 10, '#ffe066'); });
   G.on('eco:miss', () => { kongalSay(u.pick(G.lines('kongal', 'miss'), Math.random()).text); G.audio.sfx('miss'); });
   G.on('weather:change', () => G.audio.ambient && G.audio.ambient(G.weather.now().type));
