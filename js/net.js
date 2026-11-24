@@ -343,6 +343,8 @@
     }
   }
   N.watchFriends = watchFriends;
+  // 이름·마을 이름을 바꾸면 목록에도 바로 반영
+  G.on('player:look', () => { if (fb()) N.publish(N.mode === 'host').catch(() => {}); });
   // 로그인하면 목록에 내 이름을 올린다(다른 사람이 나를 친구로 고를 수 있게)
   G.on('cloud:state', (s) => { if (s.phase === 'synced' && !N._published && fb()) { N._published = true; N.publish(N.mode === 'host').catch((e) => { N._published = false; G.log.err('net.publish', e); }); watchFriends(); } if (s.phase === 'signed-out' || s.phase === 'kicked') { N._published = false; N.code = ''; } });
 
