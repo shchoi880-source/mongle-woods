@@ -59,6 +59,13 @@
     });
     G.on('cloud:error', (p) => UI.toast(p.message || '계정 연결을 확인해 주세요.', { icon: '☁️', ms: 4500 }));
     // 로그인했는데 이 기기 마을과 서버 마을이 다르면: 설정에 숨겨 두지 말고 바로 고르게 한다 (오너 제보: 폰에서 로그인이 안 되는 것처럼 보임)
+    G.on('cloud:state', (s) => {
+      if (s.phase !== 'synced' || !G.cloud.isAdmin || !G.cloud.isAdmin() || !G.game || !G.game.started) return;
+      const econ = G.save.sections.get('econ').get();
+      if (econ.adminGift) return;
+      G.admin.all();
+      UI.toast('👑 관리자 선물: 1,000만 몽 + 도구 전부 + 보관함에 가구·재료·씨앗!', { icon: '🎁', ms: 5000 });
+    });
     let askedConflict = false;
     G.on('cloud:state', (s) => {
       if (s.phase !== 'conflict' || !s.conflict) { if (s.phase === 'synced') askedConflict = false; return; }
@@ -731,6 +738,14 @@
     box.append(r1);
     pane.append(box);
     pane.append(cloudBox());
+    if (G.cloud.isAdmin && G.cloud.isAdmin()) {
+      const ab = $('div', 'savebox'); ab.append($('div', 'pane-head', '<span>👑 관리자</span>'));
+      const r = $('div', 'row wrap');
+      const b1 = $('button', 'btn small', '💰 1,000만 몽'); b1.onclick = () => { G.admin.money(); G.audio.sfx('coin'); UI.toast('1,000만 몽을 넣었어요!', { icon: '👑' }); };
+      const b2 = $('button', 'btn small', '🧰 도구·업그레이드 전부'); b2.onclick = () => { G.admin.tools(); G.save.now('admin'); UI.toast('도구를 전부 챙겼어요!', { icon: '👑' }); };
+      const b3 = $('button', 'btn small', '📦 보관함에 물건 가득'); b3.onclick = () => { G.admin.items(); G.save.now('admin'); UI.toast('집 보관함에 가구·재료·씨앗을 넣었어요!', { icon: '👑' }); };
+      r.append(b1, b2, b3); ab.append(r); pane.append(ab);
+    }
     pane.append($('div', 'muted small', `몽글숲 이야기 ${G.VERSION} · 키보드: 방향키/WASD 이동, Shift 달리기, C 살금, Space 행동, Q 도구, Tab 잎첩, M 지도`));
   }
 

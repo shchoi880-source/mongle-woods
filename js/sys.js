@@ -190,6 +190,23 @@
       return { ok: false };
     },
   };
+  // ---------- 관리자 선물 (오너 계정) ----------
+  G.admin = {
+    money(n = 10000000) { G.wallet.add(n, 'admin'); },
+    tools() {
+      for (const t of ['net', 'rod', 'shovel', 'axe', 'can']) if (G.TOOLS[t]) G.player.giveTool(t);
+      G.player.up = Object.assign({}, G.player.up, { net: 1, rod: 1, can: 1 });
+    },
+    // 보관함(100칸)에 가구 전부 1개씩 + 재료·씨앗
+    items() {
+      const put = (id, n, x) => { const s = G.storage.slots; const it = G.items.get(id); if (!it) return; const ex = !x && s.find((b) => b.id === id && !b.x); if (ex) { ex.n = Math.min((it.stack || 1) * 1, ex.n + n); return; } if (s.length < G.storage.size) s.push({ id, n, x: x || null }); };
+      if (G.house) for (const f of G.house.SHOP_FORMS) put('furn:' + f.id, 1, { c: 0 });
+      for (const m of ['wood', 'stone', 'clay', 'iron']) put(m, 30);
+      if (G.farm) for (const c of G.data.all('crops')) put('seed:' + c.id, 30);
+      G.save.mark('admin');
+    },
+    all() { G.admin.money(); G.admin.tools(); G.admin.items(); econ.adminGift = true; G.save.now('admin'); },
+  };
   G.save.section('econ', {
     v: 1, def: () => ({ money: 1000, salesTotal: 0, firstSale: false }),
     get: () => Object.assign({}, econ), set: (d) => Object.assign(econ, d),
