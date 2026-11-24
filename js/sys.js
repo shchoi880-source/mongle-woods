@@ -55,8 +55,8 @@
       return inv.slots.some((s) => s.id === id && !s.x && s.n < it.stack);
     },
     sort() {
-      const ord = { tool: 0, letter: 1, bug: 2, fish: 3, fossil: 4, shell: 5, mat: 6 };
-      inv.slots.sort((a, b) => (ord[G.items.get(a.id).cat] - ord[G.items.get(b.id).cat]) || a.id.localeCompare(b.id) || ((b.x && b.x.size || 0) - (a.x && a.x.size || 0)));
+      const ord = { tool: 0, letter: 1, bug: 2, fish: 3, fossil: 4, shell: 5, mat: 6, sea: 7, crop: 8, seed: 9, dish: 10, ranch: 11, furn: 12, fest: 13 };
+      inv.slots.sort((a, b) => ((ord[G.items.get(a.id).cat] ?? 20) - (ord[G.items.get(b.id).cat] ?? 20)) || a.id.localeCompare(b.id) || ((b.x && b.x.size || 0) - (a.x && a.x.size || 0)));
       G.emit('inv:change', {});
     },
   };
@@ -205,7 +205,8 @@
       if (G.farm) for (const c of G.data.all('crops')) put('seed:' + c.id, 30);
       G.save.mark('admin');
     },
-    all() { G.admin.money(); G.admin.tools(); G.admin.items(); econ.adminGift = true; G.save.now('admin'); },
+    hats() { G.player.unlocks = Object.assign({}, G.player.unlocks, { hat13: 1, hat14: 1, hat15: 1, hat16: 1, hat17: 1 }); },
+    all() { G.admin.money(); G.admin.tools(); G.admin.items(); G.admin.hats(); econ.adminGift = true; G.save.now('admin'); },
   };
   G.save.section('econ', {
     v: 1, def: () => ({ money: 1000, salesTotal: 0, firstSale: false }),

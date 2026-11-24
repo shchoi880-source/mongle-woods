@@ -383,9 +383,13 @@
         const n = L.count(pt);
         for (let i = 0; i < n; i++) {
           const cur = (look[pt.k] === undefined ? (L.def()[pt.k] || 0) : look[pt.k]) === i;
-          const c = $('button', 'chip' + (pt.colors ? ' sw' : '') + (cur ? ' on' : ''), pt.colors ? '' : esc(pt.names[i]));
+          const locked = L.isLocked(pt, i);
+          const c = $('button', 'chip' + (pt.colors ? ' sw' : '') + (cur ? ' on' : '') + (locked ? ' locked' : ''), pt.colors ? '' : (locked ? '🔒 ' : '') + esc(pt.names[i]));
           if (pt.colors) { c.style.background = pt.colors[i]; c.setAttribute('aria-label', pt.name + ' ' + (i + 1)); }
-          c.onclick = () => { look[pt.k] = i; G.audio.sfx('pop'); onChange && onChange(pt.k); render(); };
+          c.onclick = () => {
+            if (locked) { const f = G.fest && G.fest.byId(pt.locks[i]); UI.toast(f ? `「${pt.names[i]}」은 ${f.name}에서 받을 수 있어요!` : `「${pt.names[i]}」은 축제 모자 4개를 모두 모으면 받아요!`, { icon: '🔒' }); G.audio.sfx('error'); return; }
+            look[pt.k] = i; G.audio.sfx('pop'); onChange && onChange(pt.k); render();
+          };
           chips.append(c);
         }
         row.append(chips); box.append(row);

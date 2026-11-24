@@ -41,6 +41,7 @@
     look: { skin: 0, hair: 0, hairC: 0, shirt: 0 }, name: '', town: '', tools: ['hand'], tool: 'hand',
     swing: 0, busy: 0, hold: null, holdT: 0, squash: 0, stepT: 0, idleT: 0,
     up: {}, // 도구 업그레이드 {net, rod, can} (6차 회의)
+    unlocks: {}, // 축제 꾸미기 잠금 해제 {'hat13': 1, ...}
     hasTool(t) { return this.tools.includes(t); },
     giveTool(t) { if (!this.tools.includes(t)) this.tools.push(t); G.save.mark('tool'); G.ui.refreshHud(); },
     setTool(t) { if (!this.hasTool(t)) return; this.tool = t;
@@ -51,9 +52,9 @@
   G.player = pl;
   G.save.section('player', {
     v: 2,
-    def: () => ({ x: 0, y: 0, dir: 0, look: { skin: 0, hair: 0, hairC: 0, shirt: 0 }, name: '', town: '', tools: ['hand'], tool: 'hand', ring: [], up: {} }),
-    get: () => ({ x: Math.round(pl.x), y: Math.round(pl.y), dir: pl.dir, look: pl.look, name: pl.name, town: pl.town, tools: pl.tools, tool: pl.tool, ring: pl.ring || [], up: pl.up || {} }),
-    set: (d) => { Object.assign(pl, { x: d.x, y: d.y, dir: d.dir, look: d.look, name: d.name, town: d.town, tools: d.tools, tool: d.tool, ring: d.ring, up: d.up || {} }); },
+    def: () => ({ x: 0, y: 0, dir: 0, look: { skin: 0, hair: 0, hairC: 0, shirt: 0 }, name: '', town: '', tools: ['hand'], tool: 'hand', ring: [], up: {}, unlocks: {} }),
+    get: () => ({ x: Math.round(pl.x), y: Math.round(pl.y), dir: pl.dir, look: pl.look, name: pl.name, town: pl.town, tools: pl.tools, tool: pl.tool, ring: pl.ring || [], up: pl.up || {}, unlocks: pl.unlocks || {} }),
+    set: (d) => { Object.assign(pl, { x: d.x, y: d.y, dir: d.dir, look: d.look, name: d.name, town: d.town, tools: d.tools, tool: d.tool, ring: d.ring, up: d.up || {}, unlocks: d.unlocks || {} }); },
     // v1 → v2: 도구 즐겨찾기(ring) 필드 추가 (마이그레이션 시험 1건, r2-제작범위 M-a)
     migrate: { 1: (d) => Object.assign({}, d, { ring: (d.tools || []).slice(0, 8) }) },
   });
@@ -78,6 +79,8 @@
     GM.drops.push(d); G.world.state.drops = GM.drops.map((e) => ({ id: e.id, x: e.x, y: e.y, n: e.n, key: e.key }));
     G.save.mark('drop');
   }
+
+  GM.dropItem = (id, x, y, n) => dropItem(id, x, y, n);
 
   // 아이템 얻기 공통 흐름: 가방 확인 → 들어 올리기 연출 → 도감 → 토스트
   const gainCount = {};
@@ -726,6 +729,7 @@
       G.events.updateRace(dt);
       if (!(G.net && G.net.guest)) G.ranch.update(dt, t);
       if (G.net) G.net.update(dt);
+      if (G.fest) G.fest.update(dt);
       G.ui.updateDialog(dt);
       cam.follow(pl.x, pl.y, dt);
       GM.target = (G.ui.dialogOpen() || G.ui.open) ? null : findTarget();
