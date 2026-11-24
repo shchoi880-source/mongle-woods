@@ -5,6 +5,7 @@
   const SDK = '13.4.0';
   const META_KEY = 'mg.cloud.meta';
   const BACKUP_KEY = 'mg.cloud.backup';
+  const ADMIN_KEY = 'mg.admin', ADMIN_FP = '4cf30db3';
   const REQUIRED_CONFIG = ['apiKey', 'authDomain', 'databaseURL', 'projectId', 'appId'];
   const WAIT = new Set(['loading', 'checking', 'registering', 'signing-in', 'linking-google', 'redirecting', 'syncing', 'reloading']);
   let api = null, auth = null, db = null, userRef = null;
@@ -225,6 +226,8 @@
   const cloud = G.cloud = {
     SDK, META_KEY, BACKUP_KEY, _decide: decide, _accountId: accountId, _validAccountId: validAccountId, _accountEmail: accountEmail,
     view: publicState,
+    // 관리자: 이 기기에서 관리자 아이디로 로그인했고, 지금 그 계정으로 로그인돼 있을 때만
+    isAdmin: () => { const a = readJSON(ADMIN_KEY); return !!(a && st.user && a.uid === st.user.uid); },
     // 멀티플레이(net.js)용: 로그인했을 때만 DB 접근을 빌려준다
     _fb: () => (api && db && st.user && auth && auth.currentUser ? { db: api.db, ref: db, uid: st.user.uid } : null),
     async init() {
@@ -275,6 +278,8 @@
       state('signing-in');
       try {
         const result = await api.auth.signInWithEmailAndPassword(auth, accountEmail(id), password);
+        // 관리자 계정 표시(아이디는 공개 코드에 남기지 않고 지문으로만 비교)
+        if (G.u.fnv1a('mongle-admin:' + id) === ADMIN_FP) writeJSON(ADMIN_KEY, { uid: result.user.uid }); 
         return await waitForUser(result.user.uid) ? result : undefined;
       }
       catch (e) { fail(e); }
