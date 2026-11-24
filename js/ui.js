@@ -46,6 +46,11 @@
     G.on('time:minute', () => UI.refreshHud());
     G.on('save:fail', () => UI.toast('저장 공간이 부족해요. 설정에서 내보내기를 해 주세요.', { icon: '⚠️' }));
     G.on('save:future', () => UI.toast('더 새로운 버전의 세이브예요. 새로고침해 주세요. (읽기 전용)', { icon: '⚠️' }));
+    G.on('cloud:state', () => {
+      const pane = UI.open && UI.open.body.querySelector('.pane[data-settings="1"]');
+      if (pane) setPane(pane);
+    });
+    G.on('cloud:error', (p) => UI.toast(p.message || '계정 연결을 확인해 주세요.', { icon: '☁️', ms: 4500 }));
   };
   function press(el) { el.classList.remove('pressed'); void el.offsetWidth; el.classList.add('pressed'); G.audio.sfx('tap'); }
   function bump(el) { el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); }
@@ -341,6 +346,7 @@
   }
 
   function setPane(pane) {
+    pane.dataset.settings = '1'; pane.innerHTML = '';
     const row = (label, el) => { const r = $('label', 'setrow', `<span>${label}</span>`); r.append(el); return r; };
     const slider = (key) => { const s = $('input'); s.type = 'range'; s.min = 0; s.max = 1; s.step = 0.05; s.value = G.settings.get(key); s.oninput = () => G.settings.set(key, +s.value); return s; };
     pane.append(row('배경 음악', slider('bgm')), row('효과음', slider('sfx')), row('목소리', slider('voice')));
@@ -355,7 +361,8 @@
 
     const box = $('div', 'savebox');
     const kb = (G.save.size() / 1024).toFixed(1);
-    box.append($('div', 'muted small', `세이브 크기 ${kb}KB · 이 기기에만 저장돼요. 가끔 내보내기로 백업해 주세요.`));
+    const where = G.cloud.view().configured ? '이 기기에 항상 보관되고, 계정 연결 후 서버에도 동기화돼요.' : '이 기기에만 저장돼요. 가끔 내보내기로 백업해 주세요.';
+    box.append($('div', 'muted small', `세이브 크기 ${kb}KB · ${where}`));
     const b1 = $('button', 'btn', '💾 지금 저장'); b1.onclick = () => { const r = G.save.now('manual'); UI.toast(r.ok ? '저장했어요!' : '저장하지 못했어요.', { icon: r.ok ? '💾' : '⚠️' }); };
     const b2 = $('button', 'btn', '📤 내보내기'); b2.onclick = () => exportSave();
     const b3 = $('button', 'btn', '📥 가져오기'); b3.onclick = () => importSave();
@@ -367,7 +374,62 @@
     const r1 = $('div', 'row wrap'); r1.append(b1, b2, b3, b4);
     box.append(r1);
     pane.append(box);
+    pane.append(cloudBox());
     pane.append($('div', 'muted small', `몽글숲 이야기 ${G.VERSION} · 키보드: 방향키/WASD 이동, Shift 달리기, C 살금, Space 행동, Q 도구, Tab 잎첩, M 지도`));
+  }
+
+  function cloudSummary(s, title) {
+    const d = $('div', 'cloudsave');
+    const when = s.savedAt ? new Date(s.savedAt).toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' }) : '시간 정보 없음';
+    d.innerHTML = `<b>${esc(title)}</b><span>「${esc(s.town || '?')}」 ${esc(s.name || '?')}</span><small>${G.fmt.money(s.money || 0)} · 도감 ${s.dex || 0}종 · ${s.playDays || 0}일 플레이</small><small>${esc(when)}</small>`;
+    return d;
+  }
+  function cloudBox() {
+    const s = G.cloud.view(), box = $('div', 'savebox cloudbox');
+    box.append($('div', 'cloudhead', '<b>☁️ 계정 연결</b><span class="freebadge">무료</span>'));
+    if (!s.configured) {
+      box.append($('div', 'muted small', 'Firebase 무료 설정을 마치면 PC와 폰에서 같은 마을을 이어 할 수 있어요. 지금 세이브는 기존처럼 이 기기에 안전하게 저장돼요.'));
+      return box;
+    }
+    if (s.phase === 'signed-out') {
+      box.append($('div', 'muted small', '구글 계정을 연결하면 현재 기기 세이브를 서버에 보관하고 다른 기기에서 이어 할 수 있어요.'));
+      const b = $('button', 'btn', '구글 계정으로 연결'); b.onclick = () => G.cloud.signIn(); box.append(b); return box;
+    }
+    if (s.phase === 'error') {
+      box.append($('div', 'cloud-error small', esc(s.error || '계정 연결을 확인해 주세요.')));
+      const b = $('button', 'btn ghost', '다시 확인'); b.onclick = () => G.cloud.retry(); box.append(b); return box;
+    }
+    const busy = { loading: '클라우드 기능을 준비하는 중…', checking: '서버 마을을 확인하는 중…', 'signing-in': '구글 로그인 중…', redirecting: '로그인 화면으로 이동하는 중…', syncing: '마을을 안전하게 동기화하는 중…', reloading: '서버 마을을 적용하는 중…', ready: '동기화를 준비하는 중…' };
+    if (busy[s.phase]) box.append($('div', 'cloudstatus', `<span class="cloudspin">☁️</span>${busy[s.phase]}`));
+    if (s.user) box.append($('div', 'clouduser', `<b>${esc(s.user.name || '연결된 계정')}</b><small>${esc(s.user.email || '')}</small>`));
+    if (s.phase === 'waiting-local') box.append($('div', 'muted small', '계정이 연결됐어요. 마을 만들기를 마치면 첫 세이브를 자동으로 서버에 올려요.'));
+    if (s.phase === 'synced') {
+      const when = s.lastSyncAt ? new Date(s.lastSyncAt).toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' }) : '방금';
+      box.append($('div', 'cloud-ok small', `✓ 동기화됨 · ${esc(when)}`));
+    }
+    if (s.phase === 'conflict' && s.conflict) {
+      box.append($('div', 'cloudwarn', '<b>두 기기에서 마을이 달라졌어요</b><span>자동으로 덮어쓰지 않았어요. 계속 사용할 저장을 골라 주세요.</span>'));
+      const choices = $('div', 'cloudchoices'); choices.append(cloudSummary(s.conflict.local, '이 기기'), cloudSummary(s.conflict.remote, '서버'));
+      const local = $('button', 'btn', '이 기기 마을 유지'); local.onclick = async () => {
+        if (await UI.confirm('서버 저장을 이 기기의 마을로 바꿀까요? 기존 서버 저장은 이 기기에 복구용으로 남겨 둘게요.', '이 기기로 바꿀래요', '취소')) G.cloud.resolve('local');
+      };
+      const remote = $('button', 'btn ghost', '서버 마을 불러오기'); remote.onclick = async () => {
+        if (await UI.confirm('서버 마을을 이 기기에 불러올까요? 현재 마을은 이 기기에 복구용으로 남겨 둘게요.', '서버 마을 불러오기', '취소')) G.cloud.resolve('remote');
+      };
+      const actions = $('div', 'row wrap'); actions.append(local, remote); box.append(choices, actions);
+    }
+    if (s.backup) {
+      const restore = $('button', 'btn small ghost', '이전 저장 복구'); restore.onclick = async () => {
+        const x = s.backup.summary;
+        if (await UI.confirm(`복구용으로 남겨 둔 「${x.town || '?'}」 ${x.name || '?'} 저장을 불러올까요?`, '복구할래요', '취소')) G.cloud.restoreBackup();
+      }; box.append(restore);
+    }
+    if (s.user && !['signing-in', 'redirecting'].includes(s.phase)) {
+      const out = $('button', 'btn small ghost', '이 기기에서 계정 연결 해제'); out.onclick = async () => {
+        if (await UI.confirm('이 기기의 계정 연결만 해제할까요? 로컬과 서버의 마을은 지워지지 않아요.', '연결 해제', '취소')) G.cloud.signOut();
+      }; box.append(out);
+    }
+    return box;
   }
 
   function exportSave() {

@@ -893,15 +893,16 @@
     if (res.corrupt) console.warn('세이브 손상 — 새로 시작');
     G.time.init();
     G.ui.init();
+    G.cloud.init();
     G.input.init(cv);
     cam.resize();
     addEventListener('resize', () => GM.resize());
     // 탭 숨김: 동기 저장 + 루프·오디오 정지
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden) { if (GM.started) G.save.now('hide'); G.loop.stop(); G.audio.suspend(); }
+      if (document.hidden) { if (GM.started) G.save.now('hide'); G.cloud.flush(); G.loop.stop(); G.audio.suspend(); }
       else { G.loop.start(); G.audio.resume(); G.time.tick(true); }
     });
-    addEventListener('pagehide', () => { if (GM.started) G.save.now('pagehide'); });
+    addEventListener('pagehide', () => { if (GM.started) G.save.now('pagehide'); G.cloud.flush(); });
     setInterval(() => { if (GM.started && G.save.isDirty()) G.save.now('interval'); }, 60000);
     G.loop.add('time', (dt) => { GM.t += dt; G.time.tick(); });
     G.loop.add('input', (dt) => G.input.update(dt));
