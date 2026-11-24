@@ -836,6 +836,7 @@
     G.requests.daily(G.time.day());
     G.tide.refresh(G.time.day());
     G.farm.ensurePlots(); G.farm.tick(G.time.day()); G.ranch.tick(G.time.day());
+    if (!fresh) awayGrow();
     GM.drops = (G.world.state.drops || []).map((d) => Object.assign({ vy: 0, h: 0, t: 0 }, d));
     G.npc.init();
     G.eco.clear();
@@ -863,6 +864,15 @@
       void k;
     }
   }
+
+  // 자리 비운 동안 자란 것 반영 + 알림
+  function awayGrow() {
+    if (G.net && G.net.guest) { G.time.st.realAt = Date.now(); return; }
+    const mins = G.time.offlineCredit(); if (mins < 2) return;
+    const crops = G.farm.away(mins), animals = G.ranch.away(mins);
+    if (crops || animals) G.ui.toast(`자리 비운 동안 ${crops ? '텃밭 작물이 자랐어요' : ''}${crops && animals ? ' · ' : ''}${animals ? '동물들이 선물을 준비했어요' : ''}!`, { icon: '🌱', ms: 3500 });
+  }
+  GM.awayGrow = awayGrow;
 
   // ---------- 이벤트 연결 ----------
   G.on('time:day', (p) => {
@@ -898,11 +908,11 @@
     // 탭 숨김: 동기 저장 + 루프·오디오 정지
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) { if (GM.started) G.save.now('hide'); G.cloud.flush(); G.loop.stop(); G.audio.suspend(); }
-      else { G.loop.start(); G.audio.resume(); G.time.tick(true); }
+      else { if (GM.started) awayGrow(); G.loop.start(); G.audio.resume(); G.time.tick(true); }
     });
     addEventListener('pagehide', () => { if (G.net) G.net.beforeUnload(); if (GM.started) G.save.now('pagehide'); G.cloud.flush(); });
     setInterval(() => { if (GM.started && G.save.isDirty()) G.save.now('interval'); }, 60000);
-    G.loop.add('time', (dt) => { GM.t += dt; if (GM.started && !G.save.paused) G.time.advance(dt); G.time.tick(); });
+    G.loop.add('time', (dt) => { GM.t += dt; if (GM.started && !G.save.paused) { G.time.advance(dt); G.time.st.realAt = Date.now(); } G.time.tick(); });
     G.loop.add('input', (dt) => G.input.update(dt));
     G.loop.add('sim', (dt) => G.scene.update(dt));
     G.loop.add('draw', () => G.scene.draw(ctx));

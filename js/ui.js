@@ -22,7 +22,7 @@
     hud.chat = $('button', 'btn-round btn-chat hidden', '💬'); hud.chat.title = '채팅 (T)';
     hud.chat.onclick = () => { press(hud.chat); UI.chat(); };
     top.append(hud.map, hud.menu);
-    hud.log = $('div', 'chatlog'); root.append(hud.log);
+    hud.log = $('div', 'chatlog'); hud.log.title = '눌러서 대화 전체 보기'; hud.log.onclick = () => UI.chat(); root.append(hud.log);
     G.on('net:change', () => UI.refreshNet());
     G.on('net:chat', () => showLog());
     // 지금 할 일 (누르면 지도)
@@ -405,9 +405,10 @@
     const N = G.net; if (!N) return;
     for (const m of N.chat.slice(-4)) {
       if (logSeen.has(m.id)) continue; logSeen.add(m.id);
+      // 대화는 사라지지 않고 화면에 남는다(최근 5줄). 시간이 지나면 살짝 흐려질 뿐. 누르면 전체 기록
       const row = $('div', 'chatline', `<b>${esc(m.name)}</b> ${esc(m.text)}`);
-      hud.log.append(row); while (hud.log.children.length > 4) hud.log.firstChild.remove();
-      setTimeout(() => row.classList.add('fade'), 7000); setTimeout(() => row.remove(), 8000);
+      hud.log.append(row); while (hud.log.children.length > 5) hud.log.firstChild.remove();
+      setTimeout(() => row.classList.add('fade'), 12000);
     }
     if (chatEl) renderChatLog();
   }
@@ -509,7 +510,17 @@
       const r = $('div', 'personrow' + (p.friend ? ' friend' : ''), `<span>${p.open ? '🟢' : '⚪'} ${p.friend ? '⭐' : ''}<b>${esc(p.name)}</b> <small class="muted">${esc(p.town)}${p.open ? ' · 마을 열림' : ''}</small></span>`);
       const btns = $('div', 'row');
       if (!p.friend) { const a = $('button', 'btn small', '＋ 친구'); a.onclick = () => { N.addFriend(p); p.friend = true; draw(); }; btns.append(a); }
-      if (p.open && N.mode !== 'host') { const v = $('button', 'btn small', '놀러 가기'); v.onclick = async () => { try { await N.visit(p.code); UI.open && UI.open.close(); } catch (e) { UI.netErr(e); } }; btns.append(v); }
+      if (N.mode !== 'host') {
+        // 항상 보이는 「놀러 가기」: 열려 있으면 바로, 닫혀 있으면 「놀러 가도 돼?」를 보낸다
+        const v = $('button', 'btn small' + (p.open ? '' : ' ghost'), p.open ? '놀러 가기' : '놀러 가도 돼?');
+        v.onclick = async () => {
+          try {
+            if (p.open) { await N.visit(p.code); UI.open && UI.open.close(); return; }
+            await N.knock(p); p.friend = true; v.textContent = '보냈어요 ✓'; v.disabled = true;
+          } catch (e) { UI.netErr(e); }
+        };
+        btns.append(v);
+      }
       if (p.friend) { const d = $('button', 'btn small ghost', '－'); d.title = '친구 빼기'; d.onclick = () => { N.removeFriend(p.code); p.friend = false; draw(); }; btns.append(d); }
       r.append(btns); list.append(r);
     };

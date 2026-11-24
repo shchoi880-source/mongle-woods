@@ -247,6 +247,13 @@
   }
 
   G.on('time:minute', () => { if (G.game && G.game.started && !(G.net && G.net.guest)) RC.tick(); });
+  // 자리 비운 동안: 쓰다듬어 둔 동물은 그만큼 시간이 지난 것으로
+  RC.away = (mins) => {
+    let n = 0;
+    for (const a of st.animals) if (a.petAt > 0 && !a.ready) { a.petAt -= mins; n++; }
+    if (st.troughUntil) st.troughUntil -= mins;
+    RC.tick(); return n;
+  };
   G.save.section('ranch', {
     v: 1, def: () => ({ pen: null, animals: [], trough: -1, troughUntil: 0, seq: 0, lastTick: -1, collected: 0, riding: null }),
     get: () => ({ pen: st.pen, animals: st.animals.map((a) => ({ id: a.id, kind: a.kind, name: a.name, x: Math.round(a.x), y: Math.round(a.y), born: a.born, love: a.love, pet: a.pet, petAt: a.petAt || 0, fed: a.fed, ready: a.ready, gold: a.gold, double: a.double })), trough: st.trough, troughUntil: st.troughUntil || 0, seq: st.seq, lastTick: st.lastTick, collected: st.collected, riding: st.riding }),

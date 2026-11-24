@@ -92,7 +92,7 @@
     // 저절로 계속 바뀌는 값(time.lastMs = 마지막 시각)은 빼고 비교한다. 안 빼면 가만히 있어도 '달라짐'으로 보여 충돌 창이 뜬다
     fingerprint(env) {
       const s = JSON.parse(JSON.stringify(env ? env.s : save.snapshot()));
-      if (s.time && s.time.d) { delete s.time.d.lastMs; delete s.time.d.vms; }
+      if (s.time && s.time.d) { delete s.time.d.lastMs; delete s.time.d.vms; delete s.time.d.realAt; }
       return u.fnv1a(JSON.stringify(s));
     },
     summary(env) {
