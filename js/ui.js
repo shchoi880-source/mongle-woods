@@ -420,7 +420,7 @@
     box.innerHTML = G.net.chat.slice(-30).map((m) => `<div class="chatline${G.cloud._fb() && m.uid === G.cloud._fb().uid ? ' me' : ''}"><b>${esc(m.name)}</b> ${esc(m.text)}</div>`).join('') || '<div class="muted small">아직 대화가 없어요. 인사해 볼까요? 👋</div>';
     box.scrollTop = box.scrollHeight;
   }
-  function closeChat() { if (chatEl) { const i = chatEl.querySelector('input'); if (i) i.blur(); chatEl.remove(); chatEl = null; G.input.unlock('chat'); } }
+  function closeChat() { if (chatEl) { const i = chatEl.querySelector('input'); if (i) i.blur(); chatEl.remove(); chatEl = null; G.input.unlock('chat'); hud.log.classList.remove('under'); } }
   UI.chat = (fromKey) => {
     if (!G.net || !G.net.active) return;
     if (chatEl) { if (fromKey) { const i = chatEl.querySelector('input'); if (i) i.focus(); } else closeChat(); return; }
@@ -439,7 +439,7 @@
     for (const [ico, text] of G.net.EMOTES) { const b = $('button', 'emote', ico); b.title = text; b.onclick = () => G.net.say(ico + ' ' + text); em.append(b); }
     chatEl.append(em);
     inp.onfocus = () => G.input.lock('chat'); inp.onblur = () => G.input.unlock('chat');
-    UI.root.append(chatEl);
+    UI.root.append(chatEl); hud.log.classList.add('under');
     renderChatLog();
     if (!G.input.isTouch()) setTimeout(() => inp.focus(), 50);
   };
