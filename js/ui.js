@@ -307,10 +307,10 @@
     const s = G.cloud.view(); if (s.phase !== 'conflict' || !s.conflict) return;
     if (UI.open) UI.open.close();
     UI.modal('어느 마을로 할까요?', (body, close) => {
-      body.append($('div', 'slot-info', '로그인됐어요! 그런데 <b>이 기기에 있던 마을</b>과 <b>계정(서버)에 저장된 마을</b>이 달라요.<br>다른 기기(PC 등)에서 하던 마을을 이어 하려면 <b>「서버 마을 불러오기」</b>를 고르세요.'));
+      body.append($('div', 'slot-info', '로그인됐어요! 그런데 <b>이 기기에서 하던 마을</b>과 <b>계정(서버)에 저장된 마을</b>이 달라요. 계속할 마을을 하나 골라 주세요.<br>다른 기기(PC 등)에서 하던 계정 마을이면 <b>「서버 마을 불러오기」</b>, 이 기기 마을이 진짜 내 마을이면 <b>「이 기기 마을로」</b>를 고르세요.'));
       const choices = $('div', 'cloudchoices'); choices.append(cloudSummary(s.conflict.remote, '서버(계정) 마을'), cloudSummary(s.conflict.local, '이 기기 마을'));
       const remote = $('button', 'btn big', '서버 마을 불러오기 (추천)'); remote.onclick = () => { close(); G.cloud.resolve('remote'); };
-      const local = $('button', 'btn ghost', '이 기기 마을로 계정 덮어쓰기');
+      const local = $('button', 'btn ghost', '이 기기 마을로 (계정 마을을 이걸로 바꿔요)');
       local.onclick = async () => { if (await UI.confirm('계정에 저장된 마을을 이 기기 마을로 바꿀까요? (기존 서버 저장은 이 기기에 복구용으로 남겨요)', '바꿀래요', '취소')) { close(); G.cloud.resolve('local'); } };
       body.append(choices, remote, local, $('div', 'muted small', '어느 쪽을 골라도 다른 쪽은 이 기기에 복구용으로 남아요. (설정 → 이전 저장 복구)'));
     });

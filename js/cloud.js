@@ -98,7 +98,9 @@
     if (remote.fingerprint === localFingerprint) return 'same';
     if (!established) return 'remote';
     // 서버가 주인(오너 결정 D17): 이 기기 마을이 이 계정 것이 아니면(또는 기준이 없으면) 서버 마을을 쓴다. 기기 마을은 복구용 백업으로만 남는다
-    if (!m || m.uid !== uid || !m.baseFingerprint) return 'remote';
+    // 계정 없이 하던 기존 마을(주인 계정 없음) + 서버에도 마을이 있으면: 마음대로 덮지 않고 고르게 한다 (기존 이용자 보호)
+    if (!m || !m.uid) return 'conflict';
+    if (m.uid !== uid || !m.baseFingerprint) return 'remote';
     const localChanged = localFingerprint !== m.baseFingerprint;
     const remoteChanged = remote.fingerprint !== m.baseFingerprint;
     if (!localChanged && remoteChanged) return 'remote';

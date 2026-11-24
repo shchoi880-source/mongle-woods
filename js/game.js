@@ -756,13 +756,17 @@
           box.append(btn('btn ghost small', '로그아웃', async () => { if (await G.ui.confirm('로그아웃할까요? 이 기기에서는 마을을 지우고, 계정(서버)에는 그대로 남아요.', '로그아웃', '취소')) { const r = await G.cloud.logoutClear(false); if (!r.ok && await G.ui.confirm('서버 저장을 확인하지 못했어요. 그래도 로그아웃할까요?', '로그아웃', '취소')) G.cloud.logoutClear(true); } }));
           return;
         }
-        // 로그인 안 됨: 로그인 또는 회원가입부터
-        tap.textContent = hasLocal ? '이 기기에 계정 없이 하던 마을이 있어요. 회원가입하면 그 마을로 계정을 만들어요.' : '로그인하거나 회원가입하고 시작해요';
+        // 로그인 안 됨: 로그인 또는 회원가입부터. 계정 없이 하던 기존 이용자는 마을 카드를 보여 주고 연결부터 (오너 요청)
+        if (hasLocal) {
+          const sm = G.save.summary(), esc2 = (x) => String(x || '').replace(/[<>&]/g, '');
+          tap.innerHTML = `<b>이 기기에서 하던 마을이 있어요!</b><br>「${esc2(sm.town)}」 ${esc2(sm.name)} · ${G.fmt.money(sm.money)} · 도감 ${sm.dex}종<br><small>계정에 연결해야 계속할 수 있어요. 연결하면 PC·폰 어디서든 이어 해요.</small>`;
+        } else tap.textContent = '로그인하거나 회원가입하고 시작해요';
         // 로그인·가입이 끝나면 서버 마을 확인 뒤 바로 게임으로 (새로고침을 거쳐도 이어지게 sessionStorage에 표시)
         const auto = () => { try { sessionStorage.setItem('mg.autogo', '1'); } catch (e) { /* 무시 */ } render(); };
         // 서버 마을을 받으면 새로고침되므로 버튼을 누를 때 미리 표시해 둔다
         const mark = () => { try { sessionStorage.setItem('mg.autogo', '1'); } catch (e) { /* 무시 */ } };
-        box.append(btn('btn', '로그인', () => { mark(); G.ui.account('login', auto); }), btn(hasLocal ? 'btn' : 'btn ghost', hasLocal ? '이 마을로 회원가입' : '회원가입', () => { mark(); G.ui.account('signup', auto); }));
+        if (hasLocal) box.append(btn('btn', '이 마을로 새 계정 만들기 (처음이에요)', () => { mark(); G.ui.account('signup', auto); }), btn('btn ghost', '이미 계정이 있어요 (로그인해서 연결)', () => { mark(); G.ui.account('login', auto); }));
+        else box.append(btn('btn', '로그인', () => { mark(); G.ui.account('login', auto); }), btn('btn ghost', '회원가입', () => { mark(); G.ui.account('signup', auto); }));
       };
       const autoGo = () => { let f = null; try { f = sessionStorage.getItem('mg.autogo'); } catch (e) { /* 무시 */ } if (f && canStart) { try { sessionStorage.removeItem('mg.autogo'); } catch (e) { /* 무시 */ } setTimeout(() => go(), 300); } };
       const offState = G.on('cloud:state', () => { render(); autoGo(); }) || (() => {});
