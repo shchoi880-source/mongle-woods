@@ -3,6 +3,7 @@
 // 사용: node tools/verify.js [시드 수=1000]
 'use strict';
 const path = require('path');
+const fs = require('fs');
 const ROOT = path.resolve(__dirname, '..');
 const N = +(process.argv[2] || 1000);
 
@@ -107,6 +108,12 @@ ok('클라우드 양쪽 변경 시 충돌', dc('local', true, { fingerprint: 'se
 ok('계정 아이디 소문자 정규화', G.cloud._accountId('  Mongle_12 ') === 'mongle_12');
 ok('계정 아이디 형식 검증', G.cloud._validAccountId('mongle_12') && !G.cloud._validAccountId('몽글12') && !G.cloud._validAccountId('abc'));
 ok('실제 이메일을 만들지 않는 내부 식별자', G.cloud._accountEmail('Mongle_12') === 'mongle_12@accounts.mongle.invalid');
+{
+  const gameSource = fs.readFileSync(path.join(ROOT, 'js', 'game.js'), 'utf8');
+  const cloudSource = fs.readFileSync(path.join(ROOT, 'js', 'cloud.js'), 'utf8');
+  ok('폰 첫 화면 로그인 뒤 게임 진행', gameSource.includes("G.ui.account('login', () => go())"));
+  ok('Google 로그인은 모바일 호환 팝업 방식', cloudSource.includes('signInWithPopup') && !cloudSource.includes('signInWithRedirect'));
+}
 {
   const prevUI = G.ui, prevAudio = G.audio;
   G.ui = { itemPop() {} }; G.audio = { sfx() {} }; G.player.tool = 'net';
