@@ -444,6 +444,15 @@
     body.append($('div', 'pane-head', '<span>줄 물건을 눌러요 (한 개씩 보내요)</span>'));
     body.append(slotGrid(async (i) => { const ok = await G.net.gift(o.uid, i, 1); if (ok) close(); }));
   });
+  // 친구 기능 오류를 한국어로 (Firebase 영어 원문 대신)
+  UI.netErr = (e) => {
+    const raw = String((e && (e.code || e.message)) || e || '');
+    let msg = e && e.message && !/^[\x00-\x7F]*$/.test(e.message) ? e.message : '';
+    if (/PERMISSION/i.test(raw)) msg = '친구 기능 서버 설정이 아직 안 됐어요. (Firebase 규칙 게시가 필요해요)';
+    else if (/network|offline|disconnect/i.test(raw)) msg = '인터넷 연결을 확인해 주세요.';
+    else if (!msg) msg = '잠시 문제가 생겼어요. 조금 뒤 다시 해 주세요.';
+    G.log.err('net', e); UI.toast(msg, { icon: '⚠️', ms: 4000 });
+  };
   async function friendsPane(pane) {
     pane.dataset.friends = '1'; pane.innerHTML = '';
     const N = G.net;
@@ -453,7 +462,7 @@
       return;
     }
     const top = $('div', 'netbox');
-    let code = '…'; try { code = await N.myCode(); } catch (e) { code = '?'; if (/PERMISSION/i.test(String(e && (e.code || e.message)))) { pane.append($('div', 'slot-info', '친구 기능을 쓰려면 서버 설정(규칙) 업데이트가 필요해요. 관리자에게 알려 주세요!')); return; } }
+    let code = '…'; try { code = await N.myCode(); } catch (e) { code = '?'; if (/PERMISSION/i.test(String(e && (e.code || e.message)))) { pane.append($('div', 'slot-info', '⚙️ 친구 기능 서버 설정이 아직 안 됐어요.<br>Firebase 콘솔 → Realtime Database → 규칙에 새 규칙(firebase.database.rules.json)을 게시하면 바로 쓸 수 있어요.')); return; } }
     top.innerHTML = `<div><small class="muted">내 친구 코드</small><div class="mycode">${esc(code)}</div></div>`;
     // 상태: 내 마을 열기 / 친구 마을에 있음
     if (N.mode === 'guest') {
@@ -465,7 +474,7 @@
       for (const o of Object.values(N.others)) { const r = $('div', 'personrow', `<span>🧑 <b>${esc(o.name)}</b></span>`); const k = $('button', 'btn small ghost', '내보내기'); k.onclick = async () => { if (await UI.confirm(`${o.name}${G.josa(o.name, '을/를').slice(-1)} 집으로 돌려보낼까요?`, '돌려보내기', '아니요')) { await N.kick(o.uid); friendsPane(pane); } }; r.append(k); top.append(r); }
     } else {
       const op = $('button', 'btn', '🚪 내 마을 열기 (친구가 놀러 올 수 있게)');
-      op.onclick = async () => { try { await N.open(); friendsPane(pane); } catch (e) { UI.toast(e.message, { icon: '⚠️' }); } };
+      op.onclick = async () => { try { await N.open(); friendsPane(pane); } catch (e) { UI.netErr(e); } };
       top.append(op);
     }
     pane.append(top);
@@ -496,7 +505,7 @@
       const r = $('div', 'personrow' + (p.friend ? ' friend' : ''), `<span>${p.open ? '🟢' : '⚪'} <b>${esc(p.name)}</b> <small class="muted">${esc(p.town)}${p.friend ? ' · 친구' : ''}</small></span>`);
       const btns = $('div', 'row');
       if (!p.friend) { const a = $('button', 'btn small', '＋ 친구'); a.onclick = () => { N.addFriend(p); p.friend = true; draw(); }; btns.append(a); }
-      if (p.open && N.mode !== 'host') { const v = $('button', 'btn small', '놀러 가기'); v.onclick = async () => { try { await N.visit(p.code); UI.open && UI.open.close(); } catch (e) { UI.toast(e.message, { icon: '⚠️', ms: 3500 }); } }; btns.append(v); }
+      if (p.open && N.mode !== 'host') { const v = $('button', 'btn small', '놀러 가기'); v.onclick = async () => { try { await N.visit(p.code); UI.open && UI.open.close(); } catch (e) { UI.netErr(e); } }; btns.append(v); }
       if (p.friend) { const d = $('button', 'btn small ghost', '－'); d.title = '친구 빼기'; d.onclick = () => { N.removeFriend(p.code); p.friend = false; draw(); }; btns.append(d); }
       r.append(btns); list.append(r);
     };
@@ -505,7 +514,7 @@
     const cf = $('div', 'row wrap');
     const ci = $('input', 'codein'); ci.placeholder = '친구 코드 6자리'; ci.maxLength = 8;
     const cb = $('button', 'btn small', '코드로 놀러 가기');
-    cb.onclick = async () => { try { await N.visit(ci.value); UI.open && UI.open.close(); } catch (e) { UI.toast(e.message, { icon: '⚠️', ms: 3500 }); } };
+    cb.onclick = async () => { try { await N.visit(ci.value); UI.open && UI.open.close(); } catch (e) { UI.netErr(e); } };
     cf.append(ci, cb);
     pane.append($('div', 'pane-head', '<span>🔑 친구 코드로 찾기</span>'), cf);
     pane.append($('div', 'muted small', '🟢 = 지금 마을 문을 열어 둔 사람 · 다른 사람에게는 캐릭터 이름과 마을 이름만 보여요.'));

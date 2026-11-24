@@ -38,7 +38,7 @@
     if (mine) { N.code = mine; return mine; }
     for (let k = 0; k < 6; k++) {
       let c = ''; for (let i = 0; i < 6; i++) c += CODE_CH[Math.floor(Math.random() * CODE_CH.length)];
-      try { await F.db.set(R('codes/' + c), F.uid); } catch (e) { continue; } // 이미 있는 코드면 규칙이 거절 → 다시
+      try { await F.db.set(R('codes/' + c), F.uid); } catch (e) { if (k === 5) throw e; continue; } // 이미 있는 코드면 규칙이 거절 → 다시 (계속 거절되면 규칙 미게시)
       await F.db.set(R('users/' + F.uid + '/code'), c);
       N.code = c; return c;
     }
