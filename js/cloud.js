@@ -271,7 +271,7 @@
       if (!password) return fail(new Error('비밀번호를 입력해 주세요.'));
       G.save.pause(false); // 다른 기기 때문에 로그아웃됐던 기기도 다시 로그인하면 저장 재개
       if (!st.configured) return fail(new Error('Firebase 설정이 아직 끝나지 않았어요.'));
-      if (!auth) { await cloud.init(); if (!auth) return; }
+      if (!auth) { await cloud.init(); if (!auth) return fail(new Error('로그인 서버에 연결하지 못했어요. 인터넷 연결을 확인하고, 카카오톡 같은 앱 안 브라우저라면 크롬·사파리로 열어 주세요.')); }
       state('signing-in');
       try {
         const result = await api.auth.signInWithEmailAndPassword(auth, accountEmail(id), password);
