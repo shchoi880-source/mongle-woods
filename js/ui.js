@@ -51,6 +51,16 @@
       if (pane) setPane(pane);
     });
     G.on('cloud:error', (p) => UI.toast(p.message || '계정 연결을 확인해 주세요.', { icon: '☁️', ms: 4500 }));
+    // 다른 기기에서 로그인 → 이 기기는 로그아웃 (닫을 수 없는 안내)
+    G.on('cloud:kicked', () => {
+      if (UI.open) UI.open.close();
+      G.input.lock('kicked');
+      const box = $('div', 'kicked', '<div class="kbox"><div class="kico">📱💻</div><b>다른 기기에서 접속했어요</b><p>이 기기는 마지막 진행을 서버에 저장하고 로그아웃했어요.<br>여기서 계속하려면 다시 로그인해 주세요. 다른 기기가 로그아웃돼요.</p></div>');
+      const again = $('button', 'btn big', '이 기기에서 다시 로그인');
+      again.onclick = () => { UI.account('login', () => { box.remove(); G.input.unlock('kicked'); }); };
+      box.firstChild.append(again);
+      UI.root.append(box);
+    });
   };
   function press(el) { el.classList.remove('pressed'); void el.offsetWidth; el.classList.add('pressed'); G.audio.sfx('tap'); }
   function bump(el) { el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); }
@@ -454,7 +464,12 @@
       box.append($('div', 'muted small', 'Firebase 무료 설정을 마치면 PC와 폰에서 같은 마을을 이어 할 수 있어요. 지금 세이브는 기존처럼 이 기기에 안전하게 저장돼요.'));
       return box;
     }
-    if (s.phase === 'signed-out') {
+    if (s.phase === 'offline') {
+      box.append($('div', 'muted small', '지금은 인터넷에 연결되지 않아 계정 기능을 쉬고 있어요. 게임과 저장은 이 기기에서 그대로 돼요.'));
+      const b = $('button', 'btn small ghost', '다시 연결해 보기'); b.onclick = () => G.cloud.retry(); box.append(b); return box;
+    }
+    if (s.phase === 'signed-out' || s.phase === 'kicked') {
+      if (s.phase === 'kicked') box.append($('div', 'cloudwarn', '<b>다른 기기에서 접속해서 로그아웃됐어요</b><span>여기서 이어 하려면 다시 로그인해 주세요.</span>'));
       box.append($('div', 'muted small', '아이디 계정을 만들거나 로그인하면 현재 마을을 서버에 보관하고 PC와 폰에서 이어 할 수 있어요. 실제 이메일은 받지 않아요.'));
       if (s.error) box.append($('div', 'cloud-error small', esc(s.error)));
       const login = $('button', 'btn', '로그인'); login.onclick = () => UI.account('login');

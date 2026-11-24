@@ -10,6 +10,7 @@
   let api = null, auth = null, db = null, userRef = null;
   let initialized = false, applyingRemote = false, uploadTimer = 0, authRun = 0;
   let pendingCharacterName = '';
+  let sessionRef = null, sessionOff = null;
   const st = { phase: 'unconfigured', configured: false, user: null, conflict: null, error: '', lastSyncAt: 0 };
 
   function readJSON(key) { try { return JSON.parse(G.store.getItem(key) || 'null'); } catch (e) { return null; } }
@@ -82,7 +83,9 @@
       'auth/provider-already-linked': '이미 Google 계정이 연결되어 있어요.',
       'PERMISSION_DENIED': '클라우드 저장 권한이 없어요. Database Rules를 확인해 주세요.',
     };
-    st.phase = 'error'; st.error = known[raw] || known[err && err.code] || raw; emit(); G.emit('cloud:error', { message: st.error });
+    let msg = known[raw] || known[err && err.code];
+    if (!msg && /^[\x00-\x7F]+$/.test(raw)) msg = '계정 연결 중 문제가 생겼어요. 잠시 뒤 다시 해 주세요.'; // 영어 원문 대신 한국어
+    st.phase = 'error'; st.error = msg || raw; emit(); G.emit('cloud:error', { message: st.error });
   }
 
   // 마지막 동기화 지문을 기준으로 한 순수 충돌 판정(자동 검증에서도 사용).
@@ -147,7 +150,7 @@
   }
   async function handleUser(user) {
     const run = ++authRun;
-    if (!user) { userRef = null; state('signed-out', { user: null, conflict: null }); return; }
+    if (!user) { userRef = null; state(st.phase === 'kicked' ? 'kicked' : 'signed-out', { user: null, conflict: null }); return; }
     if (pendingCharacterName) {
       G.player.name = pendingCharacterName;
       pendingCharacterName = '';
@@ -155,6 +158,7 @@
     // 로그인 아이디·Google 이름·이메일·사진은 게임 상태에 보관하지 않는다.
     st.user = { uid: user.uid, hasGoogle: (user.providerData || []).some((p) => p.providerId === 'google.com') };
     state('checking', { user: st.user, conflict: null });
+    await claimSession(user.uid); if (run !== authRun) return;
     try {
       userRef = api.db.ref(db, 'users/' + user.uid + '/save');
       const snap = await api.db.get(userRef); if (run !== authRun) return;
@@ -173,6 +177,38 @@
     } catch (e) { if (run === authRun) fail(e); }
   }
 
+  // ---------- 한 계정 = 한 기기 (오너 요청) ----------
+  // 로그인하면 users/{uid}/session 을 이 기기로 바꾸고, 예전 기기가 마지막 진행을 올릴 시간을 잠깐 준 뒤 서버 마을을 읽는다.
+  // 다른 기기가 세션을 가져가면: 이 기기는 마지막 진행을 올리고, 저장을 멈추고, 로그아웃한다.
+  async function claimSession(uid) {
+    if (sessionOff) { sessionOff(); sessionOff = null; }
+    sessionRef = api.db.ref(db, 'users/' + uid + '/session');
+    try {
+      const prev = (await api.db.get(sessionRef)).val();
+      await api.db.set(sessionRef, { deviceId, at: api.db.serverTimestamp() });
+      if (prev && prev.deviceId && prev.deviceId !== deviceId) await new Promise((r) => setTimeout(r, 2500)); // 예전 기기의 마지막 저장을 기다림
+    } catch (e) {
+      // 규칙이 아직 갱신 전이면(PERMISSION_DENIED) 한 기기 제한만 건너뛰고 동기화는 계속
+      G.log.err('cloud.session', e); sessionRef = null; return;
+    }
+    let first = true;
+    sessionOff = api.db.onValue(sessionRef, (snap) => {
+      const v = snap.val();
+      if (first) { first = false; return; }
+      if (v && v.deviceId && v.deviceId !== deviceId) kicked();
+    });
+  }
+  async function kicked() {
+    if (st.phase === 'kicked') return;
+    try { await upload(false); } catch (e) { /* 이미 끊겼으면 무시 */ }
+    G.save.pause(true); // 이 기기에서 더 진행되어 기록이 엇갈리지 않게 저장 멈춤
+    if (sessionOff) { sessionOff(); sessionOff = null; }
+    st.user = null; userRef = null;
+    try { await api.auth.signOut(auth); } catch (e) { /* 무시 */ }
+    state('kicked', { conflict: null });
+    G.emit('cloud:kicked', {});
+  }
+
   const cloud = G.cloud = {
     SDK, META_KEY, BACKUP_KEY, _decide: decide, _accountId: accountId, _validAccountId: validAccountId, _accountEmail: accountEmail,
     view: publicState,
@@ -189,7 +225,12 @@
         try { await authApi.setPersistence(auth, authApi.browserLocalPersistence); } catch (e) { /* 세션 내 로그인은 계속 가능 */ }
         authApi.onAuthStateChanged(auth, (user) => handleUser(user));
         try { await authApi.getRedirectResult(auth); } catch (e) { fail(e); }
-      } catch (e) { fail(e); }
+      } catch (e) {
+        // 인터넷이 없거나 SDK를 받지 못함: 게임은 그대로, 계정 기능만 잠시 쉰다
+        initialized = false; api = null;
+        state('offline', { error: '' });
+        if (typeof addEventListener !== 'undefined') addEventListener('online', () => cloud.init(), { once: true });
+      }
     },
     async register(id, password, characterName) {
       id = accountId(id); characterName = String(characterName || '').trim();
@@ -213,6 +254,7 @@
       id = accountId(id);
       if (!validAccountId(id)) return fail(new Error('아이디는 영문 소문자·숫자·밑줄로 4~20자여야 해요.'));
       if (!password) return fail(new Error('비밀번호를 입력해 주세요.'));
+      G.save.pause(false); // 다른 기기 때문에 로그아웃됐던 기기도 다시 로그인하면 저장 재개
       if (!st.configured) return fail(new Error('Firebase 설정이 아직 끝나지 않았어요.'));
       if (!auth) { await cloud.init(); if (!auth) return; }
       state('signing-in');
@@ -222,7 +264,7 @@
     async signInGoogle() {
       if (!st.configured) return fail(new Error('Firebase 설정이 아직 끝나지 않았어요.'));
       if (!auth) { await cloud.init(); if (!auth) return; }
-      state('signing-in');
+      state('signing-in'); G.save.pause(false);
       const provider = new api.auth.GoogleAuthProvider(); provider.setCustomParameters({ prompt: 'select_account' });
       try { return await api.auth.signInWithPopup(auth, provider); }
       catch (e) {
@@ -244,7 +286,7 @@
         } else fail(e);
       }
     },
-    async signOut() { if (auth) await api.auth.signOut(auth); },
+    async signOut() { if (sessionOff) { sessionOff(); sessionOff = null; } if (auth) await api.auth.signOut(auth); },
     async retry() { if (st.user) await handleUser(auth.currentUser); else if (auth) state('signed-out'); else { initialized = false; await cloud.init(); } },
     async resolve(which) {
       if (!st.conflict) return;

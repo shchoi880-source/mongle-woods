@@ -73,7 +73,13 @@ ok('V8 도감 복원', G.collect.has('bug', 3, 0) && G.collect.has('fish', 5, 1)
 const ex = G.save.exportString(); const pi = G.save.parseImport(ex);
 ok('V8 내보내기 문자열 검증', pi.ok && ex.startsWith('MG1:'));
 ok('V8 손상된 내보내기 거부', !G.save.parseImport(ex.slice(0, -3) + 'zzz').ok);
-ok('V8 상태 지문 안정성', G.save.fingerprint() === G.save.fingerprint() && G.save.fingerprint(pi.env) === G.u.fnv1a(JSON.stringify(pi.env.s)));
+ok('V8 상태 지문 안정성', G.save.fingerprint() === G.save.fingerprint() && G.save.fingerprint(pi.env) === G.save.fingerprint(JSON.parse(JSON.stringify(pi.env))));
+{ // 시각(time.lastMs)만 바뀌면 지문은 그대로, 돈이 바뀌면 달라진다 (가짜 충돌 방지)
+  const e1 = JSON.parse(JSON.stringify(pi.env)), e2 = JSON.parse(JSON.stringify(pi.env)), e3 = JSON.parse(JSON.stringify(pi.env));
+  e2.s.time.d.lastMs = (e2.s.time.d.lastMs || 0) + 123456; e3.s.econ.d.money += 1;
+  ok('V8 지문: 시각만 바뀌면 같음', G.save.fingerprint(e1) === G.save.fingerprint(e2));
+  ok('V8 지문: 진행이 바뀌면 다름', G.save.fingerprint(e1) !== G.save.fingerprint(e3));
+}
 ok('V8 세이브 요약', pi.summary.money === snapMoney && pi.summary.name !== undefined && pi.summary.playDays !== undefined);
 // 마이그레이션 v1 → v2 (player.ring 추가)
 const env = JSON.parse(JSON.stringify(pi.env));

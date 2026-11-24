@@ -245,3 +245,13 @@ input, select, textarea { font: inherit; color: var(--ink); }
 .tool-img { width: 30px; height: 30px; display: block; } .act-img { width: 40px; height: 40px; display: block; margin: 0 auto; }
 .ti-img { width: 18px; height: 18px; vertical-align: -4px; }
 .chip .ti-img { margin-right: 2px; }
+
+/* ---- 겹침 순서: 타이틀 < 대화 < 창 < 알림 ---- */
+.title, .create { z-index: 1; }
+.dialog { z-index: 10; }
+.modal { z-index: 20; }
+.itempop { z-index: 25; }
+.toasts { z-index: 30; }
+.kicked { position: absolute; inset: 0; z-index: 18; background: rgba(91,70,54,.45); display: grid; place-items: center; padding: 16px; }
+.kbox { background: var(--paper); border-radius: 26px; padding: 22px 20px; max-width: 360px; text-align: center; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 10px; }
+.kbox .kico { font-size: 34px; } .kbox p { margin: 0; font-size: 14px; color: var(--ink2); line-height: 1.6; word-break: keep-all; }

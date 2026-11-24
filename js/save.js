@@ -17,7 +17,7 @@
   const ENV_V = 1;
   const KEY = { A: 'mg.slot.A', B: 'mg.slot.B', META: 'mg.meta', PREMIG: 'mg.premig', SETTINGS: 'mg.settings' };
   const sections = new Map();
-  let seq = 0, last = null, dirty = false, timer = 0, lastSaveAt = 0, unknown = {}, readOnly = false;
+  let seq = 0, last = null, dirty = false, timer = 0, lastSaveAt = 0, unknown = {}, readOnly = false, paused = false;
 
   const save = G.save = {
     KEY,
@@ -40,8 +40,12 @@
       const s = save.snapshot();
       return { fmt: 'MG', v: ENV_V, seq: seq + 1, t: Date.now(), app: G.VERSION, sum: u.fnv1a(JSON.stringify(s)), s };
     },
+    // 다른 기기에서 로그인되어 로그아웃된 동안은 이 기기 저장을 멈춘다(기록 엇갈림 방지)
+    pause(on) { paused = !!on; },
+    get paused() { return paused; },
     now(why) {
       if (readOnly) return { ok: false, err: 'readonly' };
+      if (paused) return { ok: false, err: 'paused' };
       if (timer) { clearTimeout(timer); timer = 0; }
       try {
         const env = save.envelope();
@@ -85,7 +89,12 @@
       return 'MG1:' + body + ':' + u.fnv1a(body);
     },
     // 클라우드 동기화는 시각·seq가 매번 바뀌는 envelope 대신 실제 게임 상태의 지문을 비교한다.
-    fingerprint(env) { return u.fnv1a(JSON.stringify(env ? env.s : save.snapshot())); },
+    // 저절로 계속 바뀌는 값(time.lastMs = 마지막 시각)은 빼고 비교한다. 안 빼면 가만히 있어도 '달라짐'으로 보여 충돌 창이 뜬다
+    fingerprint(env) {
+      const s = JSON.parse(JSON.stringify(env ? env.s : save.snapshot()));
+      if (s.time && s.time.d) delete s.time.d.lastMs;
+      return u.fnv1a(JSON.stringify(s));
+    },
     summary(env) {
       env = env || save.envelope();
       const meta = env.s.meta && env.s.meta.d || {}, econ = env.s.econ && env.s.econ.d || {};

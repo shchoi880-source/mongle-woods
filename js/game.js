@@ -706,7 +706,8 @@
         setTimeout(() => { titleEl.remove(); titleEl = null; args && args.fresh ? G.scene.replace('create') : startTown(); }, 500);
       };
       const keyGo = (e) => { if (!G.ui.open && !['INPUT', 'BUTTON'].includes(document.activeElement && document.activeElement.tagName)) go(e); };
-      titleEl.querySelector('.tap').onclick = go; addEventListener('keydown', keyGo);
+      // 화면 아무 곳이나 톡 하면 시작 (계정 버튼은 자기 클릭을 막아 둔다)
+      titleEl.addEventListener('click', (e) => { if (!e.target.closest('.title-account')) go(e); }); addEventListener('keydown', keyGo);
       if (args && args.fresh && G.cloud.view().configured) {
         const actions = document.createElement('div'); actions.className = 'title-account';
         const login = document.createElement('button'); login.className = 'btn ghost'; login.textContent = '기존 계정으로 이어하기';

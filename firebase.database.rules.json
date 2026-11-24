@@ -28,6 +28,12 @@
           },
           "$other": { ".validate": false }
         },
+        "session": {
+          ".validate": "newData.hasChildren(['deviceId', 'at'])",
+          "deviceId": { ".validate": "newData.isString() && newData.val().length <= 80" },
+          "at": { ".validate": "newData.isNumber() && newData.val() <= now" },
+          "$other": { ".validate": false }
+        },
         "$other": { ".validate": false }
       }
     },
