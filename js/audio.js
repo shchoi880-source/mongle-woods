@@ -185,7 +185,7 @@
   };
   AU.suspend = () => { if (ac && ac.state === 'running') ac.suspend(); };
   AU.resume = () => { if (ac && ac.state === 'suspended') ac.resume(); };
-  G.on('time:hour', () => AU.music.stinger && ac && AU.ready && AU.music.stinger('hour'));
+  G.on('time:hour', (p) => p.h % 6 === 0 && AU.music.stinger && ac && AU.ready && AU.music.stinger('hour')); // 마을 1시간 = 실제 1분이라 6시간마다만
 
   G.modules.add('audio');
 })(globalThis.G);

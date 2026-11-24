@@ -1,14 +1,15 @@
-// 묶음 4: 목장 — 닭·소·양·돼지·조랑말. 하루 한 번 쓰다듬으면 다음 아침 생산물. 여물통 먹이 = 두 배 기회. 조랑말은 탈 수 있다
+// 묶음 4: 목장 — 닭·소·양·돼지·조랑말. 쓰다듬으면 몇 분 뒤 생산물(거두면 또 쓰다듬기). 여물통 먹이 = 두 배. 조랑말은 탈 수 있다
+// 시간(2026-11 개편): hrs = 마을 시간(= 실제 분). 아기는 마을 하루(24분)면 어른
 // 원칙: 벌 없음 — 돌보지 않아도 아프거나 떠나지 않고, 그날 생산물만 없다
 (function (G) {
   'use strict';
   const u = G.u, TILE = G.C.TILE, D = G.data;
   const KINDS = {
-    chicken: { name: '닭', baby: '병아리', price: 800, prod: 'egg', every: 1, col: ['#ffffff', '#ff6b5a'] },
-    cow: { name: '소', baby: '송아지', price: 3000, prod: 'milk', every: 1, col: ['#ffffff', '#4a3f3a'] },
-    sheep: { name: '양', baby: '아기 양', price: 2000, prod: 'wool', every: 3, col: ['#fbf8f2', '#5a4a4a'] },
-    pig: { name: '돼지', baby: '아기 돼지', price: 2500, prod: 'truffle', every: 1, col: ['#ffb8c6', '#e8889c'] },
-    pony: { name: '조랑말', baby: '아기 조랑말', price: 5000, prod: null, every: 0, col: ['#c98e5a', '#7a4f2e'] },
+    chicken: { name: '닭', baby: '병아리', price: 800, prod: 'egg', hrs: 2, col: ['#ffffff', '#ff6b5a'] },
+    cow: { name: '소', baby: '송아지', price: 3000, prod: 'milk', hrs: 3, col: ['#ffffff', '#4a3f3a'] },
+    sheep: { name: '양', baby: '아기 양', price: 2000, prod: 'wool', hrs: 5, col: ['#fbf8f2', '#5a4a4a'] },
+    pig: { name: '돼지', baby: '아기 돼지', price: 2500, prod: 'truffle', hrs: 4, col: ['#ffb8c6', '#e8889c'] },
+    pony: { name: '조랑말', baby: '아기 조랑말', price: 5000, prod: null, hrs: 1, col: ['#c98e5a', '#7a4f2e'] },
   };
   const NAMES = { chicken: ['꼬꼬', '삐약', '노른', '깃털'], cow: ['얼룩', '우유', '음매', '구름'], sheep: ['보들', '복슬', '털뭉', '솜솜'], pig: ['꿀꿀', '분홍', '토실토실', '코코'], pony: ['바람', '달리', '갈기', '방울말'] };
   D.add('items', [
@@ -34,7 +35,12 @@
   const RC = G.ranch = { st, KINDS };
   const PEN_W = 6, PEN_H = 4;
   RC.capacity = () => 4 + (G.nest ? G.nest.st.stage : 0) * 2;
-  RC.adult = (a) => G.time.day() - a.born >= 3;
+  RC.adult = (a) => G.time.day() - a.born >= 1;
+  RC.TROUGH_MIN = 720;
+  // 쓰다듬을 수 있나: 생산물을 기다리는 중이 아니고, 거둘 것도 없을 때
+  RC.canPet = (a) => !a.ready && !(a.petAt > 0);
+  RC.minsLeft = (a) => a.petAt > 0 ? Math.max(1, Math.ceil((a.petAt + KINDS[a.kind].hrs * 60 - G.time.gmin()) / G.time.SPEED)) : 0;
+  RC.troughFull = () => (st.troughUntil || 0) > G.time.gmin();
 
   // 울타리 자리: 집 근처 6×4 풀밭(나무·텃밭·길 피함)
   RC.ensurePen = () => {
@@ -66,22 +72,25 @@
     const first = !st.animals.length;
     const used = st.animals.map((a) => a.name), pool = NAMES[kind].filter((n) => !used.includes(n));
     const p = st.pen;
-    st.animals.push({ id: ++st.seq, kind, name: pool[0] || NAMES[kind][0] + st.seq, x: (p.x + 1 + Math.random() * (p.w - 2)) * TILE, y: (p.y + 1 + Math.random() * (p.h - 2)) * TILE, born: G.time.day(), love: 0, pet: -1, fed: -1, ready: false, gold: false, tx: 0, ty: 0, wait: 0 });
+    st.animals.push({ id: ++st.seq, kind, name: pool[0] || NAMES[kind][0] + st.seq, x: (p.x + 1 + Math.random() * (p.w - 2)) * TILE, y: (p.y + 1 + Math.random() * (p.h - 2)) * TILE, born: G.time.day(), love: 0, pet: -1, petAt: 0, fed: -1, ready: false, gold: false, tx: 0, ty: 0, wait: 0 });
     G.save.mark('animal'); G.emit('ranch:buy', { kind });
     return { ok: true, first };
   };
 
-  // 하루가 지나면: 어제 쓰다듬은 어른 동물은 생산물 준비
-  RC.tick = (day) => {
-    if (st.lastTick < 0) { st.lastTick = day; return; }
-    if (day <= st.lastTick) return;
+  // 매 마을 분: 쓰다듬고 시간이 지난 동물은 생산물 준비 (아기·조랑말은 다시 쓰다듬을 수 있게만)
+  RC.tick = () => {
+    const now = G.time.gmin(); let changed = false;
     for (const a of st.animals) {
+      if (!(a.petAt > 0) || a.ready) continue;
       const k = KINDS[a.kind];
-      if (!k.prod || a.ready || !RC.adult(a) || a.pet < st.lastTick) continue;
-      if (k.every > 1 && (day - a.born) % k.every !== 0) continue;
-      a.ready = true; a.double = a.fed >= st.lastTick; a.gold = a.kind === 'chicken' && a.love >= 5 && u.hashf(G.rng.seed, day, a.id) < 0.06;
+      if (now < a.petAt + k.hrs * 60) continue;
+      if (k.prod && RC.adult(a)) {
+        a.ready = true; a.double = (st.troughUntil || 0) > a.petAt;
+        a.gold = a.kind === 'chicken' && a.love >= 5 && u.hashf(G.rng.seed, now, a.id) < 0.06;
+      }
+      a.petAt = 0; changed = true;
     }
-    st.lastTick = day; G.save.mark('ranch');
+    if (changed) G.save.mark('ranch');
   };
 
   // ---------- 상호작용 ----------
@@ -95,7 +104,7 @@
     if (!a) return null;
     const k = KINDS[a.kind], nm = `${a.name} (${RC.adult(a) ? k.name : k.baby})`;
     if (a.ready) return { kind: 'ranch', act: 'collect', ref: a, icon: '🧺', label: '거두기', name: nm };
-    if (a.pet !== G.time.day()) return { kind: 'ranch', act: 'pet', ref: a, icon: '🤲', label: '쓰다듬기', name: nm };
+    if (RC.canPet(a)) return { kind: 'ranch', act: 'pet', ref: a, icon: '🤲', label: '쓰다듬기', name: nm };
     if (a.kind === 'pony' && RC.adult(a)) return { kind: 'ranch', act: 'ride', ref: a, icon: '🐴', label: '타기', name: nm };
     return { kind: 'ranch', act: 'look', ref: a, icon: '💗', label: '보기', name: nm };
   };
@@ -103,21 +112,21 @@
     const a = tg.ref, pl = G.player;
     if (tg.act === 'trough') {
       const food = G.inv.slots.findIndex((s) => s.id.startsWith('crop:'));
-      if (food < 0) { await G.ui.say([{ who: 'sys', text: '여물통이 비어 있어요. 텃밭 작물을 하나 넣으면 오늘 먹이가 돼요. (다음 날 생산물이 더 많이 나올 수 있어요)' }]); return; }
-      if (st.trough === G.time.day()) { await G.ui.say([{ who: 'sys', text: '오늘 먹이는 이미 넉넉해요.' }]); return; }
+      if (food < 0) { await G.ui.say([{ who: 'sys', text: '여물통이 비어 있어요. 텃밭 작물을 하나 넣으면 12분 동안 먹이가 돼요. (그동안 쓰다듬은 동물은 생산물이 2개!)' }]); return; }
+      if (RC.troughFull()) { await G.ui.say([{ who: 'sys', text: `먹이가 아직 넉넉해요. (약 ${Math.ceil((st.troughUntil - G.time.gmin()) / G.time.SPEED)}분 남음)` }]); return; }
       const nm = G.items.name(G.inv.slots[food].id); G.inv.removeAt(food, 1);
-      st.trough = G.time.day(); for (const x of st.animals) x.fed = G.time.day();
+      st.troughUntil = G.time.gmin() + RC.TROUGH_MIN;
       G.audio.sfx('drop'); G.ui.toast(`여물통에 ${nm}${G.josa(nm, '을/를').slice(-1)} 넣었어요. 동물들이 좋아해요!`, { icon: '🌾' });
       G.save.mark('ranch'); return;
     }
     if (tg.act === 'pet') {
-      a.pet = G.time.day(); a.love = Math.min(10, a.love + 1); a.hop = 0.35;
+      a.petAt = G.time.gmin(); a.love = Math.min(10, a.love + 1); a.hop = 0.35;
       pl.squash = 0.12; G.audio.sfx(a.kind === 'chicken' ? 'kongal' : 'pop');
       G.game.sparkle(a.x, a.y - 20, 6, '#ff9fbf');
       const say = { chicken: '꼬꼬댁!', cow: '음머~', sheep: '메에~', pig: '꿀꿀!', pony: '히힝!' }[a.kind];
       G.ui.toast(`${a.name}: ${say} (애정 ${'♥'.repeat(Math.ceil(a.love / 2))})`, { icon: '💗', ms: 1600 });
       G.emit('ranch:pet', { kind: a.kind });
-      G.events.tip('pet', '하루 한 번 쓰다듬으면 다음 날 아침 생산물이 나와요. 여물통에 작물을 넣으면 더 많이!');
+      G.events.tip('pet', '쓰다듬으면 몇 분 뒤 머리 위에 생산물이 떠요. 거두고 또 쓰다듬어요! 여물통에 작물을 넣으면 2개씩.');
       G.save.mark('ranch'); return;
     }
     if (tg.act === 'collect') {
@@ -129,7 +138,8 @@
       return;
     }
     if (tg.act === 'ride') { RC.mount(a); return; }
-    await G.ui.say([{ who: 'sys', text: `${a.name}가 기분 좋아 보여요. 오늘은 이미 쓰다듬었어요. (애정 ${'♥'.repeat(Math.ceil(a.love / 2)) || '–'})` }]);
+    const k = KINDS[a.kind], wait = a.petAt > 0 ? (k.prod && RC.adult(a) ? ` 약 ${RC.minsLeft(a)}분 뒤면 ${G.items.get(k.prod).name}${G.josa(G.items.get(k.prod).name, '이/가').slice(-1)} 나와요.` : ` 약 ${RC.minsLeft(a)}분 뒤에 또 쓰다듬을 수 있어요.`) : '';
+    await G.ui.say([{ who: 'sys', text: `${a.name}가 기분 좋아 보여요.${wait} (애정 ${'♥'.repeat(Math.ceil(a.love / 2)) || '–'})` }]);
   };
   // 조랑말 타기: 이동 1.6배. 행동 버튼(대상 없음)이나 집 안에 들어가면 내린다
   RC.mount = (a) => { st.riding = a.id; G.audio.sfx('chime'); G.ui.toast(`${a.name}에 탔어요! 빨라졌어요. 내릴 땐 빈 곳에서 행동 버튼.`, { icon: '🐴', ms: 2600 }); G.save.mark('ride'); };
@@ -169,7 +179,7 @@
     // 여물통
     const tp = RC.troughPos();
     P.rrect(ctx, tp.x - 14, tp.y - 6, 28, 12, 4, '#a7724a', L, 1.3);
-    if (st.trough === G.time.day()) P.rrect(ctx, tp.x - 11, tp.y - 6, 22, 5, 2, '#e8c45a');
+    if (RC.troughFull()) P.rrect(ctx, tp.x - 11, tp.y - 6, 22, 5, 2, '#e8c45a');
   };
   RC.collect = (R, rect, t) => {
     for (const a of st.animals) {
@@ -236,10 +246,10 @@
     };
   }
 
-  G.on('time:day', (p) => RC.tick(p.day));
+  G.on('time:minute', () => { if (G.game && G.game.started) RC.tick(); });
   G.save.section('ranch', {
-    v: 1, def: () => ({ pen: null, animals: [], trough: -1, seq: 0, lastTick: -1, collected: 0, riding: null }),
-    get: () => ({ pen: st.pen, animals: st.animals.map((a) => ({ id: a.id, kind: a.kind, name: a.name, x: Math.round(a.x), y: Math.round(a.y), born: a.born, love: a.love, pet: a.pet, fed: a.fed, ready: a.ready, gold: a.gold, double: a.double })), trough: st.trough, seq: st.seq, lastTick: st.lastTick, collected: st.collected, riding: st.riding }),
+    v: 1, def: () => ({ pen: null, animals: [], trough: -1, troughUntil: 0, seq: 0, lastTick: -1, collected: 0, riding: null }),
+    get: () => ({ pen: st.pen, animals: st.animals.map((a) => ({ id: a.id, kind: a.kind, name: a.name, x: Math.round(a.x), y: Math.round(a.y), born: a.born, love: a.love, pet: a.pet, petAt: a.petAt || 0, fed: a.fed, ready: a.ready, gold: a.gold, double: a.double })), trough: st.trough, troughUntil: st.troughUntil || 0, seq: st.seq, lastTick: st.lastTick, collected: st.collected, riding: st.riding }),
     set: (d) => { Object.assign(st, d); st.animals = (d.animals || []).map((a) => Object.assign({ tx: 0, ty: 0, wait: 0 }, a)); },
   });
   G.modules.add('ranch');

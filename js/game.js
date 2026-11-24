@@ -250,7 +250,7 @@
         G.audio.sfx(tg.kind === 'chop' ? 'shake' : 'dig');
         setTimeout(() => {
           const r = G.nest.gather(o, tg.kind === 'chop' ? 'axe' : 'shovel');
-          if (r.none) { G.audio.sfx('bump'); G.ui.toast(tg.kind === 'chop' ? '이 나무는 오늘 많이 내줬어요. 내일 또 와요.' : '이 바위는 오늘 다 두드렸어요.', { icon: tg.kind === 'chop' ? '🌳' : '🪨', ms: 1500 }); return; }
+          if (r.none) { G.audio.sfx('bump'); G.ui.toast(tg.kind === 'chop' ? `이 나무는 오늘 많이 내줬어요. 다음 아침(약 ${G.time.minsToMorning()}분 뒤)에 또 와요.` : `이 바위는 오늘 다 두드렸어요. 다음 아침(약 ${G.time.minsToMorning()}분 뒤)에 또 와요.`, { icon: tg.kind === 'chop' ? '🌳' : '🪨', ms: 1500 }); return; }
           dropItem(r.id, o.tx * TILE + 16 + (pl.x < o.tx * TILE + 16 ? -18 : 18), o.ty * TILE + 28, 1);
           G.audio.sfx('drop'); if (tg.kind === 'chop') leafFx(o);
         }, 180);
@@ -883,14 +883,14 @@
     if (!GM.started) return;
     G.world.refresh(p.day);
     A.season = G.time.season(); A.clearCache();
-    G.ui.toast('새 아침! 몽글바람이 새 물건을 실어 왔어요.', { icon: '🌤️', ms: 3200 });
+    G.ui.toast('새 아침! 몽글바람이 새 물건을 실어 왔어요. 나무·바위·상점·부탁이 다시 채워졌어요.', { icon: '🌤️', ms: 3600 });
     G.save.mark('day');
   });
   G.on('quest:done', (p) => { G.ui.toast(`할 일 완료: ${p.text}`, { icon: '✅' }); G.audio.sfx('chime'); fxSparkle(pl.x, pl.y - 50, 8); });
   G.on('stamp:earn', (p) => { setTimeout(async () => { G.audio.sfx('stamp'); kongalReact('jump'); await G.ui.say([{ who: 'kongal', text: '꼬물꼬물! (오늘 멋졌어!)' }, { who: 'sys', text: p.id === 'daily' ? '오늘의 부탁을 모두 들어줬어요! 반짝 도장을 하나 받았어요.' : '반짝 도장을 하나 받았어요! 내일은 박물관이 문을 열고, 새 이웃도 온대요.' }]); }, 1400); });
   G.on('dex:new', (p) => { if (p.newSp) fxSparkle(pl.x, pl.y - 60, 10, '#ffe066'); });
   G.on('eco:miss', () => { kongalSay(u.pick(G.lines('kongal', 'miss'), Math.random()).text); G.audio.sfx('miss'); });
-  G.on('weather:change', () => G.audio.ambient && G.audio.ambient(G.weather.now().type));
+  G.on('weather:change', () => G.audio && G.audio.ambient && G.audio.ambient(G.weather.now().type));
   G.on('time:hour', () => G.audio.ambient && G.audio.ambient(G.weather.now().type));
   G.on('cam:px', () => A.clearCache());
 
@@ -916,7 +916,7 @@
     });
     addEventListener('pagehide', () => { if (GM.started) G.save.now('pagehide'); G.cloud.flush(); });
     setInterval(() => { if (GM.started && G.save.isDirty()) G.save.now('interval'); }, 60000);
-    G.loop.add('time', (dt) => { GM.t += dt; G.time.tick(); });
+    G.loop.add('time', (dt) => { GM.t += dt; if (GM.started && !G.save.paused) G.time.advance(dt); G.time.tick(); });
     G.loop.add('input', (dt) => G.input.update(dt));
     G.loop.add('sim', (dt) => G.scene.update(dt));
     G.loop.add('draw', () => G.scene.draw(ctx));

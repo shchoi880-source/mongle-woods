@@ -45,7 +45,7 @@
     const ra = G.ranch.st.animals;
     const rr = ra.find((x) => x.ready);
     if (rr) return { text: `목장에서 ${rr.name}의 선물 거두기 🧺`, pos: at(rr.x, rr.y) };
-    const rp = ra.find((x) => x.pet !== G.time.day() && !G.ranch.st.riding);
+    const rp = ra.find((x) => G.ranch.canPet(x) && !G.ranch.st.riding);
     if (rp) return { text: `목장의 ${rp.name} 쓰다듬기 🤲`, pos: at(rp.x, rp.y) };
     // 3.5) 텃밭
     const fp = G.farm.st.plots;

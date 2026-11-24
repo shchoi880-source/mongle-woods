@@ -1,5 +1,6 @@
 // 묶음 3: 텃밭(농사) — 집 옆 6칸(집 단계마다 +3), 계절 작물 12종, 물 주기(비·눈 오는 날은 자동), 수확·거대 작물, 요리 8종
-// 원칙: 벌 없음 — 물을 깜빡해도 시들지 않고 그날은 자라지 않을 뿐
+// 원칙: 벌 없음 — 물을 깜빡해도 시들지 않고 그동안 자라지 않을 뿐
+// 시간(2026-11 개편): grow 1 = 마을 4시간(실제 4분). 물은 한 번 주면 마을 12시간(실제 12분) 촉촉. 비·눈이 오면 저절로 촉촉
 (function (G) {
   'use strict';
   const u = G.u, TILE = G.C.TILE, D = G.data;
@@ -43,7 +44,7 @@
 
   // ---------- 상태 ----------
   // plots: [{tx,ty, crop, prog, water(day), giant}]
-  const st = { plots: [], lastTick: -1, harvested: 0, giants: 0, seedGift: false, dry: 0 };
+  const st = { plots: [], lastTick: -1, lastMin: -1, harvested: 0, giants: 0, seedGift: false, dry: 0 };
   const F = G.farm = { st, DISHES, SEASON_OF };
 
   // 텃밭 자리: 집(텐트) 문 근처 풀밭에서 3칸씩 줄 (지도는 바꾸지 않고 '데칼'로만 그린다)
@@ -64,22 +65,31 @@
     }
     G.save.mark('farm');
   };
-  const wetDay = (day) => { const p = G.weather.pattern(day); return p === 'shower' || p === 'rainy'; };
-  // 하루가 지나면: 어제 물을 줬거나 비·눈이 왔으면 한 단계 자란다 (여러 날 건너뛰면 첫날만)
-  F.tick = (day) => {
-    if (st.lastTick < 0) { st.lastTick = day; return; }
-    if (day <= st.lastTick) return;
-    const prev = day - 1;
+  const GROW_MIN = 240, WET_MIN = 720; // 마을 분
+  F.GROW_MIN = GROW_MIN; F.WET_MIN = WET_MIN;
+  const raining = () => { const w = G.weather.now().type; return w === 'rain' || w === 'snow'; };
+  // 매 마을 분: 촉촉한 작물은 자란다 (놀지 않는 동안엔 마을 시간이 멈추므로 따로 따라잡을 필요 없음)
+  F.tick = () => {
+    const now = G.time.gmin();
+    if (st.lastMin === undefined || st.lastMin < 0 || now < st.lastMin) { st.lastMin = now; return; }
+    const dt = Math.min(now - st.lastMin, 180); if (dt <= 0) return;
+    const rain = raining(); let changed = false;
     for (const p of st.plots) {
       if (!p.crop) continue;
       const c = D.get('crops', p.crop);
+      if (p.gp === undefined) p.gp = (p.prog || 0) * GROW_MIN;
       if (p.prog >= c.grow) continue;
-      if (p.water === prev || p.water === st.lastTick || wetDay(prev)) p.prog++;
+      const wetFor = rain ? dt : Math.max(0, Math.min(dt, (p.wet || 0) - st.lastMin));
+      if (wetFor <= 0) continue;
+      p.gp += wetFor; const np = Math.min(c.grow, Math.floor(p.gp / GROW_MIN));
+      if (np !== p.prog) { p.prog = np; changed = true; if (np >= c.grow) G.emit('farm:ripe', { crop: c.id }); }
     }
-    st.lastTick = day; G.save.mark('farm');
+    st.lastMin = now; if (changed) G.save.mark('farm');
   };
   F.stage = (p) => { if (!p.crop) return -1; const c = D.get('crops', p.crop); return p.prog >= c.grow ? 3 : p.prog === 0 ? 0 : p.prog / c.grow < 0.5 ? 1 : 2; };
-  F.watered = (p) => p.water === G.time.day() || wetDay(G.time.day()) && G.weather.now().type !== 'clear';
+  F.watered = (p) => (p.wet || 0) > G.time.gmin() || raining();
+  // 다 자라기까지 남은 실제 분(촉촉하다는 가정)
+  F.minsLeft = (p) => { const c = D.get('crops', p.crop); return Math.max(0, Math.ceil((c.grow * GROW_MIN - (p.gp || 0)) / G.time.SPEED)); };
   F.at = (tx, ty) => st.plots.find((p) => p.tx === tx && p.ty === ty);
   F.seedsInBag = () => G.inv.slots.filter((s) => s.id.startsWith('seed:'));
 
@@ -99,31 +109,31 @@
       if (seeds.length > 1) { const names = seeds.slice(0, 3).map((s) => G.items.get(s.id).name); const i = await G.ui.choose({ who: 'sys', text: '어떤 씨앗을 심을까요?' }, names.concat(['그만두기'])); if (i >= names.length) return; seed = seeds[i]; }
       const c = G.items.get(seed.id).ref;
       G.inv.removeAt(G.inv.slots.indexOf(seed), 1);
-      Object.assign(p, { crop: c.id, prog: 0, water: -1, giant: false });
+      Object.assign(p, { crop: c.id, prog: 0, gp: 0, wet: 0, water: -1, giant: false });
       pl.squash = 0.12; G.audio.sfx('dig'); G.emit('farm:plant', { crop: c.id });
       if (c.season !== SEASON_OF(G.time.month())) G.ui.toast(`${c.name}는 ${({ spring: '봄', summer: '여름', autumn: '가을', winter: '겨울' })[c.season]} 작물이라 천천히 자랄지도 몰라요. (그래도 자라요!)`, { icon: '🌱' });
       if (!pl.hasTool('can')) G.ui.toast('물뿌리개는 땅굴상점에서 팔아요.', { icon: '🚿' });
-      else G.events.tip('water', '심었으면 물을 줘요! 하루 한 번, 비 오는 날은 쉬어도 돼요.');
+      else G.events.tip('water', '심었으면 물을 줘요! 한 번 주면 12분 동안 촉촉하고, 몇 분이면 다 자라요. 비 오면 저절로 자라요.');
       G.save.mark('farm'); return;
     }
     if (tg.act === 'water') {
       if (!pl.hasTool('can')) { await G.ui.say([{ who: 'sys', text: '물뿌리개가 없어요. 땅굴상점에서 팔아요.' }]); return; }
-      p.water = G.time.day(); pl.swing = 0.001; pl.busy = 0.35; G.audio.sfx('plop');
+      p.wet = G.time.gmin() + WET_MIN; pl.swing = 0.001; pl.busy = 0.35; G.audio.sfx('plop');
       for (let k = 0; k < 8; k++) G.game.fx.push({ x: p.tx * TILE + 16 + (Math.random() - 0.5) * 16, y: p.ty * TILE + 10, vx: (Math.random() - 0.5) * 30, vy: 40 + Math.random() * 30, t: 0, life: 0.5, kind: 'drop', c: '#a7e3ff' });
       // 옆 칸도 물이 안 줬으면 같이 (물뿌리개는 넓게 뿌린다)
-      for (const q of st.plots) if (q !== p && q.crop && Math.abs(q.tx - p.tx) <= 1 && q.ty === p.ty) q.water = G.time.day();
+      for (const q of st.plots) if (q !== p && q.crop && Math.abs(q.tx - p.tx) <= 1 && q.ty === p.ty) q.wet = G.time.gmin() + WET_MIN;
       G.emit('farm:water', {}); G.save.mark('farm'); return;
     }
     if (tg.act === 'harvest') {
       const c = D.get('crops', p.crop);
       // 거대 작물: 12% ("잘 나오네" 정도, 오너 요청) + 8번 연속 안 나오면 다음은 확정
-      const giant = (st.dry || 0) >= 8 || u.hashf(G.rng.seed, G.time.day(), p.tx, p.ty, st.harvested) < 0.12;
+      const giant = (st.dry || 0) >= 8 || u.hashf(G.rng.seed, G.time.gmin(), p.tx, p.ty, st.harvested) < 0.12;
       st.dry = giant ? 0 : (st.dry || 0) + 1;
-      const n = giant ? 1 : 1 + (u.hashf(G.rng.seed, p.tx, p.ty, G.time.day()) < 0.35 ? 1 : 0);
+      const n = giant ? 1 : 1 + (u.hashf(G.rng.seed, p.tx, p.ty, G.time.gmin(), st.harvested) < 0.35 ? 1 : 0);
       const x = giant ? { v: 1, size: Math.round(c.val / 10) } : null;
       if (!G.inv.canFit('crop:' + c.id, x)) { G.audio.sfx('error'); G.ui.toast('가방이 꽉 찼어요!', { icon: '🎒' }); return; }
       if (G.game.gain('crop:' + c.id, n, x, { msg: giant ? `거대 ${c.name}를 수확했다! 쫑알이 보면 1면감이야!` : `${c.name} ${n}개 수확!`, src: 'farm' })) {
-        Object.assign(p, { crop: null, prog: 0, water: -1, giant: false });
+        Object.assign(p, { crop: null, prog: 0, gp: 0, wet: 0, water: -1, giant: false });
         st.harvested += n; if (giant) st.giants++;
         G.emit('farm:harvest', { crop: c.id, n, giant });
         G.save.mark('farm');
@@ -131,7 +141,7 @@
       return;
     }
     const c = D.get('crops', p.crop);
-    await G.ui.say([{ who: 'sys', text: `${c.name}가 자라고 있어요. (${Math.min(p.prog, c.grow)}/${c.grow}일) 오늘 물은 이미 줬어요.` }]);
+    await G.ui.say([{ who: 'sys', text: `${c.name}가 자라고 있어요. (${Math.min(p.prog, c.grow)}/${c.grow}) 촉촉하니까 앞으로 약 ${F.minsLeft(p)}분이면 다 자라요.` }]);
   };
 
   // ---------- 그리기 ----------
@@ -188,10 +198,11 @@
     };
   }
 
-  G.on('time:day', (p) => { if (G.world.map) { F.tick(p.day); F.ensurePlots(); } });
+  G.on('time:minute', () => { if (G.world.map && G.game && G.game.started) F.tick(); });
+  G.on('time:day', () => { if (G.world.map) F.ensurePlots(); });
   G.on('house:stage', () => F.ensurePlots());
   G.save.section('farm', {
-    v: 1, def: () => ({ plots: [], lastTick: -1, harvested: 0, giants: 0, seedGift: false }),
+    v: 1, def: () => ({ plots: [], lastTick: -1, lastMin: -1, harvested: 0, giants: 0, seedGift: false }),
     get: () => JSON.parse(JSON.stringify(st)), set: (d) => Object.assign(st, d),
   });
   G.modules.add('farm');
