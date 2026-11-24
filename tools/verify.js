@@ -107,6 +107,17 @@ ok('클라우드 양쪽 변경 시 충돌', dc('local', true, { fingerprint: 'se
 ok('계정 아이디 소문자 정규화', G.cloud._accountId('  Mongle_12 ') === 'mongle_12');
 ok('계정 아이디 형식 검증', G.cloud._validAccountId('mongle_12') && !G.cloud._validAccountId('몽글12') && !G.cloud._validAccountId('abc'));
 ok('실제 이메일을 만들지 않는 내부 식별자', G.cloud._accountEmail('Mongle_12') === 'mongle_12@accounts.mongle.invalid');
+ok('곤충: 채를 들고 걸으면 덜 놀람', G.eco._scareScale({ mode: 'walk', tool: 'net' }) < G.eco._scareScale({ mode: 'walk', tool: 'hand' }));
+ok('곤충: 달리면 여전히 도망', G.eco._scareScale({ mode: 'run', tool: 'net' }) > G.eco._scareScale({ mode: 'walk', tool: 'net' }));
+ok('곤충: 포획 판정 완화', G.eco._bugTune.catchRadius >= 34 && G.eco._bugTune.catchGrace >= 0.5 && G.eco._bugTune.fleeSpeed < 140);
+ok('곤충: 가장 예민한 종도 채 들고 걸어서 포획 거리 진입', Math.max(...G.data.all('bugs').map((x) => x.flee)) * G.C.TILE * G.eco._bugTune.netWalkScare < 22 + G.eco._bugTune.catchRadius);
+{
+  const sp = G.data.all('bugs')[0], p = { x: 0, y: 0, dir: 3 };
+  const edge = { sp, x: 55, y: 0, alt: 0, fade: 1, state: 'idle', t: 0 };
+  G.eco.bugs.push(edge); ok('곤충: 넓어진 채 끝자락에서 포획', G.eco.swing(p) === edge);
+  const startled = { sp, x: 45, y: 0, alt: 0, fade: 1, state: 'flee', t: 0.4 };
+  G.eco.bugs.push(startled); ok('곤충: 도망 직후에도 포획', G.eco.swing(p) === startled); G.eco.clear();
+}
 
 // 마을 시계: 실제 1초 = 마을 1분, 농사·목장은 몇 분 안에
 {

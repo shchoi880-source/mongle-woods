@@ -43,7 +43,7 @@
     hasTool(t) { return this.tools.includes(t); },
     giveTool(t) { if (!this.tools.includes(t)) this.tools.push(t); G.save.mark('tool'); G.ui.refreshHud(); },
     setTool(t) { if (!this.hasTool(t)) return; this.tool = t;
-      if (t === 'net') G.events.tip('net', '잠자리채: 곤충 앞에서 노란 버튼. 조이스틱을 살짝만 기울이면 살금살금!', '잠자리채: 곤충 앞에서 Space. C 키를 누르고 걸으면 살금살금!');
+      if (t === 'net') G.events.tip('net', '잠자리채를 들고 천천히 걸으면 곤충이 덜 놀라요. 가까이서 노란 버튼!', '잠자리채를 들고 걸으면 곤충이 덜 놀라요. 가까이서 Space!');
       if (t === 'rod') G.events.tip('rod', '낚싯대: 물 쪽을 보고 노란 버튼으로 던져요. 찌가 「풍덩!」 잠기면 다시 눌러요.', '낚싯대: 물 쪽을 보고 Space로 던져요. 찌가 「풍덩!」 잠기면 다시 Space!'); G.fishing.cancel(true); G.ui.refreshHud(); G.save.mark('tool'); },
     nextTool() { const i = this.tools.indexOf(this.tool); this.setTool(this.tools[(i + 1) % this.tools.length]); G.audio.sfx('tap'); },
   };
@@ -132,7 +132,7 @@
     const tp = G.tide.near(f.x, f.y, 26) || G.tide.near(pl.x, pl.y, 22);
     if (tp) return { kind: 'pool', ref: tp, icon: '🦀', label: '잡기', name: '조수 웅덩이' };
     // 3) 도구별
-    if (pl.tool === 'net') { const b = G.eco.nearest('bug', f.x, f.y, 48); return { kind: 'net', ref: b, icon: 'tool:net', label: '휘두르기', name: b && b.fade > 0.5 ? b.sp.name : '' }; }
+    if (pl.tool === 'net') { const b = G.eco.nearest('bug', f.x, f.y, 56); return { kind: 'net', ref: b, icon: 'tool:net', label: '휘두르기', name: b && b.fade > 0.5 ? b.sp.name : '' }; }
     if (pl.tool === 'rod') {
       if (G.fishing.state !== 'idle') return { kind: 'rod', icon: 'tool:rod', label: G.fishing.state === 'reel' ? '영차!' : G.fishing.state === 'bite' ? '당기기!' : '거두기' };
       const water = waterAhead();

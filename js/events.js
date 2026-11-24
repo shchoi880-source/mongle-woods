@@ -14,7 +14,7 @@
     G.ui.hint(G.input.isTouch() ? touch : (pc || touch));
     clearTimeout(EV._tipT); EV._tipT = setTimeout(() => G.ui.hint(''), 5000);
   };
-  G.on('eco:flee', (p) => { if (p.e && p.e.sp && p.e.sp.beh !== 'E') EV.tip('flee', '뛰어가면 곤충이 도망가요. 조이스틱을 살짝만 기울여 살금살금!', '뛰면 곤충이 도망가요. C 키를 누른 채 살금살금!'); });
+  G.on('eco:flee', (p) => { if (p.e && p.e.sp && p.e.sp.beh !== 'E') EV.tip('flee', '뛰어가면 곤충이 도망가요. 잠자리채를 들고 천천히 걸어 보세요!', '뛰면 곤충이 도망가요. 잠자리채를 들고 걸으면 가까이 갈 수 있어요!'); });
   G.on('eco:miss', (p) => { if (p.kind === 'fish') EV.tip('miss', '「톡」은 아직이에요! 찌가 크게 「풍덩!」 잠길 때 눌러요.'); });
   G.on('fishing:bite', () => EV.tip('bite', '지금이에요! 노란 버튼!', '지금이에요! Space!'));
 
