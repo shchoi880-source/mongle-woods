@@ -6,6 +6,15 @@
   G.data.add('items', [{ id: 'star_fragment', name: '별 조각', cat: 'mat', val: 400, stack: 30 }]);
 
   const EV = G.events = { st };
+  // 특별한 날씨 알림 (무지개·천둥·함박눈) — 마을 하루에 한 번씩
+  let fxSeen = '';
+  G.on('time:hour', () => {
+    if (!G.game || !G.game.started || (G.house && G.house.inside)) return;
+    const w = G.weather.now(), key = G.time.day() + ':' + w.fx;
+    if (!w.fx || fxSeen === key || !['rainbow', 'storm', 'blizzard'].includes(w.fx)) return;
+    fxSeen = key;
+    G.ui.toast({ rainbow: '🌈 무지개가 떴어요! 하늘을 봐요.', storm: '⛈️ 천둥 번개! 우르릉 쾅쾅.', blizzard: '🌨️ 함박눈이 펑펑 내려요!' }[w.fx], { icon: '✨', ms: 3500 });
+  });
 
   // ---------- 처음 쓰는 조작 안내 (한 번씩) ----------
   EV.tip = (id, touch, pc) => {

@@ -560,8 +560,8 @@
     ctx.globalAlpha = 1;
     // 레이어 5: 날씨
     const wx = G.weather.now();
-    A.weather.update(G.loop.dt, wx.type, rect, wx.wind || 0);
-    A.weather.draw(ctx, wx.type);
+    A.weather.update(G.loop.dt, wx.type, rect, wx.wind || 0, wx.fx || '', wx.int || 0);
+    A.weather.draw(ctx, wx.type, wx.fx || '', rect, t);
     // 레이어 6·7: 그레이딩 + 빛
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     const d = G.time.date(); const hour = d.getHours() + d.getMinutes() / 60;

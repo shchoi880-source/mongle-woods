@@ -50,7 +50,7 @@
   // 텃밭 자리: 집(텐트) 문 근처 풀밭에서 3칸씩 줄 (지도는 바꾸지 않고 '데칼'로만 그린다)
   F.ensurePlots = () => {
     const W = G.world, m = W.map; if (!m) return;
-    const want = 6 + (G.nest ? G.nest.st.stage : 0) * 3;
+    const want = 6 + (G.nest ? G.nest.st.stage : 0) * 3 + (st.extra || 0) * 3; // 집 단계 + 상점에서 넓힌 만큼
     if (st.plots.length >= want) return;
     const tent = m.plots.tent, door = tent.door;
     const used = new Set(st.plots.map((p) => p.tx + ',' + p.ty));
@@ -61,6 +61,18 @@
         if (st.plots.length >= want) break;
         const x0 = door.x + dx, y0 = door.y + dy;
         if ([0, 1, 2].every((k) => ok(x0 + k, y0))) for (let k = 0; k < 3; k++) { st.plots.push({ tx: x0 + k, ty: y0, crop: null, prog: 0, water: -1, giant: false }); used.add(x0 + k + ',' + y0); }
+      }
+    }
+    // 그래도 모자라면(넓힌 밭): 지금 밭 가까운 곳부터 3칸 줄을 찾는다 (목장 울타리는 피함)
+    if (st.plots.length < want) {
+      const pen = G.ranch && G.ranch.st.pen, inPen = (x, y) => pen && x >= pen.x - 1 && x <= pen.x + pen.w && y >= pen.y - 1 && y <= pen.y + pen.h;
+      const cx = st.plots.length ? st.plots.reduce((a, p) => a + p.tx, 0) / st.plots.length : door.x, cy = st.plots.length ? st.plots.reduce((a, p) => a + p.ty, 0) / st.plots.length : door.y;
+      const cands = [];
+      for (let y0 = door.y - 16; y0 <= door.y + 16; y0++) for (let x0 = door.x - 18; x0 <= door.x + 16; x0++) cands.push([x0, y0, (x0 + 1 - cx) ** 2 + (y0 - cy) ** 2 * 1.5]);
+      cands.sort((a, b) => a[2] - b[2]);
+      for (const [x0, y0] of cands) {
+        if (st.plots.length >= want) break;
+        if ([0, 1, 2].every((k) => ok(x0 + k, y0) && !inPen(x0 + k, y0))) for (let k = 0; k < 3; k++) { st.plots.push({ tx: x0 + k, ty: y0, crop: null, prog: 0, water: -1, giant: false }); used.add(x0 + k + ',' + y0); }
       }
     }
     G.save.mark('farm');
@@ -90,6 +102,15 @@
   F.watered = (p) => (p.wet || 0) > G.time.pmin() || raining();
   // 다 자라기까지 남은 실제 분(촉촉하다는 가정)
   F.minsLeft = (p) => { const c = D.get('crops', p.crop); return Math.max(0, Math.ceil((c.grow * GROW_MIN - (p.gp || 0)) / G.time.SPEED)); };
+  // 밭 넓히기 (상점): 3칸씩, 최대 14번(= 42칸 더)
+  F.EXTRA_MAX = 14;
+  F.expandPrice = () => 2000 * ((st.extra || 0) + 1);
+  F.expand = () => {
+    if ((st.extra || 0) >= F.EXTRA_MAX) return { ok: false, why: '더는 넓힐 수 없어요. 아주 넓은 밭이에요!' };
+    const before = st.plots.length; st.extra = (st.extra || 0) + 1; F.ensurePlots();
+    if (st.plots.length <= before) { st.extra--; return { ok: false, why: '집 근처에 밭을 늘릴 빈 풀밭이 없어요.' }; }
+    G.save.mark('farm'); return { ok: true, n: st.plots.length - before };
+  };
   F.at = (tx, ty) => st.plots.find((p) => p.tx === tx && p.ty === ty);
   F.seedsInBag = () => G.inv.slots.filter((s) => s.id.startsWith('seed:'));
 
@@ -225,7 +246,7 @@
   };
   G.on('house:stage', () => F.ensurePlots());
   G.save.section('farm', {
-    v: 1, def: () => ({ plots: [], lastTick: -1, lastMin: -1, harvested: 0, giants: 0, seedGift: false }),
+    v: 1, def: () => ({ plots: [], lastTick: -1, lastMin: -1, harvested: 0, giants: 0, seedGift: false, extra: 0 }),
     get: () => JSON.parse(JSON.stringify(st)), set: (d) => Object.assign(st, d),
   });
   G.modules.add('farm');

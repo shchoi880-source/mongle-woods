@@ -46,8 +46,32 @@
   // ---------- 상태 ----------
   // 방: 7×6 타일, 위 2줄은 벽, 바닥 7×4, 문은 아래 가운데
   const ROOM = { w: 7, h: 6, wall: 2, door: 3 };
-  const st = { items: [], starter: false, rated: 0 }; // items: {f, x, y, r, c}
+  const st = { items: [], starter: false, rated: 0, wall: 0, floor: 0 }; // items: {f, x, y, r, c} · wall/floor: 0 = 집 기본, 1~ = 고른 무늬
+  // 벽지·바닥 (8차 회의: 꾸미기 강화). 번호는 끝에만 추가
+  const WALLS = [null,
+    { name: '크림 줄무늬', c1: '#fff3e0', c2: '#ffe0c2', pat: 'stripe' }, { name: '분홍 물방울', c1: '#ffe6ee', c2: '#ffc2d6', pat: 'dots' },
+    { name: '하늘 체크', c1: '#e6f4ff', c2: '#c8e4fb', pat: 'check' }, { name: '민트 꽃무늬', c1: '#e3f7ee', c2: '#9fe0c0', pat: 'flower' },
+    { name: '보라 별밤', c1: '#3f3a6b', c2: '#ffe28a', pat: 'stars' }, { name: '나무 판벽', c1: '#d9a877', c2: '#c4915f', pat: 'plank' },
+    { name: '레몬 물결', c1: '#fff8c8', c2: '#ffe27a', pat: 'wave' }, { name: '구름 하늘', c1: '#bfe6ff', c2: '#ffffff', pat: 'cloud' }];
+  const FLOORS = [null,
+    { name: '진한 원목', c1: '#b9875a', c2: '#a8764a', pat: 'plank' }, { name: '하얀 타일', c1: '#f4f4f0', c2: '#dcdcd4', pat: 'tile' },
+    { name: '분홍 카펫', c1: '#ffcfdc', c2: '#ffb8cb', pat: 'carpet' }, { name: '풀밭 매트', c1: '#a8d878', c2: '#94c864', pat: 'grass' },
+    { name: '체스 바닥', c1: '#f3e2c4', c2: '#8a6a55', pat: 'check' }, { name: '하늘 카펫', c1: '#cfe8ff', c2: '#b8dcff', pat: 'carpet' }];
+  function paintPattern(ctx, P, d, x0, y0, w, h, t) {
+    ctx.fillStyle = d.c1; ctx.fillRect(x0, y0, w, h); ctx.fillStyle = d.c2;
+    if (d.pat === 'stripe') for (let x = x0; x < x0 + w; x += 18) ctx.fillRect(x, y0, 8, h);
+    else if (d.pat === 'dots') for (let y = y0 + 6; y < y0 + h; y += 14) for (let x = x0 + ((y / 14) % 2) * 9; x < x0 + w; x += 18) P.blob(ctx, x, y, 2.6, 2.6, d.c2);
+    else if (d.pat === 'check' || d.pat === 'tile') { const g = d.pat === 'tile' ? 32 : 16; for (let y = y0; y < y0 + h; y += g) for (let x = x0; x < x0 + w; x += g) if (d.pat === 'tile' ? true : ((x - x0) / g + (y - y0) / g) % 2 === 0) { if (d.pat === 'tile') { ctx.strokeStyle = d.c2; ctx.lineWidth = 1.5; ctx.strokeRect(x + 0.5, y + 0.5, g - 1, g - 1); } else ctx.fillRect(x, y, g, g); } }
+    else if (d.pat === 'flower') for (let y = y0 + 10; y < y0 + h; y += 22) for (let x = x0 + ((y / 22) % 2) * 11; x < x0 + w; x += 22) { for (let k = 0; k < 5; k++) { const a = k / 5 * 6.28; P.blob(ctx, x + Math.cos(a) * 3, y + Math.sin(a) * 3, 2, 2, d.c2); } P.blob(ctx, x, y, 1.4, 1.4, '#fff6c8'); }
+    else if (d.pat === 'stars') for (let i = 0; i < w * h / 300; i++) { const x = x0 + (i * 53.7 % w), y = y0 + (i * 31.3 % h), tw = 0.5 + 0.5 * Math.sin((t || 0) * 2 + i); ctx.globalAlpha = 0.4 + tw * 0.6; P.blob(ctx, x, y, 1.3, 1.3, d.c2); ctx.globalAlpha = 1; }
+    else if (d.pat === 'plank') for (let y = y0; y < y0 + h; y += 12) { ctx.fillStyle = ((y - y0) / 12) % 2 ? d.c2 : d.c1; ctx.fillRect(x0, y, w, 11); }
+    else if (d.pat === 'wave') { ctx.strokeStyle = d.c2; ctx.lineWidth = 3; for (let y = y0 + 8; y < y0 + h; y += 14) { ctx.beginPath(); for (let x = x0; x <= x0 + w; x += 4) ctx.lineTo(x, y + Math.sin(x * 0.15) * 3); ctx.stroke(); } }
+    else if (d.pat === 'cloud') for (let i = 0; i < w / 50; i++) { const x = x0 + 20 + i * 50, y = y0 + 12 + (i % 2) * 18; P.blob(ctx, x, y, 12, 6, d.c2); P.blob(ctx, x + 8, y - 4, 8, 6, d.c2); }
+    else if (d.pat === 'carpet') { ctx.strokeStyle = d.c2; ctx.lineWidth = 1; for (let y = y0; y < y0 + h; y += 4) { ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x0 + w, y); ctx.stroke(); } }
+    else if (d.pat === 'grass') for (let i = 0; i < w * h / 120; i++) { const x = x0 + (i * 37.3 % w), y = y0 + (i * 23.7 % h); ctx.fillRect(x, y, 1.5, 4); }
+  }
   const H = G.house = { inside: false, st, ROOM, FORMS, SHOP_FORMS: FORMS.filter((f) => !f.hidden), COLS, COLN, editing: false };
+  H.WALLS = WALLS; H.FLOORS = FLOORS;
   // 방 크기는 둥지 단계에 따라 (텐트 7×6 → 오두막 9×7 → 작은 집 11×8). 오른쪽·아래로만 넓어져서 가구 위치는 그대로다
   function syncRoom() { const r = G.nest ? G.nest.room() : { w: 7, h: 6 }; ROOM.w = r.w; ROOM.h = r.h; ROOM.door = Math.floor(r.w / 2); RW = ROOM.w * TILE; RH = ROOM.h * TILE; }
   H.syncRoom = syncRoom;
@@ -93,9 +117,9 @@
   };
 
   G.save.section('house', {
-    v: 1, def: () => ({ items: [], starter: false, rated: 0 }),
-    get: () => ({ items: st.items.map((o) => [o.f, o.x, o.y, o.r, o.c]), starter: st.starter, rated: st.rated }),
-    set: (d) => { st.items = (d.items || []).filter((a) => form(a[0])).map((a) => ({ f: a[0], x: a[1], y: a[2], r: a[3] || 0, c: a[4] || 0 })); st.starter = !!d.starter; st.rated = d.rated || 0; },
+    v: 1, def: () => ({ items: [], starter: false, rated: 0, wall: 0, floor: 0 }),
+    get: () => ({ items: st.items.map((o) => [o.f, o.x, o.y, o.r, o.c]), starter: st.starter, rated: st.rated, wall: st.wall || 0, floor: st.floor || 0 }),
+    set: (d) => { st.items = (d.items || []).filter((a) => form(a[0])).map((a) => ({ f: a[0], x: a[1], y: a[2], r: a[3] || 0, c: a[4] || 0 })); st.starter = !!d.starter; st.rated = d.rated || 0; st.wall = d.wall || 0; st.floor = d.floor || 0; },
   });
 
   // ---------- 가구 그림 (발자국 좌상단 기준, 위로 솟음) ----------
@@ -314,6 +338,7 @@
     else if (stage === 1) for (let y = -6; y < wallH; y += 12) { ctx.fillStyle = (y / 12) % 2 ? '#c99868' : '#e2b88a'; ctx.fillRect(-8, y, RW + 16, 11); P.blob(ctx, -2, y + 5, 4, 5, '#b8875a'); P.blob(ctx, RW + 2, y + 5, 4, 5, '#b8875a'); }
     else if (stage >= 3) { const c = stage === 3 ? '#f0c8a8' : '#d8c8ff'; for (let x = -8; x < RW + 16; x += 20) { ctx.fillStyle = c; ctx.fillRect(x, -6, 8, wallH); } ctx.fillStyle = stage === 3 ? '#c98e5a' : '#a88ad8'; ctx.fillRect(-8, wallH - 14, RW + 16, 14); }
     else { for (let y = 0; y < wallH; y += 16) for (let x = (y / 16) % 2 * 16; x < RW + 16; x += 32) P.blob(ctx, x, y + 6, 3, 3, '#ffc2d6'); ctx.fillStyle = '#e8c494'; ctx.fillRect(-8, wallH - 14, RW + 16, 14); }
+    if (st.wall && WALLS[st.wall]) paintPattern(ctx, P, WALLS[st.wall], -8, -50, RW + 16, wallH + 50, t); // 고른 벽지
     if (stage > 0) { P.rrect(ctx, RW / 2 - 26, 4, 52, 30, 6, '#bfe6f5', L, 1.6); ctx.fillStyle = L; ctx.fillRect(RW / 2 - 1, 4, 2, 30); ctx.fillRect(RW / 2 - 26, 18, 52, 2); }
     ctx.fillStyle = 'rgba(91,70,54,0.12)'; ctx.fillRect(-8, wallH - 10, RW + 16, 10);
     ctx.restore();
@@ -321,6 +346,7 @@
     P.rrect(ctx, -8, wallH, RW + 16, RH - wallH + 8, [0, 0, 14, 14], '#e8c494', L, 2);
     ctx.save(); ctx.beginPath(); ctx.rect(-6, wallH, RW + 12, RH - wallH + 6); ctx.clip();
     for (let y = wallH; y < RH + 8; y += 16) { ctx.fillStyle = (y / 16) % 2 ? '#e2bb88' : '#ecca9c'; ctx.fillRect(-8, y, RW + 16, 15); ctx.fillStyle = 'rgba(156,106,64,0.35)'; for (let x = ((y / 16) % 2) * 40; x < RW + 16; x += 80) ctx.fillRect(x - 8, y, 2, 15); }
+    if (st.floor && FLOORS[st.floor]) paintPattern(ctx, P, FLOORS[st.floor], -8, wallH, RW + 16, RH - wallH + 8, t); // 고른 바닥
     ctx.restore();
     // 문 깔판
     P.rrect(ctx, ROOM.door * TILE + 2, RH - 4, TILE - 4, 14, 5, '#9fd0a8', L, 1.3);
@@ -394,6 +420,27 @@
     G.ui.toast(`아늑지수 ${'🌸'.repeat(r.petals)}${r.hints[0] ? ' — ' + r.hints[0] : ''}`, { icon: '🏡', ms: 3600 });
     if (st.items.some((o) => o.f === 'rug')) { G.game.kongalSay('새근~'); }
   }
+  // 벽지·바닥 고르기 (무료, 언제든)
+  function openWallpaper() {
+    G.ui.modal('벽지·바닥 꾸미기', (body) => {
+      const render = () => {
+        body.innerHTML = '';
+        for (const [key, list, title] of [['wall', WALLS, '🧱 벽지'], ['floor', FLOORS, '🪵 바닥']]) {
+          const h = document.createElement('div'); h.className = 'pane-head'; h.innerHTML = `<span>${title}</span>`; body.append(h);
+          const row = document.createElement('div'); row.className = 'chips';
+          list.forEach((d, i) => {
+            const c = document.createElement('button'); c.className = 'chip' + ((st[key] || 0) === i ? ' on' : '');
+            c.innerHTML = d ? `<i class="swatch" style="background:linear-gradient(135deg, ${d.c1} 50%, ${d.c2} 50%)"></i>${d.name}` : '집 기본';
+            c.onclick = () => { st[key] = i; G.audio.sfx('pop'); changed(); render(); };
+            row.append(c);
+          });
+          body.append(row);
+        }
+        const n = document.createElement('div'); n.className = 'muted small'; n.textContent = '언제든 무료로 바꿀 수 있어요. 창을 닫으면 방에서 바로 보여요.'; body.append(n);
+      };
+      render();
+    });
+  }
   function buildToolbar() {
     const $ = (t, c, h) => { const e = document.createElement(t); if (c) e.className = c; if (h !== undefined) e.innerHTML = h; return e; };
     toolbar = $('div', 'edit-bar');
@@ -403,6 +450,7 @@
     b('📦', '꺼내기', openPicker);
     b('↻', '돌리기', rotateSel);
     b('🎒', '넣기', storeSel);
+    b('🎨', '벽지·바닥', openWallpaper);
     b('↶', '되돌리기', undo);
     b('✔', '다 했어요', endEdit, 'done');
     toolbar.append(tip, row);
