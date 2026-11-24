@@ -1,0 +1,41 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "users": {
+      "$uid": {
+        ".read": "auth !== null && auth.uid === $uid",
+        ".write": "auth !== null && auth.uid === $uid",
+        "save": {
+          ".validate": "newData.hasChildren(['payload', 'fingerprint', 'revision', 'appVersion', 'clientSavedAt', 'updatedAt', 'deviceId', 'summary'])",
+          "payload": { ".validate": "newData.isString() && newData.val().beginsWith('MG1:') && newData.val().length <= 220000" },
+          "fingerprint": { ".validate": "newData.isString() && newData.val().matches(/^[0-9a-f]{8}$/)" },
+          "revision": { ".validate": "newData.isNumber() && newData.val() >= 1 && (!data.exists() || newData.val() >= data.val())" },
+          "appVersion": { ".validate": "newData.isString() && newData.val().length <= 24" },
+          "clientSavedAt": { ".validate": "newData.isNumber() && newData.val() > 0" },
+          "updatedAt": { ".validate": "newData.isNumber() && newData.val() <= now" },
+          "deviceId": { ".validate": "newData.isString() && newData.val().length <= 80" },
+          "summary": {
+            ".validate": "newData.hasChildren(['name', 'town', 'created', 'money', 'dex', 'playDays', 'savedAt'])",
+            "name": { ".validate": "newData.isString() && newData.val().length <= 24" },
+            "town": { ".validate": "newData.isString() && newData.val().length <= 24" },
+            "created": { ".validate": "newData.isNumber()" },
+            "money": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+            "dex": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+            "playDays": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+            "savedAt": { ".validate": "newData.isNumber() && newData.val() > 0" },
+            "$other": { ".validate": false }
+          },
+          "$other": { ".validate": false }
+        },
+        "$other": { ".validate": false }
+      }
+    },
+    "rooms": {
+      "$room": {
+        ".read": false,
+        ".write": false
+      }
+    }
+  }
+}

@@ -84,6 +84,18 @@
       const body = u.b64enc(JSON.stringify(save.envelope()));
       return 'MG1:' + body + ':' + u.fnv1a(body);
     },
+    // 클라우드 동기화는 시각·seq가 매번 바뀌는 envelope 대신 실제 게임 상태의 지문을 비교한다.
+    fingerprint(env) { return u.fnv1a(JSON.stringify(env ? env.s : save.snapshot())); },
+    summary(env) {
+      env = env || save.envelope();
+      const meta = env.s.meta && env.s.meta.d || {}, econ = env.s.econ && env.s.econ.d || {};
+      const col = env.s.collect && env.s.collect.d || {}, time = env.s.time && env.s.time.d || {};
+      return {
+        name: meta.name || '', town: meta.town || '', created: meta.created || 0,
+        money: econ.money || 0, dex: col.count || 0, playDays: time.playDays || 0,
+        savedAt: env.t || 0, seq: env.seq || 0,
+      };
+    },
     parseImport(str) {
       str = String(str || '').trim();
       const m = /^MG1:([A-Za-z0-9+/=]+):([0-9a-f]{8})$/.exec(str);
@@ -91,8 +103,7 @@
       if (u.fnv1a(m[1]) !== m[2]) return { ok: false, err: '내용이 손상되었어요.' };
       let env; try { env = JSON.parse(u.b64dec(m[1])); } catch (e) { return { ok: false, err: '읽을 수 없어요.' }; }
       if (!verify(env)) return { ok: false, err: '체크섬이 맞지 않아요.' };
-      const meta = env.s.meta && env.s.meta.d || {}, econ = env.s.econ && env.s.econ.d || {}, col = env.s.collect && env.s.collect.d || {};
-      return { ok: true, env, summary: { name: meta.name, town: meta.town, created: meta.created, money: econ.money || 0, dex: col.count || 0 } };
+      return { ok: true, env, summary: save.summary(env) };
     },
     importEnv(env) {
       // 현재 세이브를 미리 백업
