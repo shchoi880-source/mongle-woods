@@ -901,10 +901,20 @@
   };
   function registerSW() {
     if (!('serviceWorker' in navigator) || location.protocol === 'file:' || G.dev) return;
+    // 새 버전이 들어오면: 저장하고 바로 새로고침 (예전엔 앱을 완전히 닫아야 적용돼서 업데이트가 안 보였다)
+    const hadCtrl = !!navigator.serviceWorker.controller; let reloading = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadCtrl || reloading) return; reloading = true;
+      if (GM.started) { G.save.now('update'); G.cloud.flush(); }
+      G.ui.toast('새 버전으로 바꾸는 중이에요…', { icon: '✨', ms: 2000 });
+      setTimeout(() => location.reload(), GM.started ? 900 : 200);
+    });
+    // 오래 켜 둔 경우에도 새 버전을 확인
+    setInterval(() => navigator.serviceWorker.getRegistration().then((r) => r && r.update()).catch(() => {}), 10 * 60000);
     navigator.serviceWorker.register('sw.js').then((reg) => {
       reg.addEventListener('updatefound', () => {
         const nw = reg.installing; if (!nw) return;
-        nw.addEventListener('statechange', () => { if (nw.state === 'installed' && navigator.serviceWorker.controller) G.ui.toast('새 버전이 준비됐어요. 다시 열면 적용돼요.', { icon: '✨', ms: 5000 }); });
+        nw.addEventListener('statechange', () => { /* skipWaiting → controllerchange에서 처리 */ });
       });
     }).catch(() => { /* 오프라인 미지원 환경 */ });
   }
