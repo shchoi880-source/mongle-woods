@@ -142,7 +142,7 @@
       });
     },
   };
-  G.on('time:day', (p) => { if (G.game && G.game.started) setTimeout(() => ML.ritual(), 1600); });
+  G.on('time:day', (p) => { if (G.game && G.game.started) { setTimeout(() => ML.ritual(), 1600); setTimeout(() => G.events.checkFirstSnow(), 5000); } });
 
   G.save.section('mail', {
     v: 1, def: () => ({ box: [], lastGen: -1, lastRitual: -1, dreamDay: -1, dream: '', dreamSp: '', seq: 0 }),
