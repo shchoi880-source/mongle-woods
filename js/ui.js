@@ -3,8 +3,8 @@
   'use strict';
   const $ = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html !== undefined) e.innerHTML = html; return e; };
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const NAMES = { ddalang: '딸랑', bori: '보리 할멈', todak: '토닥', tosil: '토실', kongal: '콩알', sogeum: '소금', lime: '라임', sys: '' };
-  const NAMECOL = { ddalang: '#ff8fb1', bori: '#c98e5a', todak: '#8a7366', tosil: '#b48aa6', kongal: '#8fb4ff', sogeum: '#6fa8c9', lime: '#9bc94a' };
+  const NAMES = { ddalang: '딸랑', bori: '보리 할멈', todak: '토닥', tosil: '토실', kongal: '콩알', sogeum: '소금', lime: '라임', slowpoke: '느림보 박사', sys: '' };
+  const NAMECOL = { ddalang: '#ff8fb1', bori: '#c98e5a', todak: '#8a7366', tosil: '#b48aa6', kongal: '#8fb4ff', sogeum: '#6fa8c9', lime: '#9bc94a', slowpoke: '#7fae7a' };
 
   const UI = G.ui = { root: null, open: null };
   let hud = {}, toastBox, dialogEl, popEl, modalEl;
@@ -120,7 +120,7 @@
   }
   UI.updateDialog = (dt) => {
     if (!dlg || dlg.full) return;
-    const speed = G.settings.get('textSpeed') || 32;
+    const speed = (G.settings.get('textSpeed') || 32) * (dlg.who === 'slowpoke' ? 0.6 : 1); // 박사는 느리게
     const before = Math.floor(dlg.shown);
     dlg.shown = speed >= 999 ? dlg.text.length : dlg.shown + speed * dt;
     const n = Math.min(dlg.text.length, Math.floor(dlg.shown));

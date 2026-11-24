@@ -17,6 +17,7 @@
     mole: { fur: '#8a7366', furD: '#6f5a4e', nose: '#ff9fb4' },
     otter: { fur: '#b08462', furD: '#8a6448', belly: '#f3dcc0' },
     cat: { fur: '#ffd9a8', furD: '#e9b47a', inner: '#ffb3c2' },
+    tortoise: { fur: '#b6d99a', furD: '#8fbf72', shell: '#b08a5a', shellD: '#8a6a40' },
   };
 
   // a: {x,y,dir,species,look,walk,moving,run,t0,blinkT,emote,emoteT,hop,sleep,tool,swing}
@@ -45,6 +46,13 @@
       if (!a.sit) {
         P.blob(ctx, -4.5, -2 + (step > 0 ? -1.8 * step : 0), 3.6, 2.6, fc, LINE, 1.2);
         P.blob(ctx, 4.5, -2 + (step < 0 ? 1.8 * step : 0), 3.6, 2.6, fc, LINE, 1.2);
+      }
+      // 거북 등껍질 (몸통 뒤)
+      if (a.species === 'tortoise') {
+        P.blob(ctx, 0, -12, 13, 11.5, sp.shell, LINE, 1.6);
+        ctx.strokeStyle = sp.shellD; ctx.lineWidth = 1.3; ctx.beginPath();
+        for (const [x, y] of [[0, -16], [-7, -10], [7, -10], [0, -6]]) { ctx.moveTo(x + 4, y); for (let k = 1; k <= 6; k++) ctx.lineTo(x + Math.cos(k * 1.047) * 4, y + Math.sin(k * 1.047) * 3.4); }
+        ctx.stroke();
       }
       // 몸통
       const bodyC = a.species === 'human' ? SHIRT[L.shirt | 0] : (L.body || sp.fur);
@@ -115,6 +123,7 @@
       if (a.species === 'hedgehog') P.blob(ctx, side ? -3 : 0, 3, 9, 8, '#fff3e0');
       if (a.species === 'rabbit') P.blob(ctx, side ? -3 : 0, 4, 8, 6, '#ffffff');
       if (a.species === 'otter') P.blob(ctx, side ? -4 : 0, 5, 8, 5.5, sp.belly);
+      if (a.species === 'tortoise' && !back) { ctx.strokeStyle = '#6b5a4a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(-5, 0.5, 3.6, 0, Math.PI * 2); if (!side) ctx.arc(5, 0.5, 3.6, 0, Math.PI * 2); ctx.stroke(); P.rrect(ctx, -9, 9, 18, 3, 1.5, '#ffffff'); }
       if (a.species === 'cat' && !back) { ctx.fillStyle = sp.furD; ctx.beginPath(); ctx.moveTo(-3, -11); ctx.lineTo(0, -6); ctx.lineTo(3, -11); ctx.fill(); }
       // 사람 머리카락
       if (a.species === 'human') this.hair(ctx, L, side, back);
@@ -320,6 +329,10 @@
       else if (key === 'urchin_shell') { P.blob(g, 16, 18, 10, 8, sh.col, LINE, 1.4); for (let k = 0; k < 8; k++) P.blob(g, 16 + Math.cos(k) * 6, 18 + Math.sin(k) * 4.5, 1, 1, '#fff'); }
       else if (key === 'pearl_oyster') { P.blob(g, 16, 19, 11, 7, '#bfb6d6', LINE, 1.4); P.blob(g, 16, 16, 4.5, 4.5, sh.col, LINE, 1); P.blob(g, 14.6, 14.6, 1.4, 1.4, '#fff'); }
       else { g.fillStyle = sh.col; g.strokeStyle = LINE; g.lineWidth = 1.4; g.beginPath(); g.moveTo(16, 27); g.lineTo(5, 15); g.quadraticCurveTo(16, 2, 27, 15); g.closePath(); g.fill(); g.stroke(); g.beginPath(); for (let k = -2; k <= 2; k++) { g.moveTo(16, 26); g.lineTo(16 + k * 4.5, 9 + Math.abs(k) * 2); } g.strokeStyle = 'rgba(150,100,70,0.5)'; g.stroke(); }
+    } else if (id === 'fossil_raw') {
+      P.blob(g, 16, 19, 12, 9, '#cdb894', LINE, 1.4); P.blob(g, 12, 16, 4, 2.4, '#e2d2b0');
+      g.strokeStyle = '#9a8566'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(8, 22); g.lineTo(13, 20); g.moveTo(20, 24); g.lineTo(24, 20); g.stroke();
+      g.fillStyle = '#8a7466'; g.font = 'bold 12px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('?', 17, 19);
     } else if (id === 'branch') {
       g.strokeStyle = '#a7724a'; g.lineWidth = 3.4; g.lineCap = 'round'; g.beginPath(); g.moveTo(6, 26); g.lineTo(26, 8); g.moveTo(16, 17); g.lineTo(20, 24); g.stroke();
       P.blob(g, 21, 25, 3, 2, '#8fd16a');

@@ -39,6 +39,7 @@
       list.push(mk('tosil', '토실', 'mole', { ribbon: '#ffb3cf', apron: '#e8f6ff' }, (sd.x + 2.8) * TILE, (sd.y + 2.25) * TILE, { static: true, behind: true }));
       const bp = door('post', 1.4, 0.4);
       list.push(mk('bori', '보리 할멈', 'hedgehog', {}, bp.x, bp.y, { static: true }));
+      if (pl.museum2) { const mp = door('museum2', 1.4, 0.4); list.push(mk('slowpoke', '느림보 박사', 'tortoise', {}, mp.x, mp.y, { static: true, visFn: () => G.museum.isOpen() })); }
       const spots = findSpots(m);
       for (const [id, v] of Object.entries(VILLAGERS)) {
         if (!pl[v.plot]) continue;
@@ -68,7 +69,7 @@
         if (n.emote) { n.emoteT += dt; if (n.emoteT > 1.6) n.emote = null; }
         const d = u.dist(n.x, n.y, p.x, p.y);
         const act = N.activity(n);
-        n.vis = !(act && act.act === 'sleep');
+        n.vis = n.visFn ? n.visFn() : !(act && act.act === 'sleep');
         if (!n.vis) continue;
         // 플레이어가 1.5타일 안: 바라보기, 3초 머물면 감정 팝 + 깡충
         if (d < TILE * 1.6) {
@@ -134,6 +135,7 @@
       try {
         if (n.id === 'todak' || n.id === 'tosil') { await G.game.openShop(); return; }
         if (n.id === 'bori') { await N.boriTalk(); return; }
+        if (n.id === 'slowpoke') { await G.museum.talk(); return; }
         if (VILLAGERS[n.id]) { await N.villagerTalk(n); return; }
       } finally { n.talking = false; }
     },

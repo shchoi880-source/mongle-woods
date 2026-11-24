@@ -202,6 +202,11 @@
       const o = place('house', 4, 3, plx + Math.cos(ang) * 13 * plSide, ply + Math.sin(ang) * 9, { solid: true, owner });
       if (o) { sites[key] = o; o.door = doorOf(o); carvePath(o.door.x, o.door.y, plx, ply); }
     }
+    // 12) 조약돌 박물관(표지판 근처) — 역시 맨 끝에 덧붙인다
+    if (sites.museum) {
+      const o = place('museum', 4, 3, sites.museum.tx + 1, sites.museum.ty + 3, { solid: true }) || place('museum', 4, 3, plx - plSide * 12, ply - 8, { solid: true });
+      if (o) { sites.museum2 = o; o.door = doorOf(o); carvePath(o.door.x, o.door.y, plx, ply); }
+    }
     const plots = Object.fromEntries(Object.entries(sites).filter(([, o]) => o).map(([k, o]) => [k, { x: o.tx, y: o.ty, w: o.w, h: o.h, door: o.door }]));
     return { seed, w: W, h: H, terr, objs, plaza: { x: plx, y: ply }, pond, fall, bridges, plots, cliffY, coast };
   }

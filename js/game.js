@@ -126,6 +126,7 @@
     const o = objAhead();
     if (o) {
       if (o.kind === 'tree' || o.kind === 'fruit' || o.kind === 'pine' || o.kind === 'bigoak') return { kind: 'shake', ref: o, icon: '🌳', label: '흔들기', name: o.kind === 'bigoak' ? '할아버지 참나무' : '나무' };
+      if (o.kind === 'museum') return { kind: 'museum', ref: o, icon: '🦴', label: G.museum.isOpen() ? '들어가기' : '살펴보기', name: '조약돌 박물관' };
       if (o.kind === 'signboard') return { kind: 'read', ref: o, icon: '📜', label: '읽기', name: '표지판' };
       if (o.kind === 'board') return { kind: 'board', ref: o, icon: '📌', label: '보기', name: '게시판' };
       if (o.kind === 'tent') return { kind: 'tent', ref: o, icon: '⛺', label: '들어가기', name: '내 텐트' };
@@ -207,8 +208,8 @@
           if (dg && !G.world.isTaken(dg.id)) {
             const rows = G.data.all('fossils');
             const fo = rows[u.hash32(G.world.map.seed, G.time.day(), dg.tx, dg.ty) % rows.length];
-            const r = G.collect.record('fossil', fo.ix);
-            if (GM.gain('fossil:' + fo.id, 1, { newSp: r.newSp }, { msg: `${G.josa(fo.name, '을/를')} 파냈다!`, sfx: 'dug' })) {
+            // 정체는 박물관에서 감정받아야 안다
+            if (GM.gain('fossil_raw', 1, { f: fo.id }, { msg: '수상한 화석을 파냈다! 박물관에서 감정받아요.', sfx: 'dug' })) {
               G.world.take(dg.id); G.emit('dig:found', { id: fo.id }); kongalReact('jump');
             }
           } else { G.ui.toast('흙이 단단해요. 금 간 땅을 찾아봐요.', { icon: '⛏️', ms: 1500 }); }
@@ -230,7 +231,8 @@
         leafFx(o);
         break;
       }
-      case 'read': await G.ui.say([{ who: 'sys', text: '「조약돌 박물관 세울 자리」 — 느림보 박사가 오는 중이래요. 조금 느려서….' }]); break;
+      case 'read': await G.ui.say([{ who: 'sys', text: G.museum.isOpen() ? '「조약돌 박물관」 — 화석 감정은 무료! 기증은 언제나 환영이래요.' : '「조약돌 박물관 — 내일 개관」 느림보 박사가 오는 중이래요. 조금 느려서….' }]); break;
+      case 'museum': if (G.museum.isOpen()) await G.museum.talk(); else await G.ui.say([{ who: 'sys', text: '천막 입구에 「내일 아침 개관!」이라고 적혀 있어요. 박사님은 아직 오는 중인가 봐요.' }]); break;
       case 'board': {
         const tr = G.market.trend();
         await G.ui.say([{ who: 'sys', text: `[몽글소식] 오늘의 유행 바람은 「${tr.name}」 쪽으로 분대요. 땅굴상점에서 조금 더 쳐 준대요.` }, { who: 'sys', text: `[쫑알 일보 창간 준비호] "새 우편지기 입주! 키 추정 3미터(정정 예정)"` }]);
@@ -452,6 +454,9 @@
         const back = A.building('stall_back', A.season, night), fr = A.building('stall', A.season, night);
         R.push({ sy: by + 10, draw: (c) => c.drawImage(back, bx - 16, by - 44, 160, 140) });
         R.push({ sy: by + 80, draw: (c) => c.drawImage(fr, bx - 16, by - 44, 160, 140) });
+      } else if (k === 'museum') {
+        const sp = A.building(G.museum.isOpen() ? 'museum' : 'museum_closed', A.season, night);
+        R.push({ sy: foot - 2, draw: (c) => c.drawImage(sp, bx - 16, by - 44, 160, 140) });
       } else if (k === 'post' || k === 'tent' || k === 'house') {
         const sp = A.building(k, A.season, night);
         R.push({ sy: foot - (k === 'stall' ? 30 : 2), draw: (c) => c.drawImage(sp, bx - 16, by - 44, 160, 140) });

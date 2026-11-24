@@ -382,6 +382,28 @@
       if (A.season === 'winter') P.blob(g, ox + 48, oy + 2, 8, 4, '#ffffff');
       return;
     }
+    if (kind === 'museum' || kind === 'museum_closed') { // 조약돌 박물관 (4×3): 둥근 천막 + 조약돌 간판
+      P.shadow(g, ox + 64, oy + 94, 124, 0.25);
+      P.rrect(g, ox + 10, oy + 36, 108, 56, 8, '#f4f1ea', C.line);
+      for (let k = 0; k < 6; k++) { g.fillStyle = k % 2 ? '#e3efe9' : '#f4f1ea'; g.fillRect(ox + 12 + k * 17.5, oy + 38, 17.5, 52); }
+      g.lineWidth = 1.5; g.strokeStyle = C.line; g.strokeRect(ox + 10, oy + 36, 108, 56);
+      g.fillStyle = '#7fbfa8'; g.beginPath(); g.moveTo(ox - 2, oy + 40); g.quadraticCurveTo(ox + 64, oy - 34, ox + 130, oy + 40); g.closePath(); g.fill(); g.stroke();
+      for (let k = 0; k < 7; k++) { g.fillStyle = k % 2 ? '#a8dcc8' : '#7fbfa8'; g.beginPath(); g.moveTo(ox + 64, oy - 14); g.lineTo(ox + 2 + k * 18, oy + 40); g.lineTo(ox + 20 + k * 18, oy + 40); g.closePath(); g.fill(); }
+      g.beginPath(); g.moveTo(ox - 2, oy + 40); g.quadraticCurveTo(ox + 64, oy - 34, ox + 130, oy + 40); g.closePath(); g.stroke();
+      roofSnow(g, ox + 34, oy - 4, 60);
+      P.blob(g, ox + 64, oy - 16, 4, 4, '#ffd24d', C.line, 1.2);
+      // 입구 + 조약돌 간판
+      P.rrect(g, ox + 50, oy + 56, 28, 36, [14, 14, 2, 2], night ? '#ffe7a0' : '#5d6f68', C.line);
+      for (const [x, y, r, c] of [[34, 48, 9, '#c9d3da'], [48, 44, 7, '#e8d2b8'], [80, 44, 7, '#d6c6e8'], [94, 48, 9, '#cfe3d3']]) P.blob(g, ox + x, oy + y, r, r * 0.75, c, C.line, 1.2);
+      P.rrect(g, ox + 30, oy + 26, 68, 16, 7, '#fff8ea', C.line);
+      g.fillStyle = '#5d6f68'; g.font = 'bold 10px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('조약돌 박물관', ox + 64, oy + 34.5);
+      if (kind === 'museum_closed') {
+        g.strokeStyle = '#ff8a7a'; g.lineWidth = 4; g.beginPath(); g.moveTo(ox + 44, oy + 60); g.lineTo(ox + 84, oy + 86); g.moveTo(ox + 84, oy + 60); g.lineTo(ox + 44, oy + 86); g.stroke();
+        P.rrect(g, ox + 34, oy + 70, 60, 14, 6, '#ffffff', C.line, 1.2);
+        g.fillStyle = '#ff6b6b'; g.font = 'bold 9px sans-serif'; g.fillText('내일 개관!', ox + 64, oy + 77.5);
+      }
+      return;
+    }
     if (kind === 'house') { // 주민 집 (4×3)
       P.shadow(g, ox + 64, oy + 94, 120, 0.25);
       P.rrect(g, ox + 14, oy + 34, 100, 58, 10, '#fff8ef', C.line);

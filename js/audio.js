@@ -123,7 +123,7 @@
 
   // ---------- 옹알이 목소리 ----------
   // 글자마다 짧은 음절 블립. 화자별 음높이·빠르기.
-  const VOICES = { ddalang: { base: 76, var: 5, inst: 'pluck' }, bori: { base: 62, var: 3, inst: 'marimba' }, todak: { base: 60, var: 6, inst: 'marimba' }, tosil: { base: 70, var: 3, inst: 'pluck' }, kongal: { base: 90, var: 4, inst: 'kalimba' }, sogeum: { base: 64, var: 4, inst: 'marimba' }, lime: { base: 79, var: 3, inst: 'pluck' }, sys: null };
+  const VOICES = { ddalang: { base: 76, var: 5, inst: 'pluck' }, bori: { base: 62, var: 3, inst: 'marimba' }, todak: { base: 60, var: 6, inst: 'marimba' }, tosil: { base: 70, var: 3, inst: 'pluck' }, kongal: { base: 90, var: 4, inst: 'kalimba' }, sogeum: { base: 64, var: 4, inst: 'marimba' }, lime: { base: 79, var: 3, inst: 'pluck' }, slowpoke: { base: 55, var: 2, inst: 'marimba' }, sys: null };
   AU.voice = (who, ch, i) => {
     const v = VOICES[who]; if (!v || !ac || !bank[v.inst]) return;
     if (/[\s.,!?…~'"]/.test(ch) || i % 2) return;
