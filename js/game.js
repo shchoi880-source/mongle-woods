@@ -112,6 +112,9 @@
       const sx = s.tx * TILE + 16, sy = s.ty * TILE + 18;
       if (u.dist(sx, sy, f.x, f.y) < 22 || u.dist(sx, sy, pl.x, pl.y) < 18) return { kind: 'shell', ref: s, icon: '🤲', label: '줍기', name: G.items.name(s.item) };
     }
+    // 2.4) 텃밭
+    const fm = G.farm.target(f.x, f.y) || G.farm.target(pl.x, pl.y);
+    if (fm) return fm;
     // 2.5) 썰물 때 조수 웅덩이 생물 (맨손으로 잡는다 — 어떤 도구를 들고 있어도)
     const tp = G.tide.near(f.x, f.y, 26) || G.tide.near(pl.x, pl.y, 22);
     if (tp) return { kind: 'pool', ref: tp, icon: '🦀', label: '잡기', name: '조수 웅덩이' };
@@ -235,6 +238,7 @@
         }, 260);
         break;
       }
+      case 'farm': await G.farm.act(tg); break;
       case 'pool': { pl.busy = 0.3; pl.squash = 0.12; G.audio.sfx('plop'); if (G.tide.catch(tg.ref)) { kongalReact('jump'); fxSplash(tg.ref.tx * TILE + 16, tg.ref.ty * TILE + 22); } break; }
       case 'chop': case 'rockhit': {
         const o = tg.ref; o.shakeT = 0.4; pl.busy = 0.45; pl.swing = 0.001;
@@ -427,12 +431,14 @@
     // 레이어 1: 물 애니·물고기 그림자·데칼
     A.drawWater(ctx, rect, t);
     G.eco.drawWater(ctx, rect, t);
+    G.farm.drawSoil(ctx, rect);
     drawDecals(t, rect);
     G.tide.draw(ctx, rect, t);
     // 레이어 3: y-정렬
     R.length = 0;
     collectObjects(rect, t);
     G.eco.collect(R, rect, t);
+    G.farm.collect(R, rect, t);
     for (const n of G.npc.list) if (n.vis && n.x > rect.x - 60 && n.x < rect.x + rect.w + 60) R.push({ sy: n.y, draw: (c) => { if (n.alpha !== undefined && n.alpha < 1) { c.globalAlpha = n.alpha; A.actor.draw(c, n, t); c.globalAlpha = 1; } else A.actor.draw(c, n, t); } });
     R.push({ sy: pl.y, draw: (c) => drawPlayer(c, t) });
     const sm = G.events.snowmanPos();
@@ -816,6 +822,7 @@
     if (G.nest.tick(G.time.day())) setTimeout(() => G.ui.toast(`${G.nest.cur().name} 공사가 끝났어요! 집이 넓어졌어요.`, { icon: '🏡', ms: 4000 }), 1500);
     G.requests.daily(G.time.day());
     G.tide.refresh(G.time.day());
+    G.farm.ensurePlots(); G.farm.tick(G.time.day());
     GM.drops = (G.world.state.drops || []).map((d) => Object.assign({ vy: 0, h: 0, t: 0 }, d));
     G.npc.init();
     G.eco.clear();

@@ -26,6 +26,24 @@
       sched: [[6, 9, 'home'], [9, 13, 'plaza'], [13, 17, 'beach'], [17, 21, 'home']], tool: null },
   };
   const LV = [0, 5, 15, 35, 70]; // 하트 1~4 문턱
+  // 좋아하는 선물: 아이템 id 또는 'cat:<분류>'
+  const FAV = {
+    ddalang: ['crop:carrot', 'crop:strawberry', 'dish:jam'], sogeum: ['cat:fish', 'dish:radish_soup', 'dish:hwachae'],
+    lime: ['crop:strawberry', 'dish:pumpkin_pie', 'cat:shell'], jjongal: ['fruit_acorn', 'crop:corn', 'dish:grilled_corn'],
+    danchu: ['crop:radish', 'crop:spinach', 'cat:fossil'], hotteok: ['crop:sweet_potato', 'dish:matang', 'crop:potato'],
+    mungchi: ['crop:wheat', 'crop:pumpkin', 'dish:carrot_soup'], mongsil: ['crop:cabbage', 'dish:cabbage_stew', 'star_fragment'],
+  };
+  const GIFT_SAY = {
+    ddalang: ['우와아, 이거 내가 제일 좋아하는 거야! 어떻게 알았어?! 랄랄!', '고마워! 방울이 기뻐서 저절로 울려!'],
+    sogeum: ['…가설 적중. 너는 내 취향을 연구했다. 감동했다. 퐁당.', '고맙다. 연구실에 잘 보관하겠다.'],
+    lime: ['…이거. 좋아하는 거야. 왜 아는 거야. 흥칫. …고마워.', '…받아 둘게. 버리진 않을 거야.'],
+    jjongal: ['특종이다! 우편지기가 내 최애를 선물했다! 1면이야!', '고마워! 내일 신문 감사 코너에 실을게!'],
+    danchu: ['이건… 제가 정말 좋아하는 것이에요. 기록부에 별 세 개를 칩니다. 단정.', '감사합니다. 「오늘의 고마운 일」에 적어 두겠습니다.'],
+    hotteok: ['최고의 운동 간식이다! 힘이 솟아! 후끈!!', '고마워! 이걸로 열 바퀴 더 뛸 수 있어!'],
+    mungchi: ['이거… 제일 좋아하는 거야…. 눈물 날 것 같아… 말랑….', '고마워…. 볼 주머니에 소중히 넣어 둘게….'],
+    mongsil: ['예보에 없던 선물이야! 그것도 내가 제일 좋아하는 거! 포슬!', '고마워! 구름 병 옆에 둘게!'],
+  };
+  const isFav = (id, itemId) => (FAV[id] || []).some((f) => f === itemId || (f.startsWith('cat:') && (G.items.get(itemId) || {}).cat === f.slice(4)));
   const defSt = () => {
     const o = { bori: { seen: 0 }, fox: { seen: 0, goneDay: -1, letter: false, talks: 0 } };
     for (const id of Object.keys(VILLAGERS)) o[id] = { fs: 0, met: false, toolDay: -1, seen: 0, greetDay: -1, lvl: 0 };
@@ -38,7 +56,7 @@
   }
 
   const N = G.npc = {
-    list, st, VILLAGERS,
+    list, st, VILLAGERS, FAV, isFav,
     get: (id) => list.find((n) => n.id === id),
     isResident(id) { const v = VILLAGERS[id]; if (!v) return false; if (!v.moveIn) return true; const created = (G.save.sections.get('meta').get() || {}).created || 0; return G.time.day() >= created + v.moveIn; },
     level(id) { const fs = (st[id] || {}).fs || 0; let l = 0; for (let i = 1; i < LV.length; i++) if (fs >= LV[i]) l = i; return l; },
@@ -151,6 +169,30 @@
       await G.ui.say([say(L[(st.fox.talks++ || 0) % L.length])]);
       G.save.mark('fox');
     },
+    giftUI(n) {
+      const id = n.id, s = st[id];
+      return G.ui.modal(`${VILLAGERS[id].name}에게 선물하기`, (body, close) => {
+        const info = document.createElement('div'); info.className = 'pane-head'; info.innerHTML = '<span>하루에 한 번. 좋아하는 걸 주면 훨씬 기뻐해요 (힌트: 이웃 탭)</span>';
+        const grid = document.createElement('div'); grid.className = 'grid';
+        G.inv.slots.forEach((x, i) => {
+          const it = G.items.get(x.id); if (!it || it.nosell || !['crop', 'dish', 'bug', 'fish', 'sea', 'shell', 'fossil', 'furn', 'mat'].includes(it.cat)) return;
+          const b = document.createElement('button'); b.className = 'slot'; b.title = G.items.name(x.id, x.x);
+          b.innerHTML = `<img src="${G.art.iconURL(G.items.icon(x.id, x.x), 64)}" alt="">${x.n > 1 ? `<b>${x.n}</b>` : ''}`;
+          b.onclick = async () => {
+            const fav = isFav(id, x.id), name = G.items.name(x.id, x.x);
+            G.inv.removeAt(i, 1); s.giftDay = G.time.day(); close();
+            N.pop(n, 'heart'); G.audio.sfx(fav ? 'rare' : 'catch');
+            await G.ui.say([{ who: id, text: (fav ? GIFT_SAY[id][0] : GIFT_SAY[id][1]) }]);
+            N.addFs(id, fav ? 6 : 2, 'gift');
+            G.emit('npc:gift', { id, item: x.id, fav });
+            if (fav) { s.favKnown = s.favKnown || []; if (!s.favKnown.includes(x.id)) s.favKnown.push(x.id); G.ui.toast(`${VILLAGERS[id].name}${G.josa(VILLAGERS[id].name, '은/는').slice(-1)} ${name}${G.josa(name, '을/를').slice(-1)} 정말 좋아해요! 💗`, { icon: '🎁' }); }
+            G.save.mark('gift');
+          };
+          grid.append(b);
+        });
+        body.append(info, grid);
+      });
+    },
     pop(n, kind) { n.emote = kind; n.emoteT = 0; n.hopT = 0.35; G.audio.sfx('pop'); },
     near(x, y, r) {
       let best = null, bd = r;
@@ -230,6 +272,12 @@
       }
       if (id === 'hotteok' && G.events.raceDay() && await G.events.raceTalk()) return;
       if (await G.requests.onTalk(n)) { G.save.mark('talk'); return; }
+      // 선물 (하루 한 번): 오늘 인사를 이미 했고 가방에 줄 만한 게 있으면 고르게 한다
+      const giftable = G.inv.slots.filter((x) => { const it = G.items.get(x.id); return it && !it.nosell && ['crop', 'dish', 'bug', 'fish', 'sea', 'shell', 'fossil', 'furn', 'mat'].includes(it.cat); });
+      if (s.greetDay === day && s.giftDay !== day && giftable.length) {
+        const c = await G.ui.choose(say('응? 무슨 일이야?'), ['이야기하기', '선물하기 🎁']);
+        if (c === 1) { await N.giftUI(n); return; }
+      }
       const seq = [];
       if (s.greetDay !== day) {
         s.greetDay = day;

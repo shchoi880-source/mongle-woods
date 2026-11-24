@@ -15,6 +15,7 @@
   G.on('dex:new', (p) => { if (p.newSp) { cur().newSp++; G.save.mark('news'); } });
   G.on('museum:donate', () => { cur().donations++; G.save.mark('news'); });
   G.on('request:done', () => { cur().requests++; G.save.mark('news'); });
+  G.on('farm:harvest', (p) => { if (p.giant) { cur().giantCrop = G.data.get('crops', p.crop).name; G.save.mark('news'); } });
   G.on('market:sell', (p) => { cur().sold += p.total; G.save.mark('news'); });
 
   const GOSSIP = [
@@ -44,7 +45,8 @@
       const d = G.time.day(), y = st.yest || blank(d - 1), R = G.rng.stream(G.rng.KEYS.TALK, d, 77);
       const name = G.player.name || '우편지기';
       let head;
-      if (y.best && y.best.size) head = `${name}, ${y.best.name} ${y.best.size}cm ${y.best.kind === 'fish' ? '낚아' : '잡아'}! 「손이 떨렸다」`;
+      if (y.giantCrop) head = `우편지기 텃밭에서 거대 ${y.giantCrop} 수확! 「두 손으로도 모자랐다」`;
+      else if (y.best && y.best.size) head = `${name}, ${y.best.name} ${y.best.size}cm ${y.best.kind === 'fish' ? '낚아' : '잡아'}! 「손이 떨렸다」`;
       else if (y.donations) head = `조약돌 박물관에 ${y.donations}점 기증! 느림보 박사 「고…맙…네…」`;
       else if (y.requests) head = `우편지기, 이웃 부탁 ${y.requests}건 해결! 마을 만족도 급상승(기자 추정)`;
       else if (N.issueNo() === 1) head = `쫑알 일보 창간! 새 우편지기 입주 — 키 추정 3미터(정정 예정)`;

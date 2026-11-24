@@ -298,7 +298,7 @@
       G.art.actor.draw(g, { species: v.species, look: v.look, x: 0, y: 0, dir: 0, seed: 1, blinkAt: 1e9 }, 1);
       const hearts = met ? '<span class="hearts">' + '♥'.repeat(lv) + '<i>' + '♥'.repeat(4 - lv) + '</i></span>' : '';
       const info = $('div', 'folkinfo', met
-        ? `<b>${esc(v.name)}</b> ${hearts}<br><span class="muted small">${v.pers} · 입버릇 「${v.catch}」 · 생일 ${+v.bday.slice(0, 2)}월 ${+v.bday.slice(3)}일</span><br><span class="muted small">지금: ${({ home: '집 근처', plaza: '광장', oak: '할아버지 참나무', pond: '연못가', river: '강가', beach: '바닷가', garden: '꽃밭', sleep: '쿨쿨 자는 중' })[(G.npc.get(id) && G.npc.activity(G.npc.get(id)) || {}).act] || '?'}</span>`
+        ? `<b>${esc(v.name)}</b> ${hearts}<br><span class="muted small">${v.pers} · 입버릇 「${v.catch}」 · 생일 ${+v.bday.slice(0, 2)}월 ${+v.bday.slice(3)}일</span><br><span class="muted small">좋아하는 것: ${(s.favKnown || []).length ? s.favKnown.map((f) => esc(G.items.name(f))).join(', ') : (lv >= 2 ? esc(G.npc.FAV[id].filter((f) => !f.startsWith('cat:')).map((f) => G.items.name(f))[0] || '?') + '…?' : '선물해 보면 알 수 있어요')}</span><br><span class="muted small">지금: ${({ home: '집 근처', plaza: '광장', oak: '할아버지 참나무', pond: '연못가', river: '강가', beach: '바닷가', garden: '꽃밭', sleep: '쿨쿨 자는 중' })[(G.npc.get(id) && G.npc.activity(G.npc.get(id)) || {}).act] || '?'}</span>`
         : `<b>???</b><br><span class="muted small">아직 인사하지 못한 이웃이에요.</span>`);
       card.append(pic, info); list.append(card);
     }
@@ -439,13 +439,14 @@
       const buy = $('div', 'buyrow');
       for (const e of G.shop.stock()) {
         const own = e.kind === 'tool' ? G.player.hasTool(e.id) : G.shop.soldOut(e);
-        const ico = e.kind === 'tool' ? `<span class="bi">${G.TOOLS[e.id].icon}</span>` : `<img src="${G.art.iconURL('furn:' + e.id + '#' + e.c, 64)}" alt="">`;
+        const ico = e.kind === 'tool' ? `<img src="${G.art.iconURL('tool:' + e.id, 64)}" alt="">` : e.kind === 'seed' ? `<img src="${G.art.iconURL('seed:' + e.id, 64)}" alt="">` : `<img src="${G.art.iconURL('furn:' + e.id + '#' + e.c, 64)}" alt="">`;
         const b = $('button', 'buycard' + (own ? ' off' : ''), `${ico}<b>${esc(e.name)}</b><small>${own ? (e.kind === 'tool' ? '가지고 있음' : '다 팔림') : G.fmt.money(e.price)}</small>`);
         b.onclick = async () => {
           if (own) return;
           const r = G.shop.buy(e);
           if (!r.ok) { G.audio.sfx('error'); UI.toast(r.why, { icon: '🪙' }); return; }
           G.audio.sfx('coin');
+          if (r.gift) { close(); await UI.say([{ who: 'tosil', text: '씨앗 첫 손님이시네요. 물뿌리개는 덤이에요. 오빠한테는 비밀이에요.' }, { who: 'todak', text: '전설의 물뿌리개예요! 물이 알아서… 아, 이건 진짜로 물이 나와요.' }]); G.ui.toast('물뿌리개를 받았어요! 텃밭은 집 옆에 있어요.', { icon: '🚿', ms: 3500 }); return; }
           if (e.kind === 'tool') {
             close();
             await UI.say(e.id === 'axe'

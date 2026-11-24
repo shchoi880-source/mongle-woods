@@ -124,9 +124,9 @@
     make(r, c = 0) {
       if (!G.craft.can(r)) return { ok: false, why: '재료가 모자라요.' };
       const isTool = r.out.startsWith('tool:');
-      if (!isTool && !G.inv.canFit(r.out, { c })) return { ok: false, why: '가방이 꽉 찼어요.' };
+      if (!isTool && !G.inv.canFit(r.out, r.out.startsWith('furn:') ? { c } : null)) return { ok: false, why: '가방이 꽉 찼어요.' };
       for (const [id, n] of r.need) G.inv.removeId(id, n);
-      if (isTool) G.player.giveTool(r.out.slice(5)); else G.inv.add(r.out, 1, { c });
+      if (isTool) G.player.giveTool(r.out.slice(5)); else if (r.out.startsWith('furn:')) G.inv.add(r.out, 1, { c }); else G.inv.add(r.out, 1);
       G.emit('craft:make', { rid: r.id });
       return { ok: true };
     },

@@ -52,6 +52,7 @@
           r = { type: 'species', item: k + ':' + sp.id };
         } else {
           const ok = MATS.filter((m) => !m.need || G.player.hasTool(m.need));
+          if (G.farm && G.player.hasTool('can')) { const sc = G.data.all('crops').filter((c) => c.season === G.farm.SEASON_OF(month)); const c = sc[Math.floor(R() * sc.length)]; if (c) ok.push({ id: 'crop:' + c.id, n: 2, need: 'can' }); }
           const m = ok[Math.floor(R() * ok.length)];
           r = { type: 'mat', item: m.id, n: m.n, any: m.any };
         }
