@@ -41,6 +41,14 @@
       const [text, pos] = map[card.id] || [card.text, null];
       return { text, pos };
     }
+    // 3.3) 이웃 생일·새 이야기 (6차 회의 B)
+    if (G.story) {
+      const yr = G.time.dayDate(G.time.day()).y;
+      const bd = G.story.birthdayToday().find((id) => G.story.st.bday[id] !== yr);
+      if (bd) { const v = G.npc.VILLAGERS[bd]; return { text: `🎂 오늘은 ${v.name}의 생일! 말 걸어 축하하기`, pos: npcAt(bd) || plotAt(v.plot) }; }
+      const sid = Object.keys(G.npc.VILLAGERS).find((id) => G.npc.isResident(id) && G.npc.level(id) > G.story.progress(id) && G.story.progress(id) < 4);
+      if (sid) { const v = G.npc.VILLAGERS[sid]; return { text: `💗 ${v.name}에게 할 이야기가 있대요 — 말 걸기`, pos: npcAt(sid) || plotAt(v.plot) }; }
+    }
     // 3.4) 목장
     const ra = G.ranch.st.animals;
     const rr = ra.find((x) => x.ready);

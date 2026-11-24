@@ -8,7 +8,7 @@ const ROOT = path.resolve(__dirname, '..');
 const N = +(process.argv[2] || 1000);
 
 // 브라우저 전용 파일(art·actors·input·audio·ui·dev·boot)은 로드하지 않는다. 나머지는 로드 시 DOM에 접근하지 않는다
-for (const f of ['core', 'save', 'firebase-config', 'cloud', 'net', 'time', 'data', 'world', 'sys', 'eco', 'npc', 'house', 'museum', 'mail', 'nest', 'requests', 'news', 'tide', 'lantern', 'events', 'farm', 'ranch', 'game']) require(path.join(ROOT, 'js', f + '.js'));
+for (const f of ['core', 'save', 'firebase-config', 'cloud', 'net', 'time', 'data', 'world', 'sys', 'eco', 'npc', 'house', 'museum', 'mail', 'nest', 'requests', 'news', 'tide', 'lantern', 'story', 'events', 'farm', 'ranch', 'game']) require(path.join(ROOT, 'js', f + '.js'));
 const G = globalThis.G;
 let fails = 0;
 const ok = (name, cond, detail) => { console.log(`${cond ? '✔' : '✘'} ${name}${detail ? ' — ' + detail : ''}`); if (!cond) fails++; };
@@ -158,6 +158,10 @@ ok('곤충: 가장 예민한 종도 채 들고 걸어서 포획 거리 진입', 
 // 등불 1~10 조건이 모두 정의돼 있다
 { let okAll = true; for (let n = 1; n <= 10; n++) { const c = G.lantern.conds(n); if (!(c.length === 2 && c.every((x) => typeof x.text === 'string' && x.need > 0))) okAll = false; } ok('등불 1~10 조건', okAll); }
 ok('채팅 욕설 필터', G.net.filter('야 시발 뭐해').indexOf('시발') < 0 && G.net.filter('안녕 반가워') === '안녕 반가워');
+
+// 이웃 이야기: 8명 × 4장, 선물 아이템이 모두 존재
+{ let bad = []; for (const [id, arr] of Object.entries(G.story.S)) { if (arr.length !== 4) bad.push(id + ':len'); for (const sc of arr) if (sc.gift && !G.items.get(sc.gift.split('#')[0])) bad.push(sc.gift); }
+  ok('이웃 이야기 8명×4장·선물 확인', Object.keys(G.story.S).length === 8 && !bad.length, bad.join(',')); }
 
 // 가방: 쌓기·가득 참
 G.inv.slots.length = 0;
