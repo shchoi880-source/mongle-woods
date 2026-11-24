@@ -238,8 +238,11 @@ input, select, textarea { font: inherit; color: var(--ink); }
 .hud-on .hud-goal.on { display: flex; } .hud-goal span { flex: none; }
 .btn-map { margin-left: 2px; }
 .hud-top .hud-money { margin-left: auto; }
-.mapwrap { background: #5cbde2; border-radius: 16px; overflow: hidden; border: 3px solid #f3e4cf; touch-action: none; }
-.mapcv { display: block; width: 100%; height: auto; }
+.mapwrap { position: relative; background: #5cbde2; border-radius: 16px; overflow: hidden; border: 3px solid #f3e4cf; touch-action: none; height: min(58vh, 520px); cursor: grab; user-select: none; -webkit-user-select: none; }
+.mapcv { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+.mapctr { position: absolute; right: 8px; top: 8px; display: flex; flex-direction: column; gap: 6px; }
+.mapctr .btn-round { width: 40px; height: 40px; font-size: 18px; }
+.mapinfo .btn { margin-left: 6px; }
 .mapinfo { margin-top: 8px; } .maplegend { margin-top: 6px; line-height: 1.5; }
 .toasts { top: calc(112px + var(--safe-t)); }
 

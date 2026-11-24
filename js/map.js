@@ -105,53 +105,110 @@
   MP.open = () => {
     const m = G.world.map; if (!m) return;
     const obj = MP.objective();
-    return G.ui.modal('몽글숲 지도', (body) => {
+    return G.ui.modal('몽글숲 지도', (body, close) => {
+      // 확대·축소·이동(오너 요청): 손가락 두 개로 벌리기/오므리기, 끌어서 이동, PC는 휠·＋－ 버튼. 장소를 누르면 「여기로 가기」
       const wrap = document.createElement('div'); wrap.className = 'mapwrap';
       const cv = document.createElement('canvas'); cv.className = 'mapcv';
-      const y0 = G.world.HIGH_ROWS - 4; // 북쪽 고지대(잠김)는 조금만
-      const W = m.w, H = m.h - y0, S = 8;   // 타일당 8px로 그리고 CSS로 줄인다
+      const y0 = G.world.HIGH_ROWS - 4;
+      const W = m.w, H = m.h - y0, S = 12;
       cv.width = W * S; cv.height = H * S;
       const g = cv.getContext('2d');
       const info = document.createElement('div'); info.className = 'slot-info mapinfo';
-      info.innerHTML = obj ? `<b>지금 할 일</b> ${obj.text}${obj.pos ? ' <span class="muted">(★ 표시)</span>' : ''}` : '<span class="muted">표시를 누르면 이름이 보여요.</span>';
       const mk = markers();
+      let sel = null;
+      const goBtn = (k) => {
+        const b = document.createElement('button'); b.className = 'btn small'; b.textContent = '🚶 여기로 가기';
+        b.onclick = () => { if (G.game.autoGo(k.tx, k.ty, k.short || '')) { G.audio.sfx('tap'); close(); } else G.ui.toast('거기로 가는 길을 찾지 못했어요.', { icon: '🚧' }); };
+        return b;
+      };
+      const showInfo = () => {
+        info.innerHTML = '';
+        if (sel) { const t = document.createElement('b'); t.textContent = sel.name; info.append(t); if (!sel.me) info.append(' ', goBtn(sel)); return; }
+        if (obj) {
+          const t = document.createElement('span'); t.innerHTML = `<b>지금 할 일</b> ${obj.text}`; info.append(t);
+          if (obj.pos) info.append(' ', goBtn({ tx: obj.pos.x / TILE, ty: obj.pos.y / TILE, short: '목적지' }));
+        } else info.innerHTML = '<span class="muted">표시를 누르면 이름이 보이고 걸어갈 수 있어요.</span>';
+      };
+      showInfo();
+      // 보기 상태: z = 화면 px / 캔버스 px, (ox, oy) = 캔버스 좌상단의 화면 위치
+      const view = { z: 1, ox: 0, oy: 0 };
+      const clamp = () => {
+        const ww = wrap.clientWidth, wh = wrap.clientHeight, cw = cv.width * view.z, ch = cv.height * view.z;
+        view.ox = cw <= ww ? (ww - cw) / 2 : Math.min(0, Math.max(ww - cw, view.ox));
+        view.oy = ch <= wh ? (wh - ch) / 2 : Math.min(0, Math.max(wh - ch, view.oy));
+        cv.style.transform = `translate(${view.ox}px, ${view.oy}px) scale(${view.z})`;
+      };
+      const fitZ = () => Math.min(wrap.clientWidth / cv.width, wrap.clientHeight / cv.height);
+      const zoomAt = (nz, sx, sy) => {
+        const z0 = fitZ(); nz = Math.max(z0, Math.min(z0 * 6, nz));
+        const cx = (sx - view.ox) / view.z, cy = (sy - view.oy) / view.z;
+        view.z = nz; view.ox = sx - cx * nz; view.oy = sy - cy * nz; clamp();
+      };
+      const centerOn = (px, py, z) => { view.z = z; view.ox = wrap.clientWidth / 2 - px * z; view.oy = wrap.clientHeight / 2 - py * z; clamp(); };
+      const meXY = () => ({ x: G.player.x / TILE * S, y: (G.player.y / TILE - y0) * S });
+      // 처음엔 내 위치를 2.5배로
+      requestAnimationFrame(() => { const p = meXY(); centerOn(p.x, p.y, fitZ() * 2.5); });
       let t0 = performance.now(), raf = 0;
       const draw = () => {
-        if (!cv.isConnected && raf) return; // 창이 닫히면 멈춘다
+        if (!cv.isConnected && raf) return;
         const t = (performance.now() - t0) / 1000;
         g.imageSmoothingEnabled = false;
         g.drawImage(terrain(), 0, y0 * 4, W * 4, H * 4, 0, 0, W * S, H * S);
         g.imageSmoothingEnabled = true;
-        g.font = '22px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+        g.textAlign = 'center'; g.textBaseline = 'middle';
         for (const k of mk) {
           const x = k.tx * S, y = (k.ty - y0) * S;
-          if (k.kind === 'npc') { g.fillStyle = k.col; g.beginPath(); g.arc(x, y, 9, 0, 6.3); g.fill(); g.lineWidth = 2; g.strokeStyle = '#5b4636'; g.stroke(); g.fillStyle = '#fff'; g.font = G.fontPx(9); g.fillText(k.label, x, y + 0.5); g.font = '22px sans-serif'; continue; }
-          if (k.icon === '•') { g.fillStyle = '#8a7a9a'; g.beginPath(); g.arc(x, y, 4, 0, 6.3); g.fill(); continue; }
-          g.fillStyle = 'rgba(255,250,241,0.85)'; g.beginPath(); g.arc(x, y, 14, 0, 6.3); g.fill();
-          g.fillText(k.icon, x, y + 1);
+          if (k.kind === 'npc') { g.fillStyle = k.col; g.beginPath(); g.arc(x, y, 12, 0, 6.3); g.fill(); g.lineWidth = 2.5; g.strokeStyle = '#5b4636'; g.stroke(); g.fillStyle = '#fff'; g.font = G.fontPx(12); g.fillText(k.label, x, y + 0.5); continue; }
+          if (k.icon === '•') { g.fillStyle = '#8a7a9a'; g.beginPath(); g.arc(x, y, 5, 0, 6.3); g.fill(); continue; }
+          const on = sel && sel.tx === k.tx && sel.ty === k.ty;
+          g.fillStyle = on ? '#ffe08a' : 'rgba(255,250,241,0.9)'; g.beginPath(); g.arc(x, y, on ? 22 : 19, 0, 6.3); g.fill();
+          g.font = '28px sans-serif'; g.fillText(k.icon, x, y + 1);
         }
-        // 목적지 ★
-        if (obj && obj.pos) { const x = obj.pos.x / TILE * S, y = (obj.pos.y / TILE - y0) * S, s = 1 + Math.sin(t * 4) * 0.12; g.save(); g.translate(x, y - 22); g.scale(s, s); g.font = '26px sans-serif'; g.fillText('⭐', 0, 0); g.restore(); }
-        // 나
-        const px = G.player.x / TILE * S, py = (G.player.y / TILE - y0) * S;
+        if (obj && obj.pos) { const x = obj.pos.x / TILE * S, y = (obj.pos.y / TILE - y0) * S, s2 = 1 + Math.sin(t * 4) * 0.12; g.save(); g.translate(x, y - 30); g.scale(s2, s2); g.font = '34px sans-serif'; g.fillText('⭐', 0, 0); g.restore(); }
+        if (G.game.auto) { const a = G.game.auto; g.strokeStyle = 'rgba(255,107,139,0.7)'; g.lineWidth = 4; g.setLineDash([8, 8]); g.beginPath(); g.moveTo(G.player.x / TILE * S, (G.player.y / TILE - y0) * S); for (let i = a.i; i < a.path.length; i++) g.lineTo(a.path[i].x / TILE * S, (a.path[i].y / TILE - y0) * S); g.stroke(); g.setLineDash([]); }
+        const p = meXY();
         if (!G.house.inside) {
-          g.fillStyle = 'rgba(255,107,139,0.25)'; g.beginPath(); g.arc(px, py, 14 + Math.sin(t * 3) * 3, 0, 6.3); g.fill();
-          g.fillStyle = '#ff6b8b'; g.beginPath(); g.arc(px, py, 8, 0, 6.3); g.fill(); g.lineWidth = 2.5; g.strokeStyle = '#fff'; g.stroke();
+          g.fillStyle = 'rgba(255,107,139,0.25)'; g.beginPath(); g.arc(p.x, p.y, 20 + Math.sin(t * 3) * 4, 0, 6.3); g.fill();
+          g.fillStyle = '#ff6b8b'; g.beginPath(); g.arc(p.x, p.y, 11, 0, 6.3); g.fill(); g.lineWidth = 3; g.strokeStyle = '#fff'; g.stroke();
         }
         raf = requestAnimationFrame(draw);
       };
       draw();
-      // 표시 누르기
-      cv.addEventListener('pointerdown', (e) => {
-        const r = cv.getBoundingClientRect(), sx = (e.clientX - r.left) * cv.width / r.width, sy = (e.clientY - r.top) * cv.height / r.height;
-        let best = null, bd = 26;
-        const all = mk.concat([{ tx: G.player.x / TILE, ty: G.player.y / TILE, name: `나 (${G.player.name})` }]).concat(obj && obj.pos ? [{ tx: obj.pos.x / TILE, ty: obj.pos.y / TILE - 2.75, name: '목적지: ' + obj.text }] : []);
-        for (const k of all) { const d = Math.hypot(k.tx * S - sx, (k.ty - y0) * S - sy); if (d < bd) { bd = d; best = k; } }
-        if (best) { info.innerHTML = `<b>${best.name}</b>`; G.audio.sfx('tap'); }
+      // 손가락·마우스: 1개 = 끌기, 2개 = 확대/축소, 움직임 없이 떼면 = 누르기
+      const pts = new Map(); let moved = 0, pinch = null;
+      const local = (e) => { const r = wrap.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+      wrap.addEventListener('pointerdown', (e) => { if (e.target.closest('.mapctr')) return; wrap.setPointerCapture(e.pointerId); pts.set(e.pointerId, local(e)); moved = 0; if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), z: view.z }; } });
+      wrap.addEventListener('pointermove', (e) => {
+        if (!pts.has(e.pointerId)) return;
+        const prev = pts.get(e.pointerId), cur = local(e); pts.set(e.pointerId, cur);
+        if (pts.size === 1) { view.ox += cur.x - prev.x; view.oy += cur.y - prev.y; moved += Math.abs(cur.x - prev.x) + Math.abs(cur.y - prev.y); clamp(); }
+        else if (pts.size === 2 && pinch) { const [a, b] = [...pts.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y); zoomAt(pinch.z * d / pinch.d, (a.x + b.x) / 2, (a.y + b.y) / 2); moved += 99; }
       });
+      const up = (e) => {
+        if (!pts.has(e.pointerId)) return;
+        const p0 = pts.get(e.pointerId); pts.delete(e.pointerId); if (pts.size < 2) pinch = null;
+        if (pts.size === 0 && moved < 8) {
+          // 누르기: 가장 가까운 표시 고르기
+          const sx = (p0.x - view.ox) / view.z, sy = (p0.y - view.oy) / view.z;
+          let best = null, bd = 30 / view.z + 10;
+          const all = mk.concat([{ tx: G.player.x / TILE, ty: G.player.y / TILE, name: `나 (${G.player.name})`, me: true }]);
+          for (const k of all) { const d = Math.hypot(k.tx * S - sx, (k.ty - y0) * S - sy); if (d < bd) { bd = d; best = k; } }
+          // 빈 땅을 누르면 그 자리로
+          if (!best) best = { tx: sx / S, ty: sy / S + y0, name: '여기', short: '' };
+          else best.short = best.short || String(best.name).replace(/\s*\(.*\)$/, '');
+          sel = best; showInfo(); G.audio.sfx('tap');
+        }
+      };
+      wrap.addEventListener('pointerup', up); wrap.addEventListener('pointercancel', up);
+      wrap.addEventListener('wheel', (e) => { e.preventDefault(); const p = local(e); zoomAt(view.z * (e.deltaY < 0 ? 1.2 : 1 / 1.2), p.x, p.y); }, { passive: false });
+      // 버튼: ＋ － 나
+      const ctr = document.createElement('div'); ctr.className = 'mapctr';
+      const mkb = (t, fn, title) => { const b = document.createElement('button'); b.className = 'btn-round small'; b.textContent = t; b.title = title; b.onclick = (e) => { e.stopPropagation(); fn(); }; return b; };
+      ctr.append(mkb('＋', () => zoomAt(view.z * 1.4, wrap.clientWidth / 2, wrap.clientHeight / 2), '확대'), mkb('－', () => zoomAt(view.z / 1.4, wrap.clientWidth / 2, wrap.clientHeight / 2), '축소'), mkb('📍', () => { const p = meXY(); centerOn(p.x, p.y, Math.max(view.z, fitZ() * 2.5)); }, '내 위치'), mkb('🗺️', () => { view.z = fitZ(); clamp(); }, '전체 보기'));
+      wrap.append(cv, ctr);
       const legend = document.createElement('div'); legend.className = 'muted small maplegend';
-      legend.textContent = '🏪 상점 · 📮 우체국 · 🏠 내 집 · 🦴 박물관 · 🏡 이웃 집 · 🌳 광장 · 🏮/• 등불 기둥 · 💧 조수 웅덩이 · 동그라미 = 이웃 · 분홍 = 나';
-      wrap.append(cv); body.append(wrap, info, legend);
+      legend.textContent = (G.input.isTouch() || (globalThis.matchMedia && matchMedia('(pointer: coarse)').matches) ? '두 손가락으로 확대·축소, 끌어서 이동' : '휠·＋－로 확대·축소, 끌어서 이동') + ' · 표시나 땅을 누르고 「여기로 가기」 · 🏪 상점 · 📮 우체국 · 🏠 내 집 · 🦴 박물관 · 🏡 이웃 집 · 🌳 광장 · 🏮 등불 · 💧 웅덩이 · 분홍 = 나';
+      body.append(wrap, info, legend);
     }, { wide: true });
   };
 
