@@ -198,7 +198,7 @@
     };
   }
 
-  G.on('time:minute', () => { if (G.world.map && G.game && G.game.started) F.tick(); });
+  G.on('time:minute', () => { if (G.world.map && G.game && G.game.started && !(G.net && G.net.guest)) F.tick(); });
   G.on('time:day', () => { if (G.world.map) F.ensurePlots(); });
   G.on('house:stage', () => F.ensurePlots());
   G.save.section('farm', {

@@ -65,6 +65,8 @@
       if (st.lastPlayDay !== day) { st.lastPlayDay = day; st.playDays++; }
     },
     init() { lastDay = T.day(); T.markPlay(lastDay); },
+    // 시계를 갈아 끼운 뒤(친구 마을 방문·복귀): 경계 이벤트 없이 현재 값으로 맞춘다
+    resync() { lastDay = T.day(); lastHour = T.hour(); lastMin = T.minute(); st.lastMs = T.now(); },
     // 조수: 12시간 25분 주기, 0 = 간조 ~ 1 = 만조
     tide() { const p = (T.now() / 60000) % 745 / 745; return 0.5 + 0.5 * Math.cos(p * Math.PI * 2); },
   };

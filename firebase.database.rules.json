@@ -8,39 +8,236 @@
         ".write": "auth !== null && auth.uid === $uid",
         "save": {
           ".validate": "newData.hasChildren(['payload', 'fingerprint', 'revision', 'appVersion', 'clientSavedAt', 'updatedAt', 'deviceId', 'summary'])",
-          "payload": { ".validate": "newData.isString() && newData.val().beginsWith('MG1:') && newData.val().length <= 220000" },
-          "fingerprint": { ".validate": "newData.isString() && newData.val().matches(/^[0-9a-f]{8}$/)" },
-          "revision": { ".validate": "newData.isNumber() && newData.val() >= 1 && (!data.exists() || newData.val() >= data.val())" },
-          "appVersion": { ".validate": "newData.isString() && newData.val().length <= 24" },
-          "clientSavedAt": { ".validate": "newData.isNumber() && newData.val() > 0" },
-          "updatedAt": { ".validate": "newData.isNumber() && newData.val() <= now" },
-          "deviceId": { ".validate": "newData.isString() && newData.val().length <= 80" },
+          "payload": {
+            ".validate": "newData.isString() && newData.val().beginsWith('MG1:') && newData.val().length <= 220000"
+          },
+          "fingerprint": {
+            ".validate": "newData.isString() && newData.val().matches(/^[0-9a-f]{8}$/)"
+          },
+          "revision": {
+            ".validate": "newData.isNumber() && newData.val() >= 1 && (!data.exists() || newData.val() >= data.val())"
+          },
+          "appVersion": {
+            ".validate": "newData.isString() && newData.val().length <= 24"
+          },
+          "clientSavedAt": {
+            ".validate": "newData.isNumber() && newData.val() > 0"
+          },
+          "updatedAt": {
+            ".validate": "newData.isNumber() && newData.val() <= now"
+          },
+          "deviceId": {
+            ".validate": "newData.isString() && newData.val().length <= 80"
+          },
           "summary": {
             ".validate": "newData.hasChildren(['name', 'town', 'created', 'money', 'dex', 'playDays', 'savedAt'])",
-            "name": { ".validate": "newData.isString() && newData.val().length <= 24" },
-            "town": { ".validate": "newData.isString() && newData.val().length <= 24" },
-            "created": { ".validate": "newData.isNumber()" },
-            "money": { ".validate": "newData.isNumber() && newData.val() >= 0" },
-            "dex": { ".validate": "newData.isNumber() && newData.val() >= 0" },
-            "playDays": { ".validate": "newData.isNumber() && newData.val() >= 0" },
-            "savedAt": { ".validate": "newData.isNumber() && newData.val() > 0" },
-            "$other": { ".validate": false }
+            "name": {
+              ".validate": "newData.isString() && newData.val().length <= 24"
+            },
+            "town": {
+              ".validate": "newData.isString() && newData.val().length <= 24"
+            },
+            "created": {
+              ".validate": "newData.isNumber()"
+            },
+            "money": {
+              ".validate": "newData.isNumber() && newData.val() >= 0"
+            },
+            "dex": {
+              ".validate": "newData.isNumber() && newData.val() >= 0"
+            },
+            "playDays": {
+              ".validate": "newData.isNumber() && newData.val() >= 0"
+            },
+            "savedAt": {
+              ".validate": "newData.isNumber() && newData.val() > 0"
+            },
+            "$other": {
+              ".validate": false
+            }
           },
-          "$other": { ".validate": false }
+          "$other": {
+            ".validate": false
+          }
         },
         "session": {
           ".validate": "newData.hasChildren(['deviceId', 'at'])",
-          "deviceId": { ".validate": "newData.isString() && newData.val().length <= 80" },
-          "at": { ".validate": "newData.isNumber() && newData.val() <= now" },
-          "$other": { ".validate": false }
+          "deviceId": {
+            ".validate": "newData.isString() && newData.val().length <= 80"
+          },
+          "at": {
+            ".validate": "newData.isNumber() && newData.val() <= now"
+          },
+          "$other": {
+            ".validate": false
+          }
         },
-        "$other": { ".validate": false }
+        "$other": {
+          ".validate": false
+        },
+        "code": {
+          ".validate": "newData.isString() && newData.val().matches(/^[A-Z2-9]{6}$/) && !data.exists()"
+        }
       }
     },
     "rooms": {
       "$room": {
-        ".read": false,
-        ".write": false
+        ".read": "auth !== null",
+        "info": {
+          ".write": "auth !== null && auth.uid === $room",
+          "open": {
+            ".validate": "newData.isBoolean()"
+          },
+          "name": {
+            ".validate": "newData.isString() && newData.val().length <= 8"
+          },
+          "town": {
+            ".validate": "newData.isString() && newData.val().length <= 8"
+          },
+          "seed": {
+            ".validate": "newData.isNumber()"
+          },
+          "vms": {
+            ".validate": "newData.isNumber()"
+          },
+          "at": {
+            ".validate": "newData.isNumber() && newData.val() <= now"
+          },
+          "v": {
+            ".validate": "newData.isString() && newData.val().length <= 16"
+          },
+          "$other": {
+            ".validate": false
+          }
+        },
+        "players": {
+          ".write": "auth !== null && auth.uid === $room && !newData.exists()",
+          "$uid": {
+            ".write": "auth !== null && (auth.uid === $uid && (auth.uid === $room || (root.child('rooms/' + $room + '/info/open').val() === true && !root.child('rooms/' + $room + '/kick/' + auth.uid).exists()) || !newData.exists()) || auth.uid === $room && !newData.exists())",
+            ".validate": "newData.hasChildren(['name','look','x','y','dir','mv','tool','at'])",
+            "name": {
+              ".validate": "newData.isString() && newData.val().length <= 8"
+            },
+            "look": {
+              ".validate": "newData.isString() && newData.val().length <= 400"
+            },
+            "x": {
+              ".validate": "newData.isNumber()"
+            },
+            "y": {
+              ".validate": "newData.isNumber()"
+            },
+            "dir": {
+              ".validate": "newData.isNumber()"
+            },
+            "mv": {
+              ".validate": "newData.isNumber()"
+            },
+            "tool": {
+              ".validate": "newData.isString() && newData.val().length <= 12"
+            },
+            "at": {
+              ".validate": "newData.isNumber() && newData.val() <= now"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        "chat": {
+          ".write": "auth !== null && auth.uid === $room && !newData.exists()",
+          "$id": {
+            ".write": "auth !== null && !data.exists() && root.child('rooms/' + $room + '/players/' + auth.uid).exists()",
+            ".validate": "newData.hasChildren(['uid','name','text','t']) && newData.child('uid').val() === auth.uid",
+            "uid": {
+              ".validate": "newData.isString()"
+            },
+            "name": {
+              ".validate": "newData.isString() && newData.val().length <= 8"
+            },
+            "text": {
+              ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 60"
+            },
+            "t": {
+              ".validate": "newData.isNumber() && newData.val() <= now"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        "gifts": {
+          "$to": {
+            "$id": {
+              ".write": "auth !== null && (!data.exists() && newData.exists() && root.child('rooms/' + $room + '/players/' + auth.uid).exists() || auth.uid === $to && !newData.exists())",
+              ".validate": "newData.hasChildren(['from','name','id','n','x','t']) && newData.child('from').val() === auth.uid",
+              "from": {
+                ".validate": "newData.isString()"
+              },
+              "name": {
+                ".validate": "newData.isString() && newData.val().length <= 8"
+              },
+              "id": {
+                ".validate": "newData.isString() && newData.val().length <= 40"
+              },
+              "n": {
+                ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 99"
+              },
+              "x": {
+                ".validate": "newData.isString() && newData.val().length <= 200"
+              },
+              "t": {
+                ".validate": "newData.isNumber() && newData.val() <= now"
+              },
+              "$other": {
+                ".validate": false
+              }
+            }
+          }
+        },
+        "kick": {
+          "$uid": {
+            ".write": "auth !== null && auth.uid === $room",
+            ".validate": "newData.isBoolean()"
+          }
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
+    "codes": {
+      "$code": {
+        ".read": "auth !== null",
+        ".write": "auth !== null && !data.exists() && newData.val() === auth.uid && $code.matches(/^[A-Z2-9]{6}$/)"
+      }
+    },
+    "directory": {
+      ".read": "auth !== null",
+      ".indexOn": [
+        "at"
+      ],
+      "$uid": {
+        ".write": "auth !== null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['name','town','code','open','at'])",
+        "name": {
+          ".validate": "newData.isString() && newData.val().length <= 8"
+        },
+        "town": {
+          ".validate": "newData.isString() && newData.val().length <= 8"
+        },
+        "code": {
+          ".validate": "newData.isString() && root.child('codes/' + newData.val()).val() === auth.uid"
+        },
+        "open": {
+          ".validate": "newData.isBoolean()"
+        },
+        "at": {
+          ".validate": "newData.isNumber() && newData.val() <= now"
+        },
+        "$other": {
+          ".validate": false
+        }
       }
     }
   }

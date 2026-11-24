@@ -212,6 +212,8 @@
   const cloud = G.cloud = {
     SDK, META_KEY, BACKUP_KEY, _decide: decide, _accountId: accountId, _validAccountId: validAccountId, _accountEmail: accountEmail,
     view: publicState,
+    // 멀티플레이(net.js)용: 로그인했을 때만 DB 접근을 빌려준다
+    _fb: () => (api && db && st.user && auth && auth.currentUser ? { db: api.db, ref: db, uid: st.user.uid } : null),
     async init() {
       if (initialized) return; initialized = true; st.configured = configured();
       if (!st.configured || typeof document === 'undefined') { state(st.configured ? 'signed-out' : 'unconfigured'); return; }

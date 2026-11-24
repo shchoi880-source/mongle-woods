@@ -100,8 +100,18 @@
 
   // ---------- 대상 선택 (액션 버튼 우선순위) ----------
   function front(d) { const [dx, dy] = DIRS[pl.dir]; return { x: pl.x + dx * d, y: pl.y + dy * d }; }
+  // 친구 마을(손님)에서는 구경·채집만: 나무·땅·건물·텃밭·목장은 주인 것
+  const GUEST_BLOCK = new Set(['ranch', 'farm', 'chop', 'rockhit', 'dig', 'lantern', 'museum', 'board', 'tent', 'mailbox', 'house', 'postoffice', 'stall', 'snowman', 'rock']);
   function findTarget() {
+    const t0 = findTargetRaw();
+    if (G.net && G.net.guest && GUEST_BLOCK.has(t0.kind)) return { kind: 'guestno', icon: '👀', label: '구경', name: t0.name };
+    return t0;
+  }
+  function findTargetRaw() {
     const f = front(20);
+    // 0) 함께 노는 친구 → 선물 주기
+    const fr = G.net && G.net.active && (G.net.near(f.x, f.y, 26) || G.net.near(pl.x, pl.y, 22));
+    if (fr) return { kind: 'friend', ref: fr, icon: '🎁', label: '선물 주기', name: fr.name };
     // 1) 주민·NPC
     const n = G.npc.near(f.x, f.y, 30) || G.npc.near(pl.x, pl.y, 26);
     if (n) return { kind: 'npc', ref: n, icon: '💬', label: '말 걸기', name: n.name };
@@ -190,6 +200,8 @@
     const tg = findTarget();
     switch (tg.kind) {
       case 'npc': await G.npc.talk(tg.ref); break;
+      case 'friend': G.ui.giftTo(tg.ref); break;
+      case 'guestno': G.ui.toast('친구 마을에서는 구경만 해요. 벌레·물고기·조개·바다생물은 잡을 수 있어요!', { icon: '👀', ms: 2600 }); break;
       case 'drop': {
         const d = tg.ref;
         if (GM.gain(d.id, d.n, null, { src: 'drop' })) { GM.drops.splice(GM.drops.indexOf(d), 1); G.world.state.drops = GM.drops.map((e) => ({ id: e.id, x: e.x, y: e.y, n: e.n, key: e.key })); }
@@ -437,16 +449,16 @@
     // 레이어 1: 물 애니·물고기 그림자·데칼
     A.drawWater(ctx, rect, t);
     G.eco.drawWater(ctx, rect, t);
-    G.farm.drawSoil(ctx, rect);
-    G.ranch.drawPen(ctx, rect, t);
+    const guest = G.net && G.net.guest; // 손님일 땐 내 텃밭·목장을 친구 마을 위에 그리지 않는다
+    if (!guest) { G.farm.drawSoil(ctx, rect); G.ranch.drawPen(ctx, rect, t); }
     drawDecals(t, rect);
     G.tide.draw(ctx, rect, t);
     // 레이어 3: y-정렬
     R.length = 0;
     collectObjects(rect, t);
     G.eco.collect(R, rect, t);
-    G.farm.collect(R, rect, t);
-    G.ranch.collect(R, rect, t);
+    if (!guest) { G.farm.collect(R, rect, t); G.ranch.collect(R, rect, t); }
+    if (G.net && G.net.active) G.net.collect(R, rect, t);
     for (const n of G.npc.list) if (n.vis && n.x > rect.x - 60 && n.x < rect.x + rect.w + 60) R.push({ sy: n.y, draw: (c) => { if (n.alpha !== undefined && n.alpha < 1) { c.globalAlpha = n.alpha; A.actor.draw(c, n, t); c.globalAlpha = 1; } else A.actor.draw(c, n, t); } });
     R.push({ sy: pl.y, draw: (c) => drawPlayer(c, t) });
     const sm = G.events.snowmanPos();
@@ -456,6 +468,7 @@
     for (const it of R) it.draw(ctx);
     // 낚싯줄·찌
     G.fishing.draw(ctx, pl, t);
+    if (G.net && G.net.active) { G.net.tag(ctx, pl.x, pl.y - 62, pl.name || '나', '#ffe08a'); if (pl.bubbleT > 0 && pl.bubble) G.net.bubble(ctx, pl.x, pl.y - 76, pl.bubble, Math.min(1, pl.bubbleT)); }
     // 이펙트
     for (const f of GM.fx) {
       const a = 1 - f.t / f.life; ctx.globalAlpha = a;
@@ -661,7 +674,8 @@
       G.eco.update(dt, pl);
       G.events.updateMeteors(dt, cam.rect());
       G.events.updateRace(dt);
-      G.ranch.update(dt, t);
+      if (!(G.net && G.net.guest)) G.ranch.update(dt, t);
+      if (G.net) G.net.update(dt);
       G.ui.updateDialog(dt);
       cam.follow(pl.x, pl.y, dt);
       GM.target = (G.ui.dialogOpen() || G.ui.open) ? null : findTarget();
@@ -677,6 +691,7 @@
       if (ev.type === 'tool') { pl.nextTool(); return true; }
       if (ev.type === 'menu') { G.ui.notebook(); return true; }
       if (ev.type === 'map') { G.map.open(); return true; }
+      if (ev.type === 'chat') { G.ui.chat(); return true; }
       if (ev.type === 'tapWorld' && ev.mouse) {
         // 마우스 클릭: 클릭한 쪽을 바라보고 행동
         const w = cam.toWorld(ev.cx, ev.cy);
@@ -885,7 +900,7 @@
       if (document.hidden) { if (GM.started) G.save.now('hide'); G.cloud.flush(); G.loop.stop(); G.audio.suspend(); }
       else { G.loop.start(); G.audio.resume(); G.time.tick(true); }
     });
-    addEventListener('pagehide', () => { if (GM.started) G.save.now('pagehide'); G.cloud.flush(); });
+    addEventListener('pagehide', () => { if (G.net) G.net.beforeUnload(); if (GM.started) G.save.now('pagehide'); G.cloud.flush(); });
     setInterval(() => { if (GM.started && G.save.isDirty()) G.save.now('interval'); }, 60000);
     G.loop.add('time', (dt) => { GM.t += dt; if (GM.started && !G.save.paused) G.time.advance(dt); G.time.tick(); });
     G.loop.add('input', (dt) => G.input.update(dt));
