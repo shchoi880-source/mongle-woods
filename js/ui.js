@@ -480,7 +480,7 @@
     pane.append(top);
     // 친구 목록
     const list = $('div', 'netlist');
-    const head = $('div', 'pane-head', '<span>👫 가입한 사람들 — 골라서 친구 추가하거나 놀러 가요</span>');
+    const head = $('div', 'pane-head', '<span>👫 친구 목록 · 가입한 사람들 — ⭐는 내 친구</span>');
     const rf = $('button', 'btn small ghost', '새로고침'); rf.onclick = () => friendsPane(pane); head.append(rf);
     const tools = $('div', 'row wrap nettools');
     const q = $('input', 'codein'); q.placeholder = '🔍 이름 찾기'; q.maxLength = 8; q.value = UI._netQ || '';
@@ -489,20 +489,24 @@
     pane.append(head, tools, list);
     list.innerHTML = '<div class="muted small">불러오는 중…</div>';
     let people = [];
+    // 친구 탭을 열 때마다 내 이름을 목록에 올린다(예전에 등록이 실패했어도 여기서 다시)
+    try { await N.publish(N.mode === 'host'); } catch (e) { G.log.err('net.publish', e); }
     try { people = await N.people(); } catch (e) { list.innerHTML = '<div class="muted small">목록을 불러오지 못했어요. 잠시 뒤 새로고침해 주세요.</div>'; }
     if (people.length || !list.querySelector('.muted')) list.innerHTML = '';
+    // 저장해 둔 친구 중 목록(최근 60명)에 없는 사람도 보여 준다
+    for (const f of N.st.friends) if (!people.some((p) => p.code === f.code)) people.push({ uid: f.uid || '', name: f.name || '친구', town: f.town || '', code: f.code, open: false, at: 0, friend: true });
     const all = people;
     const draw = () => {
       list.innerHTML = '';
       const qq = (UI._netQ || '').trim();
       const shown = all.filter((p) => (!UI._netOnly || p.friend) && (!qq || p.name.includes(qq) || p.town.includes(qq)));
-      if (!shown.length) list.append($('div', 'muted small', all.length ? '찾는 사람이 없어요.' : '아직 다른 가입자가 없어요. 친구에게 몽글숲을 알려 주세요!'));
+      if (!shown.length) list.append($('div', 'slot-info', all.length ? '찾는 사람이 없어요.' : '아직 목록에 다른 사람이 없어요.<br>친구가 <b>새 버전에서 로그인</b>하면 여기에 자동으로 나타나요. (친구도 게임을 껐다 켜서 최신 버전으로!)<br>또는 친구에게 위의 <b>내 친구 코드</b>를 알려 주고, 아래 「친구 코드로 찾기」를 써도 돼요.'));
       for (const p of shown) row(p);
     };
     q.oninput = () => { UI._netQ = q.value; draw(); };
     only.onclick = () => { UI._netOnly = !UI._netOnly; only.classList.toggle('on', UI._netOnly); draw(); };
     const row = (p) => {
-      const r = $('div', 'personrow' + (p.friend ? ' friend' : ''), `<span>${p.open ? '🟢' : '⚪'} <b>${esc(p.name)}</b> <small class="muted">${esc(p.town)}${p.friend ? ' · 친구' : ''}</small></span>`);
+      const r = $('div', 'personrow' + (p.friend ? ' friend' : ''), `<span>${p.open ? '🟢' : '⚪'} ${p.friend ? '⭐' : ''}<b>${esc(p.name)}</b> <small class="muted">${esc(p.town)}${p.open ? ' · 마을 열림' : ''}</small></span>`);
       const btns = $('div', 'row');
       if (!p.friend) { const a = $('button', 'btn small', '＋ 친구'); a.onclick = () => { N.addFriend(p); p.friend = true; draw(); }; btns.append(a); }
       if (p.open && N.mode !== 'host') { const v = $('button', 'btn small', '놀러 가기'); v.onclick = async () => { try { await N.visit(p.code); UI.open && UI.open.close(); } catch (e) { UI.netErr(e); } }; btns.append(v); }
