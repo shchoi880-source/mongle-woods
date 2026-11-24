@@ -54,7 +54,7 @@
     if (st.plots.length >= want) return;
     const tent = m.plots.tent, door = tent.door;
     const used = new Set(st.plots.map((p) => p.tx + ',' + p.ty));
-    const ok = (x, y) => W.tile(x, y) === G.TERR.GRASS && !W.objAtTile(x, y) && !used.has(x + ',' + y) && !(x === door.x && y >= door.y && y <= door.y + 2);
+    const ok = (x, y) => W.tile(x, y) === G.TERR.GRASS && !W.objAtTile(x, y) && !(G.yard && G.yard.at(x, y)) && !used.has(x + ',' + y) && !(x === door.x && y >= door.y && y <= door.y + 2);
     // 문 옆(왼쪽·오른쪽)부터 나선으로 3칸 가로줄을 찾는다
     for (let r = 1; r < 9 && st.plots.length < want; r++) {
       for (const [dx, dy] of [[r + 1, 0], [-(r + 3), 0], [r + 1, 1], [-(r + 3), 1], [-1, r + 1], [-1, -(r + 1)], [r + 1, -1], [-(r + 3), -1]]) {

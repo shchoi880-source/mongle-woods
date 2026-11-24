@@ -292,7 +292,8 @@
     isWater(t) { return t === T.WATER || t === T.SEA; },
     walkableTile(tx, ty) {
       const t = W.tile(tx, ty); if (!WALK.has(t)) return false;
-      const o = W.objAtTile(tx, ty); return !(o && o.solid);
+      const o = W.objAtTile(tx, ty); if (o && o.solid) return false;
+      return !(G.yard && G.yard.blocked(tx, ty)); // 마당에 놓은 가구
     },
     // 원(반경 r)이 (x,y)에 있을 수 있는가 — 4방향 샘플
     canStand(x, y, r) {

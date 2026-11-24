@@ -342,3 +342,4 @@ input, select, textarea { font: inherit; color: var(--ink); }
 .sheet.nb { height: min(88%, 760px); }
 .shoptabs .tab { flex: 1; font-size: 15px; padding: 9px 12px; }
 .chip .swatch { display: inline-block; width: 16px; height: 16px; border-radius: 5px; margin-right: 5px; vertical-align: -3px; border: 1px solid rgba(91,70,54,.3); }
+.lookico { font-size: 40px; line-height: 64px; display: block; height: 64px; }

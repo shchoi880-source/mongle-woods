@@ -16,12 +16,13 @@
     { k: 'cheek', cat: 'face', name: '볼', names: ['분홍', '없음', '주근깨', '발그레', '반창고'] },
     { k: 'hair', cat: 'hair', name: '머리 모양', names: ['삐침', '단발', '똥머리', '양갈래', '긴 생머리', '포니테일', '짧은 머리', '뽀글', '옆 가르마', '땋은 머리', '양 똥머리', '공주 머리', '뾰족', '웨이브', '바가지'] },
     { k: 'hairC', cat: 'hair', name: '머리 색', colors: HAIRC },
-    { k: 'outfit', cat: 'wear', name: '옷 모양', names: ['티셔츠', '멜빵', '원피스', '후드', '줄무늬', '앞치마', '조끼', '하트 니트', '세일러'] },
+    { k: 'outfit', cat: 'wear', name: '옷 모양', names: ['티셔츠', '멜빵', '원피스', '후드', '줄무늬', '앞치마', '조끼', '하트 니트', '세일러', '한복 저고리', '잠옷', '노란 우비', '턱시도', '공주 드레스', '운동복'],
+      locks: { 9: 'shop', 10: 'shop', 11: 'shop', 12: 'shop', 13: 'shop', 14: 'shop' } }, // 9~14: 옷 가게
     { k: 'shirt', cat: 'wear', name: '옷 색', colors: SHIRT },
     { k: 'shirt2', cat: 'wear', name: '포인트 색', colors: SHIRT },
     { k: 'shoes', cat: 'wear', name: '신발', colors: SHOES },
-    { k: 'hat', cat: 'acc', name: '모자·장식', names: ['없음', '비니', '야구모자', '밀짚모자', '리본', '화관', '고양이 귀', '토끼 귀', '새싹', '왕관', '베레모', '별 핀', '헤드폰', '벚꽃 핀', '수박 모자', '호박 모자', '눈송이 왕관', '황금 왕관'],
-      locks: { 13: 'blossom', 14: 'summer', 15: 'autumn', 16: 'winter', 17: 'gold' } }, // 축제 보상(잠금)
+    { k: 'hat', cat: 'acc', name: '모자·장식', names: ['없음', '비니', '야구모자', '밀짚모자', '리본', '화관', '고양이 귀', '토끼 귀', '새싹', '왕관', '베레모', '별 핀', '헤드폰', '벚꽃 핀', '수박 모자', '호박 모자', '눈송이 왕관', '황금 왕관', '마녀 모자', '해적 모자', '공룡 모자', '개구리 모자', '요리사 모자', '곰돌이 귀'],
+      locks: { 13: 'blossom', 14: 'summer', 15: 'autumn', 16: 'winter', 17: 'gold', 18: 'shop', 19: 'shop', 20: 'shop', 21: 'shop', 22: 'shop', 23: 'shop' } }, // 축제 보상·옷 가게(잠금)
     { k: 'hatC', cat: 'acc', name: '장식 색', colors: SHIRT },
     { k: 'glasses', cat: 'acc', name: '안경', names: ['없음', '동그란', '네모', '선글라스', '하트'] },
   ];
@@ -95,6 +96,7 @@
       }
       // 몸통
       const bodyC = a.species === 'human' ? SHIRT[L.shirt | 0] : (L.body || sp.fur);
+      if (a.species === 'human' && (L.outfit | 0) === 13) { ctx.fillStyle = bodyC; ctx.strokeStyle = LINE; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-6, -13); ctx.quadraticCurveTo(-15, -4, -15, 0); ctx.quadraticCurveTo(0, 3, 15, 0); ctx.quadraticCurveTo(15, -4, 6, -13); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.strokeStyle = SHIRT[L.shirt2 === undefined ? 5 : L.shirt2 | 0]; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-14, -1); ctx.quadraticCurveTo(0, 2, 14, -1); ctx.stroke(); } // 공주 드레스
       if (a.species === 'human' && (L.outfit | 0) === 2) { ctx.fillStyle = bodyC; ctx.strokeStyle = LINE; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-7, -12); ctx.lineTo(-12, -2); ctx.quadraticCurveTo(0, 1.5, 12, -2); ctx.lineTo(7, -12); ctx.closePath(); ctx.fill(); ctx.stroke(); } // 원피스 치마
       P.blob(ctx, 0, -11, 9, 9.5, bodyC, LINE, 1.5);
       if (a.species === 'human') this.outfit(ctx, L, side, back, bodyC);
@@ -256,7 +258,16 @@
     // 옷 모양 (몸통 위 덧그림). 몸통 타원 안에 잘라서 그린다
     outfit(ctx, L, side, back, bodyC) {
       const o = L.outfit | 0, c2 = SHIRT[L.shirt2 === undefined ? 5 : L.shirt2 | 0];
-      if (!o || o === 2) return;
+      if (!o || o === 2 || o === 13) return;
+      if (o >= 9) { // 옷 가게 옷
+        ctx.save(); ctx.beginPath(); ctx.ellipse(0, -11, 8.3, 8.8, 0, 0, Math.PI * 2); ctx.clip();
+        if (o === 9) { if (!back) { ctx.fillStyle = c2; ctx.beginPath(); ctx.moveTo(-9, -20); ctx.lineTo(1, -10); ctx.lineTo(-9, -6); ctx.fill(); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-3, -19); ctx.lineTo(2, -13); ctx.stroke(); ctx.fillStyle = '#ff6b8b'; ctx.fillRect(0, -12, 2, 9); } ctx.fillStyle = c2; ctx.fillRect(-10, -5, 20, 6); }
+        if (o === 10) { ctx.fillStyle = 'rgba(255,255,255,0.55)'; for (let y = -18; y < 0; y += 5) for (let x = -8 + ((y / 5) % 2 ? 2.5 : 0); x < 9; x += 5) { ctx.beginPath(); ctx.arc(x, y, 1.2, 0, 6.3); ctx.fill(); } if (!back) { P.blob(ctx, 0, -16, 3, 1.8, c2); for (const y of [-12, -8, -4]) P.blob(ctx, 0, y, 0.9, 0.9, c2); } }
+        if (o === 11) { ctx.fillStyle = '#ffd24d'; ctx.fillRect(-10, -21, 20, 22); ctx.strokeStyle = 'rgba(160,120,20,0.5)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, -20); ctx.lineTo(0, 0); ctx.stroke(); if (!back) for (const y of [-14, -9, -4]) P.blob(ctx, 1.8, y, 0.9, 0.9, '#5b4636'); }
+        if (o === 12) { ctx.fillStyle = '#2f3a4a'; ctx.fillRect(-10, -21, 20, 22); if (!back) { ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(-4, -20); ctx.lineTo(0, -6); ctx.lineTo(4, -20); ctx.fill(); P.blob(ctx, -2, -17, 2.2, 1.4, c2, LINE, 0.6); P.blob(ctx, 2, -17, 2.2, 1.4, c2, LINE, 0.6); P.blob(ctx, 0, -10, 0.8, 0.8, '#2f3a4a'); } }
+        if (o === 14) { ctx.fillStyle = c2; ctx.fillRect(-10, -21, 3, 22); ctx.fillRect(7, -21, 3, 22); if (!back) { ctx.fillStyle = '#ffffff'; ctx.fillRect(-1, -20, 2, 20); P.rrect(ctx, -5, -15, 3, 4, 1, c2); } }
+        ctx.restore(); return;
+      }
       ctx.save(); ctx.beginPath(); ctx.ellipse(0, -11, 8.3, 8.8, 0, 0, Math.PI * 2); ctx.clip();
       if (o === 1) { ctx.fillStyle = c2; ctx.fillRect(-9, -9, 18, 10); if (!back) { ctx.fillRect(-5.5, -19, 2.4, 10); ctx.fillRect(3.1, -19, 2.4, 10); P.blob(ctx, side ? -3 : 0, -5.5, 2.2, 1.6, 'rgba(255,255,255,0.35)'); } else { ctx.fillRect(-5.5, -19, 2.4, 10); ctx.fillRect(3.1, -19, 2.4, 10); } }
       if (o === 3) { if (!back) { P.rrect(ctx, -5, -8, 10, 5, 2, c2); ctx.strokeStyle = LINE; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(-1.5, -19); ctx.lineTo(-1.5, -14); ctx.moveTo(1.5, -19); ctx.lineTo(1.5, -14); ctx.stroke(); } else P.blob(ctx, 0, -17, 7, 4, c2); }
@@ -303,6 +314,16 @@
       if (h === 14) { ctx.fillStyle = '#5aa548'; ctx.beginPath(); ctx.ellipse(0, -6, 14, 11, 0, Math.PI, Math.PI * 2); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.strokeStyle = '#2f6a3a'; ctx.lineWidth = 1.6; ctx.beginPath(); for (const x of [-8, 0, 8]) { ctx.moveTo(x, -16 + Math.abs(x) * 0.4); ctx.quadraticCurveTo(x + 2, -11, x, -6); } ctx.stroke(); ctx.strokeStyle = LINE; P.rrect(ctx, -14, -8, 28, 4, 2, '#ff6b6b', LINE, 1.2); }
       if (h === 15) { P.blob(ctx, 0, -10, 13, 8, '#ff9a3a', LINE, 1.4); ctx.strokeStyle = '#d0702a'; ctx.lineWidth = 1.2; ctx.beginPath(); for (const x of [-6, 0, 6]) { ctx.moveTo(x, -17); ctx.quadraticCurveTo(x * 1.3, -10, x, -3); } ctx.stroke(); P.rrect(ctx, -1.5, -21, 3, 5, 1.5, '#5aa548', LINE, 1); P.blob(ctx, 3, -20, 3, 1.6, '#7cc35a'); }
       if (h === 16 || h === 17) { const gold = h === 17; ctx.fillStyle = gold ? '#ffd24d' : '#e6f3ff'; ctx.beginPath(); ctx.moveTo(-9, -9); for (let k = 0; k <= 4; k++) { const x = -9 + k * 4.5; ctx.lineTo(x, k % 2 ? -14 : -20); } ctx.lineTo(9, -9); ctx.closePath(); ctx.fill(); ctx.stroke(); P.blob(ctx, 0, -12, 2, 2, gold ? '#ff6b8b' : '#8fd3ff', LINE, 0.8); if (gold) { P.blob(ctx, -4.5, -11, 1.2, 1.2, '#8fd3ff'); P.blob(ctx, 4.5, -11, 1.2, 1.2, '#7cc35a'); } else for (const x of [-9, 0, 9]) P.blob(ctx, x, x ? -14 : -20, 1.3, 1.3, '#ffffff'); }
+      if (h === 18) { ctx.fillStyle = '#5a4a8a'; ctx.beginPath(); ctx.moveTo(-17, -6); ctx.quadraticCurveTo(0, -10, 17, -6); ctx.lineTo(13, -3); ctx.lineTo(-13, -3); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-9, -7); ctx.lineTo(3, -30); ctx.quadraticCurveTo(6, -27, 9, -7); ctx.closePath(); ctx.fill(); ctx.stroke(); P.rrect(ctx, -9, -10, 18, 3.5, 1.5, c, LINE, 1); P.blob(ctx, 4, -24, 1.6, 1.6, '#ffe28a'); }
+      if (h === 19) { ctx.fillStyle = '#2f2a2a'; ctx.beginPath(); ctx.moveTo(-18, -7); ctx.quadraticCurveTo(-10, -22, 0, -16); ctx.quadraticCurveTo(10, -22, 18, -7); ctx.quadraticCurveTo(0, -3, -18, -7); ctx.fill(); ctx.stroke(); if (!back) { P.blob(ctx, 0, -12, 3.2, 2.8, '#ffffff', LINE, 0.8); P.blob(ctx, -1, -12.5, 0.7, 0.7, LINE); P.blob(ctx, 1, -12.5, 0.7, 0.7, LINE); } ctx.strokeStyle = c; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(-15, -7.5); ctx.quadraticCurveTo(0, -4, 15, -7.5); ctx.stroke(); }
+      if (h === 20 || h === 21) {
+        const frog = h === 21, col = frog ? '#7cc35a' : c;
+        ctx.fillStyle = col; ctx.beginPath(); ctx.ellipse(0, -4, 15, 13, 0, Math.PI, Math.PI * 2); ctx.closePath(); ctx.fill(); ctx.stroke();
+        if (!frog) { ctx.fillStyle = '#ffffff'; for (let k = -2; k <= 2; k++) { const x = k * 5; ctx.beginPath(); ctx.moveTo(x - 2.5, -16 + Math.abs(k) * 1.5); ctx.lineTo(x, -21 + Math.abs(k) * 1.5); ctx.lineTo(x + 2.5, -16 + Math.abs(k) * 1.5); ctx.fill(); ctx.stroke(); } }
+        else if (!back) for (const x of side ? [-4] : [-6, 6]) { P.blob(ctx, x, -15, 4.5, 4.5, col, LINE, 1.2); P.blob(ctx, x, -15, 2.6, 2.6, '#ffffff'); P.blob(ctx, x + 0.5, -14.6, 1.3, 1.5, '#2d2430'); }
+      }
+      if (h === 22) { P.rrect(ctx, -10, -9, 20, 5, 2, '#ffffff', LINE, 1.2); for (const [x, y, r] of [[-6, -15, 6], [6, -15, 6], [0, -19, 7]]) P.blob(ctx, x, y, r, r * 0.9, '#ffffff', LINE, 1.2); P.blob(ctx, 0, -13, 9, 4, '#ffffff'); }
+      if (h === 23) for (const s2 of side ? [1] : [-1, 1]) { P.blob(ctx, s2 * 9 + (side ? 1 : 0), -11, 5, 5, c, LINE, 1.3); if (!back) P.blob(ctx, s2 * 9 + (side ? 1 : 0), -11, 2.6, 2.6, '#ffd7c2'); }
       if (h === 12) { ctx.strokeStyle = '#5b4636'; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.ellipse(0, -2, 14, 12, 0, Math.PI * 1.05, Math.PI * 1.95); ctx.stroke(); for (const s of side ? [0] : [-1, 1]) P.rrect(ctx, (side ? -3 : s * 14) - 3, -4, 6, 9, 3, c, LINE, 1.2); }
     },
     hair(ctx, L, side, back) {

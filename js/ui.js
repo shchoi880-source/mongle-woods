@@ -387,7 +387,7 @@
           const c = $('button', 'chip' + (pt.colors ? ' sw' : '') + (cur ? ' on' : '') + (locked ? ' locked' : ''), pt.colors ? '' : (locked ? '🔒 ' : '') + esc(pt.names[i]));
           if (pt.colors) { c.style.background = pt.colors[i]; c.setAttribute('aria-label', pt.name + ' ' + (i + 1)); }
           c.onclick = () => {
-            if (locked) { const f = G.fest && G.fest.byId(pt.locks[i]); UI.toast(f ? `「${pt.names[i]}」은 ${f.name}에서 받을 수 있어요!` : `「${pt.names[i]}」은 축제 모자 4개를 모두 모으면 받아요!`, { icon: '🔒' }); G.audio.sfx('error'); return; }
+            if (locked) { const lk = pt.locks[i], f = G.fest && G.fest.byId(lk); UI.toast(lk === 'shop' ? `「${pt.names[i]}」은 땅굴상점 옷 코너에서 살 수 있어요! (날마다 바뀌어요)` : f && lk !== 'gold' ? `「${pt.names[i]}」은 ${f.name}에서 받을 수 있어요!` : `「${pt.names[i]}」은 축제 모자 4개를 모두 모으면 받아요!`, { icon: '🔒' }); G.audio.sfx('error'); return; }
             look[pt.k] = i; G.audio.sfx('pop'); onChange && onChange(pt.k); render();
           };
           chips.append(c);
@@ -617,6 +617,12 @@
         const it = G.items.get(s.id);
         const p = G.items.sellPrice(s.id, s.x);
         info.innerHTML = `<b>${esc(G.items.name(s.id, s.x))}</b>${s.x && s.x.size ? ` · ${s.x.size}cm` : ''}${s.n > 1 ? ` × ${s.n}` : ''}<br><span class="muted">${it.nosell ? '팔 수 없는 물건' : '가판대 판매가 ' + G.fmt.money(p)}</span>`;
+        // 가구: 밖(내 마을)이면 「마당에 놓기」
+        if (s.id.startsWith('furn:') && G.yard && !(G.house && G.house.inside) && !(G.net && G.net.guest)) {
+          const yb = $('button', 'btn small', '🏡 내 앞에 놓기 (마당 꾸미기)');
+          yb.onclick = () => { const close = UI.open && UI.open.close; if (close) close(); setTimeout(() => G.yard.placeFromBag(i), 50); };
+          info.append(document.createElement('br'), yb);
+        }
         G.audio.sfx('tap');
       }), info);
     };
@@ -907,8 +913,8 @@
       // 구매
       const buy = $('div', 'buyrow');
       for (const e of G.shop.stock()) {
-        const own = e.kind === 'tool' ? G.player.hasTool(e.id) : G.shop.soldOut(e);
-        const ico = e.kind === 'plot' ? `<img src="${G.art.iconURL('seed:carrot', 64)}" alt=""><i class="upmark">＋</i>` : e.kind === 'tool' || e.kind === 'up' ? `<img src="${G.art.iconURL('tool:' + e.id, 64)}" alt="">${e.kind === 'up' ? '<i class="upmark">⬆</i>' : ''}` : e.kind === 'seed' ? `<img src="${G.art.iconURL('seed:' + e.id, 64)}" alt="">` : e.kind === 'animal' ? `<img src="${G.art.iconURL('animal:' + e.id, 64)}" alt="">` : `<img src="${G.art.iconURL('furn:' + e.id + '#' + e.c, 64)}" alt="">`;
+        const own = e.kind === 'tool' ? G.player.hasTool(e.id) : e.kind === 'look' ? !!(G.player.unlocks || {})[e.id] : G.shop.soldOut(e);
+        const ico = e.kind === 'look' ? `<span class="lookico">${e.part === 'hat' ? '👒' : '👕'}</span>` : e.kind === 'plot' ? `<img src="${G.art.iconURL('seed:carrot', 64)}" alt=""><i class="upmark">＋</i>` : e.kind === 'tool' || e.kind === 'up' ? `<img src="${G.art.iconURL('tool:' + e.id, 64)}" alt="">${e.kind === 'up' ? '<i class="upmark">⬆</i>' : ''}` : e.kind === 'seed' ? `<img src="${G.art.iconURL('seed:' + e.id, 64)}" alt="">` : e.kind === 'animal' ? `<img src="${G.art.iconURL('animal:' + e.id, 64)}" alt="">` : `<img src="${G.art.iconURL('furn:' + e.id + '#' + e.c, 64)}" alt="">`;
         const b = $('button', 'buycard' + (own ? ' off' : ''), `${ico}<b>${esc(e.name)}</b><small>${own ? (e.kind === 'tool' ? '가지고 있음' : '다 팔림') : G.fmt.money(e.price)}</small>`);
         b.onclick = async () => {
           if (own) return;
@@ -920,6 +926,7 @@
           if (e.kind === 'animal') { tip(r.first ? `${e.name}가 집 옆 목장에 왔어요! 쓰다듬으면 몇 분 뒤 선물을 줘요.` : `${e.name}가 목장에 도착했어요!`, '🐣', 4000); }
           else if (r.gift) { tip('씨앗 첫 손님 덤으로 물뿌리개를 받았어요! 텃밭은 집 옆에 있어요.', '🚿', 4000); }
           else if (e.kind === 'tool') { G.player.setTool(e.id); tip(e.id === 'axe' ? '도끼를 샀어요! 나무를 찍으면 목재가 나와요.' : e.id === 'can' ? '물뿌리개를 샀어요! 텃밭에 물을 줘요.' : '삽을 샀어요! 땅의 금(✕)을 파 보세요.', '🧰'); }
+          else if (e.kind === 'look') tip(`「${e.name}」을 샀어요! 잎첩 🪞 나에서 입어 봐요.`, '👕', 3600);
           else if (e.kind === 'plot') tip(`텃밭이 ${r.n}칸 넓어졌어요! (모두 ${G.farm.st.plots.length}칸)`, '🥕');
           else if (e.kind === 'up') tip({ net: '튼튼 잠자리채! 채가 더 넓게 닿아요.', rod: '튼튼 낚싯대! 물고기가 더 멀리서 오고, 당기기가 넉넉해져요.', can: '큰 물뿌리개! 주변 5×3 칸에 한 번에 물을 줘요.' }[e.id], '⬆️', 3600);
           else if (e.kind === 'seed') tip(`${e.name}를 샀어요! 집 옆 텃밭에 심어요.`, '🌱');
