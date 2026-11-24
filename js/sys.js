@@ -134,6 +134,7 @@
         const season = G.farm.SEASON_OF(G.time.dayDate(d).m);
         for (const c of G.data.all('crops').filter((x) => x.season === season)) list.push({ kind: 'seed', id: c.id, name: c.name + ' 씨앗 3개', price: c.seed * 3, key: 'seed_' + c.id });
         if (G.TOOLS.can && !G.player.hasTool('can')) list.push({ kind: 'tool', id: 'can', name: G.TOOLS.can.name, price: G.TOOLS.can.price, key: 'can' });
+        if ((G.farm.st.extra || 0) < G.farm.EXTRA_MAX) list.push({ kind: 'plot', id: 'plot', name: `텃밭 3칸 넓히기 (지금 ${G.farm.st.plots.length}칸)`, price: G.farm.expandPrice(), key: 'plot' });
       }
       // 도구 업그레이드 (한 번 사면 영구)
       for (const [t, nm, pr] of [['net', '튼튼 잠자리채', 3000], ['rod', '튼튼 낚싯대', 3000], ['can', '큰 물뿌리개', 2500]]) {
@@ -160,6 +161,11 @@
         G.player.giveTool(entry.id);
         G.emit('shop:buy', { id: entry.id, price: entry.price });
         return { ok: true };
+      }
+      if (entry.kind === 'plot') {
+        if (G.wallet.get() < entry.price) return { ok: false, why: '몽이 조금 모자라요.' };
+        const r = G.farm.expand(); if (!r.ok) return r;
+        G.wallet.spend(entry.price, 'buy'); G.emit('shop:buy', { id: 'plot', price: entry.price }); return { ok: true, n: r.n };
       }
       if (entry.kind === 'up') {
         if (G.player.up && G.player.up[entry.id]) return { ok: false, why: '이미 좋은 걸 가지고 있어요.' };

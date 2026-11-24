@@ -341,3 +341,4 @@ input, select, textarea { font: inherit; color: var(--ink); }
 /* 7차 회의: 잎첩 높이 고정(탭을 바꿀 때 창이 들썩이지 않게), 상점 탭 */
 .sheet.nb { height: min(88%, 760px); }
 .shoptabs .tab { flex: 1; font-size: 15px; padding: 9px 12px; }
+.chip .swatch { display: inline-block; width: 16px; height: 16px; border-radius: 5px; margin-right: 5px; vertical-align: -3px; border: 1px solid rgba(91,70,54,.3); }

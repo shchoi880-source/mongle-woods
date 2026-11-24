@@ -116,14 +116,25 @@
       const s1 = Math.floor(r() * 18), len = 3 + Math.floor(r() * 5);
       // 05시 기준으로 시간 재배열
       const hh = (hour - G.C.DAY_H + 24) % 24;
-      if (p === 'clear') return { type: 'clear', wind: r() * 0.5 };
-      if (p === 'cloudy') return { type: 'cloudy', wind: 0.3 + r() * 0.4 };
-      if (p === 'shower') return (hh >= s1 && hh < s1 + len) ? { type: wet, wind: 0.5, int: 0.6 } : { type: 'cloudy', wind: 0.3 };
-      return (hh % 9 < 6) ? { type: wet, wind: 0.6, int: 1 } : { type: 'cloudy', wind: 0.4 };
+      // 8차 회의: 날씨 꾸밈(fx) — 기본 종류(type)는 그대로 두고 볼거리만 더한다 (무지개·안개·잎·꽃잎·천둥·함박눈)
+      const r2 = r(), m = dd.m, fall = m >= 9 && m <= 11, spring = m >= 3 && m <= 5;
+      const breeze = (w) => (w > 0.35 && (fall || spring) ? (fall ? 'leaves' : 'petals') : '');
+      if (p === 'clear') { const w = r() * 0.5; return { type: 'clear', wind: w, fx: breeze(w + r2 * 0.3) }; }
+      if (p === 'cloudy') { const w = 0.3 + r() * 0.4; return { type: 'cloudy', wind: w, fx: hh < 4 ? 'fog' : breeze(w) }; }
+      if (p === 'shower') {
+        if (hh >= s1 && hh < s1 + len) return { type: wet, wind: 0.5, int: 0.6 };
+        // 소나기가 그친 뒤 낮 두 시간은 무지개
+        if (!winter && hh >= s1 + len && hh < s1 + len + 2 && hour >= 6 && hour < 18) return { type: 'clear', wind: 0.2, fx: 'rainbow' };
+        return { type: 'cloudy', wind: 0.3 };
+      }
+      const storm = r2 < 0.4;
+      return (hh % 9 < 6) ? { type: wet, wind: storm ? 1 : 0.6, int: storm ? 1.5 : 1, fx: storm ? (winter ? 'blizzard' : 'storm') : '' } : { type: 'cloudy', wind: 0.4 };
     },
     now() { return G.weather.at(T.day(), T.hour()); },
     override(w) { override = w; G.emit('weather:change', {}); },
     LABEL: { clear: '맑음', cloudy: '흐림', rain: '비', snow: '눈' },
+    FX_LABEL: { rainbow: '무지개', fog: '안개', leaves: '단풍 바람', petals: '꽃잎 바람', storm: '천둥 번개', blizzard: '함박눈' },
+    FX_ICON: { rainbow: '🌈', fog: '🌫️', leaves: '🍂', petals: '🌸', storm: '⛈️', blizzard: '🌨️' },
     ICON: { clear: '☀️', cloudy: '☁️', rain: '🌧️', snow: '❄️' },
   };
 

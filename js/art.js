@@ -565,19 +565,40 @@
 
   // ---------- 날씨 파티클 ----------
   const parts = [];
+  // 날씨 그리기: 비·눈 + 꾸밈(fx: 무지개·안개·잎·꽃잎·천둥·함박눈) — 8차 회의
+  const fxParts = []; let flash = 0, nextFlash = 4;
   A.weather = {
-    update(dt, type, rect, wind) {
-      const want = type === 'rain' ? 140 : type === 'snow' ? 90 : 0;
+    update(dt, type, rect, wind, fx, int) {
+      const heavy = fx === 'storm' || fx === 'blizzard';
+      const want = type === 'rain' ? (heavy ? 230 : 140) : type === 'snow' ? (heavy ? 200 : 90) : 0;
       while (parts.length < want) parts.push({ x: rect.x + Math.random() * rect.w, y: rect.y + Math.random() * rect.h, s: Math.random() });
       if (parts.length > want) parts.length = want;
       for (const p of parts) {
-        if (type === 'rain') { p.y += (520 + p.s * 120) * dt; p.x += (-40 - wind * 80) * dt; }
-        else { p.y += (40 + p.s * 30) * dt; p.x += (Math.sin(p.y * 0.03 + p.s * 6) * 20 - wind * 20) * dt; }
+        if (type === 'rain') { p.y += (520 + p.s * 120) * (heavy ? 1.25 : 1) * dt; p.x += (-40 - wind * 120) * dt; }
+        else { p.y += (40 + p.s * 30) * (heavy ? 1.8 : 1) * dt; p.x += (Math.sin(p.y * 0.03 + p.s * 6) * 20 - wind * (heavy ? 90 : 20)) * dt; }
         if (p.y > rect.y + rect.h + 20) { p.y = rect.y - 20; p.x = rect.x + Math.random() * rect.w; }
         if (p.x < rect.x - 30) p.x += rect.w + 60; if (p.x > rect.x + rect.w + 30) p.x -= rect.w + 60;
       }
+      // 잎·꽃잎: 바람에 비스듬히 날린다
+      const fwant = fx === 'leaves' || fx === 'petals' ? 26 : 0;
+      while (fxParts.length < fwant) fxParts.push({ x: rect.x + Math.random() * rect.w, y: rect.y + Math.random() * rect.h, s: Math.random(), a: Math.random() * 6 });
+      if (fxParts.length > fwant) fxParts.length = fwant;
+      for (const p of fxParts) {
+        p.x += (60 + p.s * 50) * dt; p.y += (25 + Math.sin(p.a) * 25) * dt; p.a += dt * (2 + p.s * 2);
+        if (p.x > rect.x + rect.w + 20) { p.x = rect.x - 20; p.y = rect.y + Math.random() * rect.h; }
+        if (p.y > rect.y + rect.h + 20) p.y = rect.y - 10;
+      }
+      // 번개: 6~12초마다 번쩍
+      if (fx === 'storm') { nextFlash -= dt; if (nextFlash <= 0) { flash = 0.35; nextFlash = 6 + Math.random() * 6; if (G.audio && G.audio.sfx) G.audio.sfx('bump'); } }
+      flash = Math.max(0, flash - dt);
     },
-    draw(ctx, type) {
+    draw(ctx, type, fx, rect, t) {
+      if (fx === 'rainbow' && rect) {
+        const cx = rect.x + rect.w * 0.72, cy = rect.y + rect.h * 1.05, R = Math.max(rect.w, rect.h) * 0.75;
+        ctx.save(); ctx.globalAlpha = 0.22; ctx.lineWidth = R * 0.035;
+        ['#ff6b6b', '#ffa94d', '#ffe066', '#8ce99a', '#74c0fc', '#9775fa'].forEach((c, i) => { ctx.strokeStyle = c; ctx.beginPath(); ctx.arc(cx, cy, R - i * R * 0.035, Math.PI * 1.05, Math.PI * 1.95); ctx.stroke(); });
+        ctx.restore();
+      }
       if (type === 'rain') {
         ctx.strokeStyle = 'rgba(220,235,255,0.55)'; ctx.lineWidth = 1.4; ctx.beginPath();
         for (const p of parts) { ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - 3, p.y + 12); }
@@ -587,6 +608,21 @@
         for (const p of parts) { ctx.moveTo(p.x + 2.2, p.y); ctx.arc(p.x, p.y, 1.4 + p.s * 1.6, 0, Math.PI * 2); }
         ctx.fill();
       }
+      if (fx === 'leaves' || fx === 'petals') {
+        for (const p of fxParts) {
+          ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a);
+          ctx.fillStyle = fx === 'leaves' ? ['#f08a3c', '#e8b44a', '#d0502a'][Math.floor(p.s * 3)] : ['#ffc2d6', '#ffd8e4', '#ffb3c8'][Math.floor(p.s * 3)];
+          ctx.beginPath(); ctx.ellipse(0, 0, fx === 'leaves' ? 4 : 3, fx === 'leaves' ? 2.2 : 2, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+        }
+      }
+      if (fx === 'fog' && rect) {
+        ctx.save();
+        for (let i = 0; i < 6; i++) { const x = rect.x + ((i * 0.27 + (t || 0) * 0.01) % 1.2 - 0.1) * rect.w, y = rect.y + rect.h * (0.15 + i * 0.15); ctx.fillStyle = 'rgba(255,255,255,0.16)'; ctx.beginPath(); ctx.ellipse(x, y, rect.w * 0.35, rect.h * 0.08, 0, 0, Math.PI * 2); ctx.fill(); }
+        ctx.fillStyle = 'rgba(240,244,248,0.18)'; ctx.fillRect(rect.x, rect.y, rect.w, rect.h); ctx.restore();
+      }
+      if (fx === 'storm' && rect) { ctx.fillStyle = 'rgba(40,45,70,0.22)'; ctx.fillRect(rect.x, rect.y, rect.w, rect.h); }
+      if (fx === 'blizzard' && rect) { ctx.fillStyle = 'rgba(235,242,250,0.22)'; ctx.fillRect(rect.x, rect.y, rect.w, rect.h); }
+      if (flash > 0 && rect) { ctx.fillStyle = `rgba(255,255,240,${flash * 1.6})`; ctx.fillRect(rect.x, rect.y, rect.w, rect.h); }
     },
   };
 
