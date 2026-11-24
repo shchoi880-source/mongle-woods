@@ -46,7 +46,7 @@
     const sp = u.pickW(cands.map((s) => ({ s, w: TIER_W[s.tier] * (dream === 'bug:' + s.id ? 6 : 1) })), R()).s;
     const spot = findSpot(sp.loc, p.x, p.y, R); if (!spot) return;
     const [tx, ty, alt, obj] = spot;
-    const v = G.rollVariant(R(), { night: G.time.isNight(), wet: wx.type !== 'clear' && wx.type !== 'cloudy' });
+    const v = G.rollVariant(R(), { night: G.time.isNight(), wet: wx.type !== 'clear' && wx.type !== 'cloudy', golden: G.lantern && G.lantern.golden() });
     const giant = v === 1;
     const b = {
       kind: 'bug', sp, x: tx * TILE + 16 + (R() - 0.5) * 12, y: ty * TILE + 20, alt, baseAlt: alt,
@@ -72,7 +72,7 @@
       const dream = G.mail ? G.mail.dreamSpecies() : '';
       const sp = u.pickW(cands.map((s) => ({ s, w: TIER_W[s.tier] * (s.rare || 1) * (dream === 'fish:' + s.id ? 6 : 1) })), R()).s;
       const wx = G.weather.now();
-      const v = G.rollVariant(R(), { night: G.time.isNight(), wet: wx.type !== 'clear' && wx.type !== 'cloudy' });
+      const v = G.rollVariant(R(), { night: G.time.isNight(), wet: wx.type !== 'clear' && wx.type !== 'cloudy', golden: G.lantern && G.lantern.golden() });
       const giant = v === 1;
       fish.push({ kind: 'fish', sp, shadow: giant ? Math.min(5, sp.shadow + 1) : sp.shadow, x: tx * TILE + 16, y: ty * TILE + 16, ang: R() * 6.28, spd: 0, t: 0, seed: R() * 10, state: 'swim', v, size: rollSize(sp, R(), giant), fade: 0 });
       return;

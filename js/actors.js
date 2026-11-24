@@ -18,6 +18,10 @@
     otter: { fur: '#b08462', furD: '#8a6448', belly: '#f3dcc0' },
     cat: { fur: '#ffd9a8', furD: '#e9b47a', inner: '#ffb3c2' },
     squirrel: { fur: '#e09a56', furD: '#b8743a', belly: '#ffe9cf', tail: '#cf8442' },
+    fox: { fur: '#f08a3c', furD: '#c8662a', belly: '#fff4e6', tail: '#f08a3c' },
+    bear: { fur: '#c08a5e', furD: '#9a6a44', belly: '#f0d4b4' },
+    hamster: { fur: '#ffd7a0', furD: '#e8b478', belly: '#ffffff' },
+    sheep: { fur: '#ffffff', furD: '#d8d2e6', face: '#f6e7d8' },
     penguin: { fur: '#46546a', furD: '#2f3a4a', belly: '#ffffff', feet: '#ffb04a' },
     tortoise: { fur: '#b6d99a', furD: '#8fbf72', shell: '#b08a5a', shellD: '#8a6a40' },
   };
@@ -49,6 +53,8 @@
         P.blob(ctx, -4.5, -2 + (step > 0 ? -1.8 * step : 0), 3.6, 2.6, fc, LINE, 1.2);
         P.blob(ctx, 4.5, -2 + (step < 0 ? 1.8 * step : 0), 3.6, 2.6, fc, LINE, 1.2);
       }
+      // 여우 꼬리
+      if (a.species === 'fox') { ctx.save(); ctx.translate(side ? 8 : 8, -6); ctx.rotate(0.9 + Math.sin(t * 1.5) * 0.1); P.blob(ctx, 0, -10, 5, 11, sp.tail, LINE, 1.4); P.blob(ctx, 0, -19, 3, 3.5, '#ffffff'); ctx.restore(); }
       // 다람쥐 꼬리 (몸통 뒤, 크게 말림)
       if (a.species === 'squirrel') {
         const sw = Math.sin(t * 2 + (a.seed || 0)) * 0.08;
@@ -67,7 +73,7 @@
       const bodyC = a.species === 'human' ? SHIRT[L.shirt | 0] : (L.body || sp.fur);
       P.blob(ctx, 0, -11, 9, 9.5, bodyC, LINE, 1.5);
       if (a.species === 'hedgehog') P.rrect(ctx, -6, -14, 12, 11, 3, '#fff7e8', LINE, 1); // 앞치마
-      if ((a.species === 'otter' || a.species === 'squirrel' || a.species === 'penguin') && !back) P.blob(ctx, side ? -2 : 0, -10, a.species === 'penguin' ? 7 : 5.5, a.species === 'penguin' ? 8 : 6.5, sp.belly);
+      if ((a.species === 'otter' || a.species === 'squirrel' || a.species === 'penguin' || a.species === 'bear' || a.species === 'hamster') && !back) P.blob(ctx, side ? -2 : 0, -10, a.species === 'penguin' ? 7 : 5.5, a.species === 'penguin' ? 8 : 6.5, sp.belly);
       if (L.scarf) P.rrect(ctx, -8, -19.5, 16, 4.5, 2, L.scarf, LINE, 1);
       if (a.species === 'mole' && L.apron) P.rrect(ctx, -6, -15, 12, 11, 3, L.apron, LINE, 1);
       // 팔
@@ -114,6 +120,7 @@
         // 가시에 꽂힌 편지
         P.rrect(ctx, 6, -18, 9, 6, 1, '#ffffff', LINE, 1);
       }
+      if (a.species === 'fox') for (const s of side ? [1] : [-1, 1]) { ctx.save(); ctx.translate(s * 7 + (side ? 2 : 0), -9); ctx.rotate(s * 0.3); ctx.fillStyle = sp.fur; ctx.strokeStyle = LINE; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-5, 2); ctx.lineTo(0, -11); ctx.lineTo(5, 2); ctx.closePath(); ctx.fill(); ctx.stroke(); if (!back) { ctx.fillStyle = '#5a3a2a'; ctx.beginPath(); ctx.moveTo(-2, -5); ctx.lineTo(0, -10); ctx.lineTo(2, -5); ctx.fill(); } ctx.restore(); }
       if (a.species === 'cat') {
         for (const s of side ? [1] : [-1, 1]) {
           ctx.save(); ctx.translate(s * 7 + (side ? 2 : 0), -9); ctx.rotate(s * 0.25 + Math.sin(t * 2.3 + (a.seed || 0)) * 0.04);
@@ -124,6 +131,9 @@
         }
       }
       if (a.species === 'otter') for (const s of side ? [1] : [-1, 1]) P.blob(ctx, s * 10, -8, 3, 3, sp.furD, LINE, 1.2);
+      if (a.species === 'bear') for (const s of side ? [1] : [-1, 1]) { P.blob(ctx, s * 9, -9, 4.5, 4.5, sp.fur, LINE, 1.3); if (!back) P.blob(ctx, s * 9, -9, 2.2, 2.2, sp.belly); }
+      if (a.species === 'hamster') for (const s of side ? [1] : [-1, 1]) { P.blob(ctx, s * 9, -10, 3.4, 3.4, sp.fur, LINE, 1.2); if (!back) P.blob(ctx, s * 9, -10, 1.8, 1.8, '#ffb3c2'); }
+      if (a.species === 'sheep') { for (const s of side ? [1] : [-1, 1]) P.blob(ctx, s * 12, -1, 2.8, 4.5, sp.face, LINE, 1.2); }
       if (a.species === 'squirrel') for (const s of side ? [1] : [-1, 1]) {
         ctx.save(); ctx.translate(s * 8 + (side ? 2 : 0), -9); ctx.rotate(s * 0.2);
         ctx.fillStyle = sp.fur; ctx.strokeStyle = LINE; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(-4, 2); ctx.lineTo(0, -7); ctx.lineTo(4, 2); ctx.closePath(); ctx.fill(); ctx.stroke();
@@ -136,8 +146,11 @@
       P.blob(ctx, 0, 0, 13, 12, sk, LINE, 1.6);
       if (a.species === 'hedgehog') P.blob(ctx, side ? -3 : 0, 3, 9, 8, '#fff3e0');
       if (a.species === 'rabbit') P.blob(ctx, side ? -3 : 0, 4, 8, 6, '#ffffff');
-      if (a.species === 'otter' || a.species === 'squirrel') P.blob(ctx, side ? -4 : 0, 5, 8, 5.5, sp.belly);
+      if (a.species === 'otter' || a.species === 'squirrel' || a.species === 'fox') P.blob(ctx, side ? -4 : 0, 5, 8, 5.5, sp.belly);
       if (a.species === 'penguin') P.blob(ctx, side ? -3 : 0, 2, 10, 8.5, sp.belly);
+      if (a.species === 'bear') P.blob(ctx, side ? -6 : 0, 5, 6, 4.5, sp.belly);
+      if (a.species === 'hamster') P.blob(ctx, side ? -4 : 0, 5, 8.5, 5.5, sp.belly);
+      if (a.species === 'sheep') { P.blob(ctx, side ? -3 : 0, 3, 9, 8, sp.face); for (let k = 0; k < 7; k++) P.blob(ctx, -10 + k * 3.3, -9 - Math.sin(k * 0.9) * 2, 4, 4, sp.fur, LINE, 1); }
       if (a.species === 'tortoise' && !back) { ctx.strokeStyle = '#6b5a4a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(-5, 0.5, 3.6, 0, Math.PI * 2); if (!side) ctx.arc(5, 0.5, 3.6, 0, Math.PI * 2); ctx.stroke(); P.rrect(ctx, -9, 9, 18, 3, 1.5, '#ffffff'); }
       if (a.species === 'cat' && !back) { ctx.fillStyle = sp.furD; ctx.beginPath(); ctx.moveTo(-3, -11); ctx.lineTo(0, -6); ctx.lineTo(3, -11); ctx.fill(); }
       // 사람 머리카락
@@ -163,7 +176,8 @@
       else if (a.species === 'hedgehog') P.blob(ctx, side ? -12 : 0, 4, 1.8, 1.4, '#3a2a2a');
       else if (a.species === 'rabbit') P.blob(ctx, side ? -10 : 0, 3.6, 1.4, 1, '#ff8fa8');
       else if (a.species === 'penguin') { ctx.fillStyle = '#ffb04a'; ctx.strokeStyle = LINE; ctx.lineWidth = 1; ctx.beginPath(); const bx = side ? -10 : 0; ctx.moveTo(bx - 3, 4); ctx.lineTo(bx + 3, 4); ctx.lineTo(bx, 7.5); ctx.closePath(); ctx.fill(); ctx.stroke(); }
-      else if (a.species === 'squirrel') P.blob(ctx, side ? -10 : 0, 3.6, 1.6, 1.2, '#7a4a2a');
+      else if (a.species === 'squirrel' || a.species === 'bear' || a.species === 'fox') P.blob(ctx, side ? -10 : 0, 3.6, a.species === 'bear' ? 2.2 : 1.6, a.species === 'bear' ? 1.6 : 1.2, '#5a3a2a');
+      else if (a.species === 'hamster' || a.species === 'sheep') P.blob(ctx, side ? -10 : 0, 3.6, 1.3, 1, '#ff8fa8');
       else if (a.species === 'otter' || a.species === 'cat') {
         P.blob(ctx, side ? -10 : 0, 3.6, 1.7, 1.2, a.species === 'cat' ? '#ff8fa8' : '#4a3a35');
         ctx.strokeStyle = 'rgba(91,70,54,0.6)'; ctx.lineWidth = 0.8; ctx.beginPath();
@@ -372,6 +386,8 @@
       else if (key === 'urchin_shell') { P.blob(g, 16, 18, 10, 8, sh.col, LINE, 1.4); for (let k = 0; k < 8; k++) P.blob(g, 16 + Math.cos(k) * 6, 18 + Math.sin(k) * 4.5, 1, 1, '#fff'); }
       else if (key === 'pearl_oyster') { P.blob(g, 16, 19, 11, 7, '#bfb6d6', LINE, 1.4); P.blob(g, 16, 16, 4.5, 4.5, sh.col, LINE, 1); P.blob(g, 14.6, 14.6, 1.4, 1.4, '#fff'); }
       else { g.fillStyle = sh.col; g.strokeStyle = LINE; g.lineWidth = 1.4; g.beginPath(); g.moveTo(16, 27); g.lineTo(5, 15); g.quadraticCurveTo(16, 2, 27, 15); g.closePath(); g.fill(); g.stroke(); g.beginPath(); for (let k = -2; k <= 2; k++) { g.moveTo(16, 26); g.lineTo(16 + k * 4.5, 9 + Math.abs(k) * 2); } g.strokeStyle = 'rgba(150,100,70,0.5)'; g.stroke(); }
+    } else if (id === 'letter_noaddr') {
+      P.rrect(g, 4, 9, 24, 16, 2, '#f3ecdf', LINE, 1.4); g.strokeStyle = '#c9b89a'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(4, 9); g.lineTo(16, 19); g.lineTo(28, 9); g.stroke(); P.blob(g, 16, 20, 2.6, 2.6, '#f08a3c'); P.blob(g, 23, 13, 2, 1.2, 'rgba(240,138,60,0.6)');
     } else if (id === 'parcel') {
       P.rrect(g, 5, 9, 22, 18, 3, '#d9a877', LINE, 1.4); g.fillStyle = '#ff8a7a'; g.fillRect(14, 9, 4, 18); g.fillRect(5, 16, 22, 4); P.blob(g, 16, 8, 4, 2.5, '#ff8a7a', LINE, 1);
     } else if (id === 'wood') {

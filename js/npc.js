@@ -16,12 +16,18 @@
     // moveIn: 이사 후 며칠째에 입주하는가 (r2-재미 §3-2: 쫑알 D2, 단추 D3)
     jjongal: { name: '쫑알', species: 'squirrel', pers: '수다', catch: '도토독', bday: '10-05', plot: 'house4', look: { scarf: '#ffd24d' }, heart: '#e09a56', moveIn: 1,
       sched: [[7, 11, 'plaza'], [11, 15, 'oak'], [15, 19, 'river'], [19, 22, 'plaza']], tool: null },
+    hotteok: { name: '호떡', species: 'bear', pers: '씩씩', catch: '후끈', bday: '01-09', plot: 'house6', look: { scarf: '#ff8a7a' }, heart: '#c08a5e', moveIn: 3,
+      sched: [[5, 9, 'beach'], [9, 13, 'plaza'], [13, 17, 'river'], [17, 21, 'plaza']], tool: null },
+    mungchi: { name: '뭉치', species: 'hamster', pers: '뒹굴', catch: '말랑', bday: '11-11', plot: 'house7', look: { scarf: '#b8e68f' }, heart: '#ffd7a0', moveIn: 5,
+      sched: [[10, 13, 'home'], [13, 16, 'oak'], [16, 19, 'plaza'], [19, 21, 'home']], tool: null },
+    mongsil: { name: '몽실', species: 'sheep', pers: '꿈꾸미', catch: '포슬', bday: '04-17', plot: 'house8', look: { scarf: '#c9b3ff' }, heart: '#c9b3ff', moveIn: 7,
+      sched: [[7, 10, 'oak'], [10, 14, 'pond'], [14, 18, 'plaza'], [18, 23, 'oak']], tool: null },
     danchu: { name: '단추', species: 'penguin', pers: '꼼꼼', catch: '단정', bday: '06-02', plot: 'house5', look: { bow: '#ff6b6b' }, heart: '#46546a', moveIn: 2,
       sched: [[6, 9, 'home'], [9, 13, 'plaza'], [13, 17, 'beach'], [17, 21, 'home']], tool: null },
   };
   const LV = [0, 5, 15, 35, 70]; // 하트 1~4 문턱
   const defSt = () => {
-    const o = { bori: { seen: 0 } };
+    const o = { bori: { seen: 0 }, fox: { seen: 0, goneDay: -1, letter: false, talks: 0 } };
     for (const id of Object.keys(VILLAGERS)) o[id] = { fs: 0, met: false, toolDay: -1, seen: 0, greetDay: -1, lvl: 0 };
     return o;
   };
@@ -45,6 +51,9 @@
       list.push(mk('tosil', '토실', 'mole', { ribbon: '#ffb3cf', apron: '#e8f6ff' }, (sd.x + 2.8) * TILE, (sd.y + 2.25) * TILE, { static: true, behind: true }));
       const bp = door('post', 1.4, 0.4);
       list.push(mk('bori', '보리 할멈', 'hedgehog', {}, bp.x, bp.y, { static: true }));
+      // 밤 손님 단풍(여우): 22시~4시, 나무 다리 위. 등불 1 전에는 다가가면 사라진다
+      const br = m.bridges.find((b) => b.kind === 'bridge') || m.bridges[0];
+      if (br) list.push(mk('danpung', '단풍', 'fox', {}, br.x * TILE + 16, br.y * TILE + 20, { static: true, visFn: () => { const h = G.time.hour(); return (h >= 22 || h < 4) && st.fox.goneDay !== G.time.day(); } }));
       if (pl.museum2) { const mp = door('museum2', 1.4, 0.4); list.push(mk('slowpoke', '느림보 박사', 'tortoise', {}, mp.x, mp.y, { static: true, visFn: () => G.museum.isOpen() })); }
       const spots = findSpots(m);
       for (const [id, v] of Object.entries(VILLAGERS)) {
@@ -77,6 +86,7 @@
         const act = N.activity(n);
         n.vis = n.visFn ? n.visFn() : !(act && act.act === 'sleep') && (!n.villager || N.isResident(n.id));
         if (!n.vis) continue;
+        if (n.id === 'danpung') { N.foxUpdate(n, p, dt); continue; }
         // 플레이어가 1.5타일 안: 바라보기, 3초 머물면 감정 팝 + 깡충
         if (d < TILE * 1.6) {
           if (n.near === 0) G.art.actor.forceBlink(n, t);
@@ -120,6 +130,27 @@
         }
       }
     },
+    // 단풍: 1단계(등불 0) — 3타일 안에 들어오면 스르르 사라진다 / 2단계(등불 1+) — 말을 건다
+    foxUpdate(n, p, dt) {
+      const d = u.dist(n.x, n.y, p.x, p.y);
+      if (!st.fox.seen) { if (d < TILE * 8) { st.fox.seen = G.time.day(); G.emit('fox:seen', {}); G.save.mark('fox'); } }
+      if (G.lantern.count() < 1 && d < TILE * 3 && !n.fading) { n.fading = 1; G.audio.sfx('chime'); }
+      if (n.fading) { n.alpha = Math.max(0, (n.alpha === undefined ? 1 : n.alpha) - dt * 1.2); if (n.alpha <= 0) { st.fox.goneDay = G.time.day(); n.fading = 0; n.alpha = 1; G.ui.toast('…여우는 바람처럼 사라졌어요.', { icon: '🍂', ms: 2600 }); G.save.mark('fox'); } }
+      n.dir = d < TILE * 6 ? faceDir(p.x - n.x, p.y - n.y) : 0;
+    },
+    async foxTalk(n) {
+      if (G.lantern.count() < 1) return;
+      const say = (t) => ({ who: 'danpung', text: t });
+      if (!st.fox.letter) {
+        await G.ui.say([say('…불이 켜졌구나. 그래서 네가 보이는 거야.'), say('나는 단풍. 길 잃은 편지를 들고 다니는 여우야.'), say('이 편지… 주소가 없어. 받는 이도, 보내는 이도. 그래도 누군가에게 꼭 닿아야 해.'), say('우편지기, 네가 들고 있어 줄래? 등불이 하나씩 켜질 때마다… 주소가 조금씩 보일 거야.')]);
+        if (G.inv.add('letter_noaddr', 1) === 0) { st.fox.letter = true; G.ui.itemPop('letter_noaddr', null, '주소 없는 편지를 받았다…'); G.audio.sfx('rare'); }
+        else G.ui.toast('가방이 꽉 차 있어요. 칸을 비우고 다시 와요.', { icon: '🎒' });
+        G.save.mark('fox'); return;
+      }
+      const L = ['봉투 끝에 아주 희미하게… 「큰」이라는 글자가 보여. 다음 등불이 켜지면 더 보일 거야.', '밤바람이 차지? 큰솜이도 이 바람을 느끼고 있을 거야.', '너는 매일 편지를 나르지. 그 소리를… 누군가 듣고 있어.'];
+      await G.ui.say([say(L[(st.fox.talks++ || 0) % L.length])]);
+      G.save.mark('fox');
+    },
     pop(n, kind) { n.emote = kind; n.emoteT = 0; n.hopT = 0.35; G.audio.sfx('pop'); },
     near(x, y, r) {
       let best = null, bd = r;
@@ -142,6 +173,7 @@
         if (n.id === 'todak' || n.id === 'tosil') { await G.game.openShop(); return; }
         if (n.id === 'bori') { await N.boriTalk(); return; }
         if (n.id === 'slowpoke') { await G.museum.talk(); return; }
+        if (n.id === 'danpung') { await N.foxTalk(n); return; }
         if (VILLAGERS[n.id]) { await N.villagerTalk(n); return; }
       } finally { n.talking = false; }
     },
@@ -344,6 +376,60 @@
   add('danchu', 'net', ['잠자리채군요. 잡으신 곤충은 이름과 크기를 꼭 기록해 두세요. …도감이 해 준다고요? 편리하네요.']);
   add('danchu', 'rod', ['낚싯대를 드셨군요. 오늘 첫 캐스팅 시각을 여쭤봐도 될까요?']);
   add('danchu', 'hearts', ['{name} 님이 오신 날은 기록부에 별표를 칩니다. …요즘은 별표가 많아졌어요. 단정.']);
+  // 호떡 (곰, 씩씩, 입버릇 "후끈")
+  add('hotteok', 'first', ['오! 새 얼굴! 나는 호떡! 운동이 취미고 특기는 운동이야! 후끈!', '겨울인데 반팔이냐고? 근육이 목도리야! …그래도 목도리는 세 개 했어.']);
+  add('hotteok', 'greet_morning', ['좋은 아침! 해변 열 바퀴 돌고 왔어! 너도 같이 뛸래? 후끈!', '아침 공기 최고! 폐가 웃고 있어!']);
+  add('hotteok', 'greet_day', ['{name}! 팔씨름 한 판? …농담이야. 반은 진심이야!', '오늘 목표: 광장 나무까지 왕복 백 번! 지금 마흔 번째!']);
+  add('hotteok', 'greet_evening', ['저녁 스트레칭 시간! 하나, 둘! …어, 등에서 소리 났다.', '노을이 꼭 호떡 색이야. 배고파졌어. 후끈.']);
+  add('hotteok', 'greet_night', ['밤엔 근육도 쉬어야 해. 근데 나는 잠이 안 와…. 팔굽혀펴기 하면 잠이 와!', '쉿, 다들 자. 나는 조용히 플랭크 중이야.']);
+  add('hotteok', 'chat', [
+    '뭉치한테 가만히 있기 대결에서 졌어. 그건 운동이 아니라 재능이야.',
+    '플랭크 하다가 잠들었는데 일어나 보니 아침이었어. 기록 경신이야!',
+    '단추가 내 운동 기록을 적어 줘. 근데 맨날 「예상 밖의 일」 칸에 적어.',
+    '토요일마다 운동회를 열고 싶어. 종목은 달리기, 줄다리기, 그리고 낮잠(뭉치 전용).',
+    '딸랑이랑 달리기 하면 방울 소리 때문에 박자가 맞아. 신기해!',
+    '근육은 배신하지 않아. 근데 계단은 가끔 배신해.',
+    '라임이 「덥다」고 나한테서 멀리 앉았어. 내가 따뜻한 건 장점이야!',
+  ]);
+  add('hotteok', 'net', ['잠자리채 휘두르기! 그것도 운동이야! 팔 근육에 좋아!']);
+  add('hotteok', 'rod', ['낚시는 기다림의 운동이야. 나한테 제일 어려운 종목이지!']);
+  add('hotteok', 'hearts', ['{name}은 내 운동 친구 1호야! 같이 뛰어 주는 거 아니어도, 응원만 해 줘도 1호야! 후끈!']);
+  // 뭉치 (햄스터, 뒹굴, 입버릇 "말랑")
+  add('mungchi', 'first', ['으음… 안녕… 나는 뭉치야…. 이사는 힘들었어… 그래서 눕는 중이야… 말랑.', '볼에 해바라기씨 있는데… 하나 줄까…? 따뜻해….']);
+  add('mungchi', 'greet_morning', ['아침이야…? 벌써…? 조금만 더…. 말랑….', '일어났어. 장하지? 다시 누워도 돼?']);
+  add('mungchi', 'greet_day', ['{name}… 오늘 날씨 누워 있기 딱 좋아….', '안녕… 나 지금 아주 바빠…. 쉬느라고….']);
+  add('mungchi', 'greet_evening', ['저녁이네… 하루 종일 누워 있었더니 하루가 빨리 갔어…. 이득이야.', '노을 보면서 누워 있으면… 노을이 나를 덮어 주는 기분이야….']);
+  add('mungchi', 'greet_night', ['쿨… 아, 깼어…. 왜…? 아, 너구나… 말랑….', '밤이 제일 좋아…. 누워 있어도 아무도 뭐라 안 해….']);
+  add('mungchi', 'chat', [
+    '호떡이랑 가만히 있기 대결했어…. 내가 이겼어…. 사실 자고 있었어….',
+    '볼 주머니 청소해야 하는데… 볼에서 편지가 세 통 나왔어…. 다 내 거 아니야….',
+    '세상에서 제일 푹신한 곳을 찾고 있어…. 지금 후보는 콩알이야…. 미안 콩알….',
+    '운동회에서 「누워 있기」 종목 만들면 금메달은 내 거야….',
+    '해바라기씨 하나 줄까…? 따뜻해…. 볼에서 나와서….',
+    '느림보 박사님이랑 있으면 마음이 편해…. 둘 다 천천히 말하니까….',
+    '오늘 목표는… 목표 정하기야…. 내일 할게….',
+  ]);
+  add('mungchi', 'net', ['잠자리채… 그거 해먹으로 써도 돼…? 안 돼…? 말랑….']);
+  add('mungchi', 'rod', ['낚시는 좋아… 앉아서 기다리는 거잖아…. 나 그거 잘해….']);
+  add('mungchi', 'hearts', ['{name} 옆에 있으면… 바닥이 더 푹신한 것 같아…. 고마워… 말랑.']);
+  // 몽실 (양, 꿈꾸미, 입버릇 "포슬")
+  add('mongsil', 'first', ['안녕! 구름을 보고 이 마을로 정했어. 저 구름이 「여기야」 하는 모양이었거든! 포슬.', '나는 몽실! 구름 예보를 해. 아직 한 번도 안 맞았지만, 그래서 더 설레!']);
+  add('mongsil', 'greet_morning', ['오늘의 구름 예보! 오후에 토끼 모양 구름이 올 거야! …아마 강아지 모양일 거야.', '좋은 아침! 하늘이 오늘 무슨 꿈을 꿨는지 알 것 같아. 솜사탕 꿈이야!']);
+  add('mongsil', 'greet_day', ['{name}! 저 구름 봐, 너 닮았어! …지금 사라졌어.', '오늘은 구름이 느긋해. 큰솜이가 깊이 자는 날인가 봐. 포슬.']);
+  add('mongsil', 'greet_evening', ['노을 구름은 분홍 털실 같아. 떠서 목도리 만들고 싶어.', '저녁 구름이 집으로 돌아가는 중이야. 구름도 집이 있을까?']);
+  add('mongsil', 'greet_night', ['밤에는 구름 대신 별을 봐. 별은 예보가 잘 맞아. 늘 거기 있으니까.', '쉿… 큰솜이 숨소리 들려? 땅이 아주 천천히 올라갔다 내려가.']);
+  add('mongsil', 'chat', [
+    '구름 예보 연속 오답 기록 갱신 중이야. 쫑알이 신문에 매일 실어 줘. 고마워…?',
+    '구름을 병에 담아 보고 싶어. 담으면 램프가 될 것 같아.',
+    '큰솜이 등 위에 살면 꿈이 잘 꿔진대. 나는 매일 구름 꿈만 꿔. 당연한가?',
+    '라임네 꽃밭 위 구름은 늘 하트 모양이야. 아무도 안 믿어 줘.',
+    '등불이 켜질 때마다 큰솜이가 꿈을 하나씩 꾼대. 보리 할멈이 그랬어.',
+    '내 털이 비 오기 전에 더 포슬포슬해져. 그건 잘 맞아!',
+    '콩알도 구름이지? …아니라고? 나는 구름이라고 믿을래. 포슬.',
+  ]);
+  add('mongsil', 'net', ['잠자리채로 구름을 잡을 수 있을까? 해 보면 알려 줘!']);
+  add('mongsil', 'rod', ['낚싯대를 하늘로 던지면 구름이 잡힐까? …물에다 던지는 거구나.']);
+  add('mongsil', 'hearts', ['{name}이 오는 날은 예보가 필요 없어. 무조건 맑음이니까. 포슬.']);
   G.data.add('lines', T);
 
   G.modules.add('npc');

@@ -136,6 +136,7 @@
     const o = objAhead();
     if (o) {
       if (o.kind === 'tree' || o.kind === 'fruit' || o.kind === 'pine' || o.kind === 'bigoak') return { kind: 'shake', ref: o, icon: '🌳', label: '흔들기', name: o.kind === 'bigoak' ? '할아버지 참나무' : '나무' };
+      if (o.kind === 'lantern') return { kind: 'lantern', ref: o, icon: '🏮', label: G.lantern.ready(o.n) ? '불 켜기' : '살펴보기', name: `${o.n}번 등불 기둥` };
       if (o.kind === 'museum') return { kind: 'museum', ref: o, icon: '🦴', label: G.museum.isOpen() ? '들어가기' : '살펴보기', name: '조약돌 박물관' };
       if (o.kind === 'signboard') return { kind: 'read', ref: o, icon: '📜', label: '읽기', name: '표지판' };
       if (o.kind === 'board') return { kind: 'board', ref: o, icon: '📌', label: '보기', name: '게시판' };
@@ -258,6 +259,7 @@
         break;
       }
       case 'read': await G.ui.say([{ who: 'sys', text: G.museum.isOpen() ? '「조약돌 박물관」 — 화석 감정은 무료! 기증은 언제나 환영이래요.' : '「조약돌 박물관 — 내일 개관」 느림보 박사가 오는 중이래요. 조금 느려서….' }]); break;
+      case 'lantern': await G.lantern.interact(tg.ref); break;
       case 'museum': if (G.museum.isOpen()) await G.museum.talk(); else await G.ui.say([{ who: 'sys', text: '천막 입구에 「내일 아침 개관!」이라고 적혀 있어요. 박사님은 아직 오는 중인가 봐요.' }]); break;
       case 'board': {
         if (G.news.available()) { await G.news.open(); break; }
@@ -424,7 +426,7 @@
     R.length = 0;
     collectObjects(rect, t);
     G.eco.collect(R, rect, t);
-    for (const n of G.npc.list) if (n.vis && n.x > rect.x - 60 && n.x < rect.x + rect.w + 60) R.push({ sy: n.y, draw: (c) => A.actor.draw(c, n, t) });
+    for (const n of G.npc.list) if (n.vis && n.x > rect.x - 60 && n.x < rect.x + rect.w + 60) R.push({ sy: n.y, draw: (c) => { if (n.alpha !== undefined && n.alpha < 1) { c.globalAlpha = n.alpha; A.actor.draw(c, n, t); c.globalAlpha = 1; } else A.actor.draw(c, n, t); } });
     R.push({ sy: pl.y, draw: (c) => drawPlayer(c, t) });
     for (const d of GM.drops) R.push({ sy: d.y, draw: (c) => drawDrop(c, d, t) });
     R.sort((a, b) => a.sy - b.sy);
@@ -499,6 +501,9 @@
       } else if (k === 'post' || k === 'tent' || k === 'house') {
         const sp = A.building(k === 'tent' ? ['tent', 'cabin', 'smallhouse'][G.nest.st.stage] || 'tent' : k, A.season, night);
         R.push({ sy: foot - (k === 'stall' ? 30 : 2), draw: (c) => c.drawImage(sp, bx - 16, by - 44, 160, 140) });
+      } else if (k === 'lantern') {
+        const sp = A.prop(o.n <= G.lantern.count() ? 'lantern_lit' : 'lantern', A.season, night);
+        R.push({ sy: foot - 4, draw: (c) => drawShaky(c, sp, bx + 16, foot - 4, -32, -76, o, 64, 80, 0.04) });
       } else if (k === 'lamp' || k === 'bench' || k === 'mailbox' || k === 'board' || k === 'signboard') {
         const sp = A.prop(k === 'mailbox' && G.mail.unread() ? 'mailbox_full' : k, A.season, night);
         R.push({ sy: foot - 4, draw: (c) => drawShaky(c, sp, bx + 16 + (k === 'bench' || k === 'board' ? 16 : 0), foot - 4, -32, -76, o, 64, 80, 0.04) });
@@ -594,6 +599,7 @@
     const a = Math.min(1, (dark - 0.25) * 2.5);
     for (const o of m.objs) {
       if (o.kind === 'lamp') put(o.tx * TILE + 16, o.ty * TILE - 22, 70, 'rgba(255,214,140,0.55)', a * (0.92 + Math.sin(t * 3 + o.i) * 0.04));
+      else if (o.kind === 'lantern' && o.n <= G.lantern.count()) put(o.tx * TILE + 16, o.ty * TILE - 26, 90, 'rgba(255,226,140,0.6)', a * (0.9 + Math.sin(t * 2 + o.n) * 0.08));
       else if (o.kind === 'house' || o.kind === 'post') { put(o.tx * TILE + 30, o.ty * TILE + 24, 34, 'rgba(255,220,150,0.5)', a); put(o.tx * TILE + 98, o.ty * TILE + 24, 34, 'rgba(255,220,150,0.5)', a); }
       else if (o.kind === 'tent') put(o.tx * TILE + 48, o.ty * TILE + 40, 40, 'rgba(255,210,140,0.4)', a);
     }

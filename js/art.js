@@ -474,6 +474,16 @@
       P.rrect(g, ox + 2, oy - 22, 60, 30, 4, C.wood, C.line, 1.5);
       P.rrect(g, ox + 8, oy - 17, 16, 14, 2, '#fffaf0'); P.rrect(g, ox + 28, oy - 18, 14, 18, 2, '#ffe9f1'); P.rrect(g, ox + 46, oy - 16, 12, 12, 2, '#eaf6ff');
       if (season === 'winter') P.blob(g, ox + 32, oy - 22, 26, 3, '#ffffff');
+    } else if (kind === 'lantern' || kind === 'lantern_lit') {
+      // 등불 기둥: 돌 받침 + 둥근 갓. 켜지면 노란 불
+      P.shadow(g, ox + 16, oy + 28, 22);
+      P.rrect(g, ox + 8, oy + 18, 16, 10, 4, '#c9d3da', C.line, 1.3);
+      P.rrect(g, ox + 12, oy - 18, 8, 38, 3, '#8a7a9a', C.line, 1.3);
+      P.blob(g, ox + 16, oy - 26, 11, 10, kind === 'lantern_lit' ? '#ffe28a' : '#e9e2f0', C.line, 1.5);
+      if (kind === 'lantern_lit') { P.blob(g, ox + 13, oy - 29, 4, 3, '#fff7cf'); }
+      else { g.strokeStyle = 'rgba(91,70,54,0.35)'; g.lineWidth = 1; g.beginPath(); g.moveTo(ox + 10, oy - 26); g.lineTo(ox + 22, oy - 26); g.stroke(); }
+      P.rrect(g, ox + 8, oy - 38, 16, 6, 3, '#8a7a9a', C.line, 1.3);
+      if (season === 'winter') P.blob(g, ox + 16, oy - 39, 9, 3, '#ffffff');
     } else if (kind === 'signboard') {
       P.shadow(g, ox + 16, oy + 28, 22);
       g.fillStyle = C.woodD; g.fillRect(ox + 14, oy + 2, 4, 26);

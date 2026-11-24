@@ -15,6 +15,9 @@
     sogeum: { ask: '연구에 {what} 필요하다. 협조 바란다. 퐁당.', thanks: '협조 감사. 연구 진척도 1% 상승. 퐁당.', wait: '{what}. 급하지 않다. 물고기들도 기다려 준다.' },
     lime: { ask: '…혹시 {what} 있으면 줘. 꼭 필요한 건 아니야. 흥칫.', thanks: '…고마워. 진짜로. 다시 말 안 해.', wait: '{what}? 아직이면 됐어. …기다리는 거 아니야.' },
     jjongal: { ask: '특종이야, 특종! 취재에 {what} 필요해! 도토독!', thanks: '고마워! 내일 신문 3면에 실어 줄게! 이름은 크게!', wait: '{what} 구하는 중이지? 그것도 기사감이야!' },
+    hotteok: { ask: '{what}! 운동하다 생각났어! 구해 줄 수 있어? 후끈!', thanks: '최고야! 하이파이브! …살살 칠게!', wait: '{what} 찾는 중이지? 걸으면서 찾으면 운동도 돼!' },
+    mungchi: { ask: '저기… {what}… 있으면… 줄래…? 말랑….', thanks: '고마워…. 오늘 할 일 다 했다…. 누워야지….', wait: '{what}…? 천천히 해…. 나도 천천히 기다릴게….' },
+    mongsil: { ask: '구름 예보에 {what}가 나왔어! 구해 줄 수 있어? 포슬.', thanks: '예보 적중! …처음이야! 고마워!', wait: '{what}… 구름이 아직 모른대. 괜찮아!' },
     danchu: { ask: '실례지만 {what} 부탁드려도 될까요? 기록에 필요해서요. 단정.', thanks: '감사합니다. 「오늘의 고마운 일」 칸에 적어 두겠습니다.', wait: '{what}는 아직이시군요. 기록은 기다릴 수 있답니다.' },
   };
 
@@ -115,7 +118,7 @@
       return true;
     },
     async complete(r, quiet) {
-      r.state = 'done';
+      r.state = 'done'; st.doneCount = (st.doneCount || 0) + 1;
       G.wallet.add(r.reward, 'request'); G.audio.sfx('coin');
       G.npc.addFs(r.who, 3, 'request');
       G.ui.toast(`부탁 완료! +${G.fmt.money(r.reward)}`, { icon: '📝' });
