@@ -91,7 +91,8 @@
     const it = G.items.get(id);
     gainCount[id] = (gainCount[id] || 0) + 1;
     const short = gainCount[id] >= 10 && !(x && (x.newSp || x.v));
-    if (!opt.keepTool) {
+    // 도구(낚싯대·잠자리채·삽·도끼)를 든 채 얻으면 손에 들어 보이는 동작을 생략한다 — 매번 맨손으로 바뀌어 보여 귀찮다(오너 피드백)
+    if (!opt.keepTool && pl.tool === 'hand') {
       pl.hold = { id, x }; pl.holdT = short ? 0.4 : 1.2; pl.busy = Math.max(pl.busy, short ? 0.35 : 0.9);
     }
     pl.dir = 0;
