@@ -197,7 +197,7 @@
     const body = $('div', 'sheet-body'); card.append(body);
     modalEl.append(card); modalEl.classList.remove('hidden');
     G.audio.sfx('open');
-    const close = (r) => { modalEl.classList.add('hidden'); modalEl.innerHTML = ''; G.input.unlock('modal'); UI.open = null; G.audio.sfx('close'); resolve(r); };
+    const close = (r) => { if (UI._previewStop) { UI._previewStop(); UI._previewStop = null; } modalEl.classList.add('hidden'); modalEl.innerHTML = ''; G.input.unlock('modal'); UI.open = null; G.audio.sfx('close'); resolve(r); };
     UI.open = { close, body, card, head };
     // 배경을 '직접 눌렀다 뗄 때'만 닫는다 (창을 연 탭의 뒤따르는 클릭이 배경에 떨어져 바로 닫히던 문제)
     const openedAt = performance.now(); let downOnBg = false;
@@ -301,17 +301,90 @@
   // 잎첩: 탭 4개
   UI.notebook = (tab = 'bag') => UI.modal('잎첩', (body, close, card) => {
     const tabs = $('div', 'tabs');
-    const TABS = [['bag', '🎒 가방'], ['dex', '📖 도감'], ['folk', '🐾 이웃'], ['todo', '✅ 할 일'], ['set', '⚙️ 설정']];
+    const TABS = [['bag', '🎒 가방'], ['me', '🪞 나'], ['dex', '📖 도감'], ['folk', '🐾 이웃'], ['todo', '✅ 할 일'], ['set', '⚙️ 설정']];
     const pane = $('div', 'pane');
     const show = (id) => {
       tab = id; tabs.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.t === id));
       pane.innerHTML = '';
-      ({ bag: bagPane, dex: dexPane, folk: folkPane, todo: todoPane, set: setPane })[id](pane, close);
+      if (UI._previewStop) { UI._previewStop(); UI._previewStop = null; }
+      ({ bag: bagPane, me: mePane, dex: dexPane, folk: folkPane, todo: todoPane, set: setPane })[id](pane, close);
     };
     for (const [id, nm] of TABS) { const b = $('button', 'tab', nm); b.dataset.t = id; b.onclick = () => { G.audio.sfx('tap'); show(id); }; tabs.append(b); }
     body.append(tabs, pane); show(tab);
     if (Date.now() - (G.settings.get('lastExport') || 0) > 7 * 864e5 && G.time.st.playDays > 1) tabs.querySelector('[data-t=set]').classList.add('badge');
   }, { wide: true });
+
+  // ---------- 꾸미기 (오너 요청: 이름·모습 언제든, 스타일 다양하게) ----------
+  // 움직이는 미리보기 캔버스. stop()으로 멈춘다
+  UI.lookPreview = (look, size = 180) => {
+    const cv = $('canvas', 'cpreview'); cv.width = size * 1.1; cv.height = size * 1.1; cv.style.width = size + 'px'; cv.style.height = size + 'px';
+    const g = cv.getContext('2d'), W = cv.width, actor = { species: 'human', look, x: 0, y: 0, dir: 0, tool: 'hand', seed: 0 };
+    let raf = 0, pose = 0, turn = 0; const t0 = performance.now();
+    const loop = () => {
+      const t = (performance.now() - t0) / 1000;
+      g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, W, W);
+      g.fillStyle = '#fff6e6'; g.beginPath(); g.arc(W / 2, W * 0.55, W * 0.44, 0, 6.3); g.fill();
+      pose = Math.max(0, pose - 1 / 60); actor.hop = pose > 0 ? Math.sin((1 - pose / 0.35) * Math.PI) * 6 : 0;
+      actor.dir = turn > 0 ? [0, 3, 2, 1][Math.floor(t * 1.6) % 4] : 0; turn = Math.max(0, turn - 1 / 60);
+      const k = W / 76; g.setTransform(k, 0, 0, k, W / 2, W * 0.91);
+      G.art.actor.draw(g, actor, t);
+      raf = requestAnimationFrame(loop);
+    };
+    loop();
+    return { el: cv, poke() { pose = 0.35; }, spin() { turn = 2.6; }, stop() { cancelAnimationFrame(raf); } };
+  };
+  // 항목 고르기 편집기: 분류 탭(얼굴·머리·옷·소품) + 항목마다 칩(색은 동그라미, 모양은 이름)
+  UI.lookEditor = (look, onChange) => {
+    const L = G.art.LOOK, wrap = $('div', 'looked'), cats = $('div', 'subtabs'), box = $('div', 'lookparts');
+    let cat = 'hair';
+    const render = () => {
+      cats.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.c === cat));
+      box.innerHTML = '';
+      for (const pt of L.PARTS.filter((x) => x.cat === cat)) {
+        const row = $('div', 'lookpart'); row.append($('b', null, pt.name));
+        const chips = $('div', 'chips');
+        const n = L.count(pt);
+        for (let i = 0; i < n; i++) {
+          const cur = (look[pt.k] === undefined ? (L.def()[pt.k] || 0) : look[pt.k]) === i;
+          const c = $('button', 'chip' + (pt.colors ? ' sw' : '') + (cur ? ' on' : ''), pt.colors ? '' : esc(pt.names[i]));
+          if (pt.colors) { c.style.background = pt.colors[i]; c.setAttribute('aria-label', pt.name + ' ' + (i + 1)); }
+          c.onclick = () => { look[pt.k] = i; G.audio.sfx('pop'); onChange && onChange(pt.k); render(); };
+          chips.append(c);
+        }
+        row.append(chips); box.append(row);
+      }
+    };
+    for (const [id, nm] of L.CATS) { const b = $('button', 'tab', nm); b.dataset.c = id; b.onclick = () => { G.audio.sfx('tap'); cat = id; render(); }; cats.append(b); }
+    const rnd = $('button', 'tab', '🎲 랜덤'); rnd.onclick = () => { Object.assign(look, L.random()); G.audio.sfx('pop'); onChange && onChange('*'); render(); }; cats.append(rnd);
+    wrap.append(cats, box); render();
+    return wrap;
+  };
+  // 잎첩 '나' 탭: 이름·마을 이름·모습을 언제든 무료로 바꾼다
+  function mePane(pane) {
+    const pl = G.player, look = Object.assign(G.art.LOOK.def(), pl.look || {});
+    const pv = UI.lookPreview(look, 150); UI._previewStop = pv.stop;
+    const top = $('div', 'mebox'), info = $('div', 'meinfo');
+    const nameIn = $('input'); nameIn.maxLength = 8; nameIn.value = pl.name || ''; nameIn.placeholder = '이름 (최대 8자)';
+    const townIn = $('input'); townIn.maxLength = 8; townIn.value = pl.town || ''; townIn.placeholder = '마을 이름 (최대 8자)';
+    const spin = $('button', 'btn ghost', '🔄'); spin.onclick = () => pv.spin(); spin.title = '돌려 보기';
+    info.append($('label', 'muted small', '내 이름'), nameIn, $('label', 'muted small', '마을 이름'), townIn);
+    top.append(pv.el, info);
+    const ed = UI.lookEditor(look, () => pv.poke());
+    const save = $('button', 'btn', '저장 ✨');
+    save.onclick = () => {
+      const name = nameIn.value.trim(), town = townIn.value.trim();
+      if (!name) { nameIn.focus(); nameIn.classList.add('shake'); setTimeout(() => nameIn.classList.remove('shake'), 400); G.audio.sfx('error'); return; }
+      const renamed = name !== pl.name;
+      pl.look = Object.assign({}, look); pl.name = name; pl.town = town || pl.town || '몽글숲';
+      G.save.mark('look'); G.save.now('look'); G.emit('player:look', {});
+      G.audio.sfx('chime'); UI.toast(renamed ? `이제 「${name}」(이)라고 불러 줄게요!` : '새 모습 멋져요!', { icon: '🪞' });
+      if (G.game && G.game.pl) G.game.pl.squash = 0.12;
+    };
+    const row2 = $('div', 'row'); row2.append(spin, save); info.append(row2);
+    // 미리보기 + 분류 탭은 스크롤해도 위에 붙어 있게
+    const stick = $('div', 'mestick'); stick.append(top, ed.firstChild);
+    pane.append(stick, ed, $('div', 'muted small', '언제든 다시 바꿀 수 있어요. 돈은 들지 않아요.'));
+  }
 
   function bagPane(pane) {
     const info = $('div', 'slot-info', '<span class="muted">칸을 누르면 자세히 볼 수 있어요.</span>');

@@ -4,10 +4,32 @@
   const A = G.art, P = A.paint, C = A.C;
   const LINE = C.line;
 
-  const SKIN = ['#ffe3cf', '#f9d2b4', '#eebd96', '#d79f76', '#b7805a', '#8d5f40', '#fff0e6', '#f5c6b0'];
-  const HAIRC = ['#5b3b2a', '#2f2a2a', '#c98a4a', '#f2cf73', '#ff9ab8', '#8fb4ff', '#9bdc9a', '#c9a0ff', '#e86e5a', '#ffffff', '#7a5a9a', '#3d6b8f'];
-  const SHIRT = ['#8fd3ff', '#ffb3c7', '#b8e68f', '#ffd98a', '#c9b3ff', '#ffffff', '#ff9f80', '#7fdcc4'];
-  A.LOOK = { SKIN, HAIRC, SHIRT, HAIRS: 4 };
+  const SKIN = ['#ffe3cf', '#f9d2b4', '#eebd96', '#d79f76', '#b7805a', '#8d5f40', '#fff0e6', '#f5c6b0', '#ffd6c0', '#e0a982', '#6f4630', '#c58c6a'];
+  const HAIRC = ['#5b3b2a', '#2f2a2a', '#c98a4a', '#f2cf73', '#ff9ab8', '#8fb4ff', '#9bdc9a', '#c9a0ff', '#e86e5a', '#ffffff', '#7a5a9a', '#3d6b8f', '#a0522d', '#ffd1dc', '#ffa94d', '#5fd3c4', '#b0b8c8', '#ffe14d'];
+  const SHIRT = ['#8fd3ff', '#ffb3c7', '#b8e68f', '#ffd98a', '#c9b3ff', '#ffffff', '#ff9f80', '#7fdcc4', '#ff6b6b', '#4d96ff', '#ffd24d', '#6bcb77', '#9d7bd8', '#ff8fd0', '#8a6a55', '#46546a', '#ff9a3a', '#a0e7e5'];
+  const SHOES = ['#7a5a4a', '#ff6b6b', '#4d96ff', '#ffffff', '#2f2a2a', '#ffd24d', '#ff8fd0', '#6bcb77'];
+  // 꾸미기 항목 (오너 요청 2026-11: 언제든 바꾸고, 스타일 다양하게). 새 항목은 끝에만 추가(세이브 호환)
+  const PARTS = [
+    { k: 'skin', cat: 'face', name: '피부', colors: SKIN },
+    { k: 'eyes', cat: 'face', name: '눈', names: ['동글', '방긋', '반짝', '졸린', '콩알', '속눈썹', '초롱'] },
+    { k: 'mouth', cat: 'face', name: '입', names: ['기본', '미소', '고양이', '활짝', '오'] },
+    { k: 'cheek', cat: 'face', name: '볼', names: ['분홍', '없음', '주근깨', '발그레', '반창고'] },
+    { k: 'hair', cat: 'hair', name: '머리 모양', names: ['삐침', '단발', '똥머리', '양갈래', '긴 생머리', '포니테일', '짧은 머리', '뽀글', '옆 가르마', '땋은 머리', '양 똥머리', '공주 머리', '뾰족', '웨이브', '바가지'] },
+    { k: 'hairC', cat: 'hair', name: '머리 색', colors: HAIRC },
+    { k: 'outfit', cat: 'wear', name: '옷 모양', names: ['티셔츠', '멜빵', '원피스', '후드', '줄무늬', '앞치마', '조끼', '하트 니트', '세일러'] },
+    { k: 'shirt', cat: 'wear', name: '옷 색', colors: SHIRT },
+    { k: 'shirt2', cat: 'wear', name: '포인트 색', colors: SHIRT },
+    { k: 'shoes', cat: 'wear', name: '신발', colors: SHOES },
+    { k: 'hat', cat: 'acc', name: '모자·장식', names: ['없음', '비니', '야구모자', '밀짚모자', '리본', '화관', '고양이 귀', '토끼 귀', '새싹', '왕관', '베레모', '별 핀', '헤드폰'] },
+    { k: 'hatC', cat: 'acc', name: '장식 색', colors: SHIRT },
+    { k: 'glasses', cat: 'acc', name: '안경', names: ['없음', '동그란', '네모', '선글라스', '하트'] },
+  ];
+  const CATS = [['face', '얼굴'], ['hair', '머리'], ['wear', '옷'], ['acc', '소품']];
+  A.LOOK = { SKIN, HAIRC, SHIRT, SHOES, HAIRS: 15, PARTS, CATS,
+    count: (pt) => (pt.colors || pt.names).length,
+    random(R = Math.random) { const l = {}; for (const pt of PARTS) l[pt.k] = Math.floor(R() * A.LOOK.count(pt)); if (R() < 0.5) l.hat = 0; if (R() < 0.7) l.glasses = 0; return l; },
+    def: () => ({ skin: 0, hair: 0, hairC: 0, shirt: 0, eyes: 0, mouth: 0, cheek: 0, outfit: 0, shirt2: 5, shoes: 0, hat: 0, hatC: 8, glasses: 0 }),
+  };
 
   // 종별 프리셋
   const SPECIES = {
@@ -48,7 +70,7 @@
       ctx.translate(0, bob - hop);
       ctx.scale(flip * (1 + sq * 0.5), 1 + breath - sq);
       // 발
-      const fc = a.species === 'human' ? '#7a5a4a' : (sp.feet || sp.furD);
+      const fc = a.species === 'human' ? SHOES[L.shoes | 0] || SHOES[0] : (sp.feet || sp.furD);
       if (!a.sit) {
         P.blob(ctx, -4.5, -2 + (step > 0 ? -1.8 * step : 0), 3.6, 2.6, fc, LINE, 1.2);
         P.blob(ctx, 4.5, -2 + (step < 0 ? 1.8 * step : 0), 3.6, 2.6, fc, LINE, 1.2);
@@ -71,7 +93,9 @@
       }
       // 몸통
       const bodyC = a.species === 'human' ? SHIRT[L.shirt | 0] : (L.body || sp.fur);
+      if (a.species === 'human' && (L.outfit | 0) === 2) { ctx.fillStyle = bodyC; ctx.strokeStyle = LINE; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-7, -12); ctx.lineTo(-12, -2); ctx.quadraticCurveTo(0, 1.5, 12, -2); ctx.lineTo(7, -12); ctx.closePath(); ctx.fill(); ctx.stroke(); } // 원피스 치마
       P.blob(ctx, 0, -11, 9, 9.5, bodyC, LINE, 1.5);
+      if (a.species === 'human') this.outfit(ctx, L, side, back, bodyC);
       if (a.species === 'hedgehog') P.rrect(ctx, -6, -14, 12, 11, 3, '#fff7e8', LINE, 1); // 앞치마
       if ((a.species === 'otter' || a.species === 'squirrel' || a.species === 'penguin' || a.species === 'bear' || a.species === 'hamster') && !back) P.blob(ctx, side ? -2 : 0, -10, a.species === 'penguin' ? 7 : 5.5, a.species === 'penguin' ? 8 : 6.5, sp.belly);
       if (L.scarf) P.rrect(ctx, -8, -19.5, 16, 4.5, 2, L.scarf, LINE, 1);
@@ -142,6 +166,8 @@
       if (a.species === 'mole') {
         for (const s of side ? [1] : [-1, 1]) P.blob(ctx, s * 10, -8, 3.2, 3.2, sp.furD, LINE, 1.2);
       }
+      if (a.species === 'human' && !back) this.hairBack(ctx, L, side);
+      if (a.species === 'human' && (L.hat | 0) === 12 && back) this.hat(ctx, L, side, back);
       // 머리통
       P.blob(ctx, 0, 0, 13, 12, sk, LINE, 1.6);
       if (a.species === 'hedgehog') P.blob(ctx, side ? -3 : 0, 3, 9, 8, '#fff3e0');
@@ -154,13 +180,15 @@
       if (a.species === 'tortoise' && !back) { ctx.strokeStyle = '#6b5a4a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(-5, 0.5, 3.6, 0, Math.PI * 2); if (!side) ctx.arc(5, 0.5, 3.6, 0, Math.PI * 2); ctx.stroke(); P.rrect(ctx, -9, 9, 18, 3, 1.5, '#ffffff'); }
       if (a.species === 'cat' && !back) { ctx.fillStyle = sp.furD; ctx.beginPath(); ctx.moveTo(-3, -11); ctx.lineTo(0, -6); ctx.lineTo(3, -11); ctx.fill(); }
       // 사람 머리카락
-      if (a.species === 'human') this.hair(ctx, L, side, back);
+      if (a.species === 'human') { this.hair(ctx, L, side, back); this.hat(ctx, L, side, back); }
       if (back) { if (a.species === 'mole' && L.band) P.rrect(ctx, -12, -8, 24, 4, 2, L.band); return; }
       // 얼굴
       const ex = side ? [-6] : [-5, 5];
       const blink = this.blink(a, t);
+      const es = a.species === 'human' ? L.eyes | 0 : 0;
       for (const x of ex) {
         const eh = a.species === 'mole' ? 1.4 : 3.1;
+        if (es && !a.sleep && this.eye(ctx, es, x, blink)) continue;
         if (a.sleep || blink < 0.2) { ctx.strokeStyle = LINE; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(x - 2, 1); ctx.quadraticCurveTo(x, 2.4, x + 2, 1); ctx.stroke(); }
         else {
           P.blob(ctx, x, 0.5, 2.3, eh * blink, '#2d2430');
@@ -168,9 +196,10 @@
         }
       }
       // 볼
-      ctx.globalAlpha = 0.55;
-      for (const x of side ? [-8] : [-8, 8]) P.blob(ctx, x, 5, 2.8, 1.8, '#ff9fb4');
-      ctx.globalAlpha = 1;
+      const ck = a.species === 'human' ? L.cheek | 0 : 0;
+      if (ck === 0 || ck === 3 || ck === 4) { ctx.globalAlpha = ck === 3 ? 0.75 : 0.55; for (const x of side ? [-8] : [-8, 8]) P.blob(ctx, x, 5, ck === 3 ? 3.8 : 2.8, ck === 3 ? 2.4 : 1.8, '#ff9fb4'); ctx.globalAlpha = 1; }
+      if (ck === 2) for (const x of side ? [-8] : [-8, 8]) for (const [dx, dy] of [[-1.5, 4], [1, 3.6], [0, 5.6]]) P.blob(ctx, x + dx, dy, 0.55, 0.55, '#b9785a');
+      if (ck === 4 && !side) { ctx.save(); ctx.translate(8, 4.5); ctx.rotate(-0.4); P.rrect(ctx, -3.5, -1.3, 7, 2.6, 1, '#ffe9c4', LINE, 0.7); ctx.restore(); }
       // 코·입
       if (a.species === 'mole') P.blob(ctx, side ? -10 : 0, 4, 3.6, 2.8, SPECIES.mole.nose, LINE, 1.1);
       else if (a.species === 'hedgehog') P.blob(ctx, side ? -12 : 0, 4, 1.8, 1.4, '#3a2a2a');
@@ -187,27 +216,116 @@
       if (a.species === 'penguin') { if (a.species === 'mole' && L.band) P.rrect(ctx, -12, -8, 24, 4, 2, L.band, LINE, 1); if (L.bow) { P.blob(ctx, -4, 12.5, 3.5, 2.4, L.bow, LINE, 1); P.blob(ctx, 4, 12.5, 3.5, 2.4, L.bow, LINE, 1); P.blob(ctx, 0, 12.5, 1.6, 1.6, L.bow, LINE, 1); } return; }
       ctx.strokeStyle = LINE; ctx.lineWidth = 1.2; ctx.beginPath();
       const mx = side ? -8 : 0;
-      if (a.mouth === 'o') { ctx.ellipse(mx, 7, 1.4, 1.6, 0, 0, Math.PI * 2); }
+      const mo = a.species === 'human' ? L.mouth | 0 : 0;
+      if (a.mouth === 'o' || mo === 4) { ctx.ellipse(mx, 7, 1.4, 1.6, 0, 0, Math.PI * 2); }
+      else if (mo === 1) { ctx.moveTo(mx - 2.4, 6); ctx.quadraticCurveTo(mx, 8.6, mx + 2.4, 6); }
+      else if (mo === 2) { ctx.moveTo(mx - 2.6, 6); ctx.quadraticCurveTo(mx - 1.3, 8, mx, 6.4); ctx.quadraticCurveTo(mx + 1.3, 8, mx + 2.6, 6); }
+      else if (mo === 3) { ctx.stroke(); ctx.beginPath(); ctx.moveTo(mx - 2.6, 5.8); ctx.quadraticCurveTo(mx, 10.5, mx + 2.6, 5.8); ctx.closePath(); ctx.fillStyle = '#d9536a'; ctx.fill(); }
       else { ctx.moveTo(mx - 1.8, 6.4); ctx.quadraticCurveTo(mx - 0.9, 7.6, mx, 6.6); ctx.quadraticCurveTo(mx + 0.9, 7.6, mx + 1.8, 6.4); }
       ctx.stroke();
       if (a.species === 'mole' && L.band) P.rrect(ctx, -12, -8, 24, 4, 2, L.band, LINE, 1);
       if (a.species === 'mole' && L.ribbon) { P.blob(ctx, 8, -10, 3.5, 2.5, L.ribbon, LINE, 1); P.blob(ctx, 13, -10, 3.5, 2.5, L.ribbon, LINE, 1); }
       if (a.species === 'hedgehog') { ctx.strokeStyle = '#7a6a5a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(-5, 0.5, 3.4, 0, Math.PI * 2); if (!side) ctx.arc(5, 0.5, 3.4, 0, Math.PI * 2); ctx.stroke(); }
+      if (a.species === 'human' && L.glasses) this.glasses(ctx, L.glasses | 0, side);
+    },
+    // 사람 눈 모양 (0 = 기본은 위에서 그림). true를 돌려주면 기본 눈을 그리지 않는다
+    eye(ctx, es, x, blink) {
+      const D = '#2d2430';
+      if (es === 1) { ctx.strokeStyle = D; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x - 2.2, 1.6); ctx.quadraticCurveTo(x, -1.4, x + 2.2, 1.6); ctx.stroke(); return true; }
+      if (blink < 0.2) return false;
+      if (es === 2) { P.blob(ctx, x, 0.5, 2.9, 3.6 * blink, D); P.blob(ctx, x - 1, -0.9, 1.2, 1.2, '#fff'); P.blob(ctx, x + 1, 1.8, 0.6, 0.6, '#fff'); P.blob(ctx, x + 1.3, -1.2, 0.4, 0.4, '#fff'); return true; }
+      if (es === 3) { P.blob(ctx, x, 1.4, 2.3, 1.7 * blink, D); ctx.strokeStyle = D; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(x - 2.6, 0.2); ctx.lineTo(x + 2.6, 0.2); ctx.stroke(); return true; }
+      if (es === 4) { P.blob(ctx, x, 0.8, 1.3, 1.6 * blink, D); return true; }
+      if (es === 5) { P.blob(ctx, x, 0.5, 2.3, 3.1 * blink, D); P.blob(ctx, x - 0.7, -0.8, 0.9, 0.9, '#fff'); ctx.strokeStyle = D; ctx.lineWidth = 1; ctx.beginPath(); const o = x < 0 ? -1 : 1; ctx.moveTo(x + o * 1.8, -1.6); ctx.lineTo(x + o * 3.6, -3); ctx.moveTo(x + o * 2.4, -0.6); ctx.lineTo(x + o * 4.2, -1.4); ctx.stroke(); return true; }
+      if (es === 6) { P.blob(ctx, x, 0.5, 2.6, 3.3 * blink, '#5a4a8a'); P.blob(ctx, x, 1.3, 1.6, 2 * blink, D); P.blob(ctx, x - 0.8, -0.9, 1, 1, '#fff'); P.blob(ctx, x + 0.9, 1.9, 0.5, 0.5, '#fff'); return true; }
+      return false;
+    },
+    glasses(ctx, g, side) {
+      const xs = side ? [-6] : [-5, 5];
+      ctx.strokeStyle = LINE; ctx.lineWidth = 1.1;
+      for (const x of xs) {
+        if (g === 1) { ctx.beginPath(); ctx.arc(x, 0.6, 3.6, 0, 6.3); ctx.stroke(); }
+        if (g === 2) { ctx.strokeRect(x - 3.6, -2.4, 7.2, 5.6); }
+        if (g === 3) { P.rrect(ctx, x - 4, -2.2, 8, 5.4, 2, 'rgba(40,30,50,0.85)', LINE, 1); P.blob(ctx, x - 1.6, -0.8, 1.2, 0.6, 'rgba(255,255,255,0.6)'); }
+        if (g === 4) { ctx.save(); ctx.translate(x, 0.5); ctx.fillStyle = 'rgba(255,110,150,0.55)'; ctx.beginPath(); ctx.moveTo(0, 3.4); ctx.bezierCurveTo(-5.5, -0.5, -2.5, -4.8, 0, -1.8); ctx.bezierCurveTo(2.5, -4.8, 5.5, -0.5, 0, 3.4); ctx.fill(); ctx.strokeStyle = '#e0457a'; ctx.stroke(); ctx.restore(); }
+      }
+      if (!side) { ctx.beginPath(); ctx.moveTo(-1.4, 0); ctx.lineTo(1.4, 0); ctx.stroke(); }
+    },
+    // 옷 모양 (몸통 위 덧그림). 몸통 타원 안에 잘라서 그린다
+    outfit(ctx, L, side, back, bodyC) {
+      const o = L.outfit | 0, c2 = SHIRT[L.shirt2 === undefined ? 5 : L.shirt2 | 0];
+      if (!o || o === 2) return;
+      ctx.save(); ctx.beginPath(); ctx.ellipse(0, -11, 8.3, 8.8, 0, 0, Math.PI * 2); ctx.clip();
+      if (o === 1) { ctx.fillStyle = c2; ctx.fillRect(-9, -9, 18, 10); if (!back) { ctx.fillRect(-5.5, -19, 2.4, 10); ctx.fillRect(3.1, -19, 2.4, 10); P.blob(ctx, side ? -3 : 0, -5.5, 2.2, 1.6, 'rgba(255,255,255,0.35)'); } else { ctx.fillRect(-5.5, -19, 2.4, 10); ctx.fillRect(3.1, -19, 2.4, 10); } }
+      if (o === 3) { if (!back) { P.rrect(ctx, -5, -8, 10, 5, 2, c2); ctx.strokeStyle = LINE; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(-1.5, -19); ctx.lineTo(-1.5, -14); ctx.moveTo(1.5, -19); ctx.lineTo(1.5, -14); ctx.stroke(); } else P.blob(ctx, 0, -17, 7, 4, c2); }
+      if (o === 4) { ctx.fillStyle = c2; for (let y = -18; y < 0; y += 4.5) ctx.fillRect(-10, y, 20, 2); }
+      if (o === 5 && !back) { P.rrect(ctx, -5.5, -15, 11, 14, 3, c2); ctx.strokeStyle = c2; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-5, -15); ctx.lineTo(-3, -20); ctx.moveTo(5, -15); ctx.lineTo(3, -20); ctx.stroke(); }
+      if (o === 6) { ctx.fillStyle = c2; if (back) ctx.fillRect(-10, -20, 20, 20); else if (side) ctx.fillRect(-2, -20, 12, 20); else { ctx.fillRect(-10, -20, 7.5, 20); ctx.fillRect(2.5, -20, 7.5, 20); P.blob(ctx, 0, -14, 0.8, 0.8, LINE); P.blob(ctx, 0, -9, 0.8, 0.8, LINE); } }
+      if (o === 7 && !back) { ctx.save(); ctx.translate(side ? -3 : 0, -11); ctx.fillStyle = c2; ctx.beginPath(); ctx.moveTo(0, 3.2); ctx.bezierCurveTo(-5, -0.5, -2.4, -4.6, 0, -1.8); ctx.bezierCurveTo(2.4, -4.6, 5, -0.5, 0, 3.2); ctx.fill(); ctx.restore(); ctx.fillStyle = c2; ctx.fillRect(-10, -3, 20, 2); }
+      if (o === 8) { ctx.fillStyle = c2; if (!back) { ctx.beginPath(); ctx.moveTo(-9, -20); ctx.lineTo(0, -12); ctx.lineTo(9, -20); ctx.closePath(); ctx.fill(); ctx.restore(); P.blob(ctx, -2, -12, 2.2, 1.5, '#ff6b6b', LINE, 0.8); P.blob(ctx, 2, -12, 2.2, 1.5, '#ff6b6b', LINE, 0.8); return; } ctx.fillRect(-9, -20, 18, 6); }
+      ctx.restore();
+    },
+    // 긴 머리: 머리통 뒤(어깨 위)로 내려오는 부분
+    hairBack(ctx, L, side) {
+      const c = HAIRC[L.hairC | 0], h = L.hair | 0; ctx.strokeStyle = LINE; ctx.lineWidth = 1.4;
+      const xs = side ? [7] : [-11, 11];
+      if (h === 4 || h === 11) for (const x of xs) P.blob(ctx, x, 9, 5, 13, c, LINE, 1.4);
+      if (h === 13) for (const x of xs) { P.blob(ctx, x, 6, 5.5, 8, c, LINE, 1.3); P.blob(ctx, x + (x < 0 ? -1 : 1), 15, 5, 6, c, LINE, 1.3); }
+      if (h === 5 && side) { P.blob(ctx, 13, 2, 4, 10, c, LINE, 1.4); }
+      if (h === 9) for (const x of xs) for (let k = 0; k < 4; k++) P.blob(ctx, x + (x < 0 ? 1 : -1), 6 + k * 4.2, 3, 2.6, c, LINE, 1.1);
+    },
+    // 모자·머리 장식
+    hat(ctx, L, side, back) {
+      const h = L.hat | 0; if (!h) return;
+      const c = SHIRT[L.hatC === undefined ? 8 : L.hatC | 0], f = side ? -1 : 0;
+      ctx.strokeStyle = LINE; ctx.lineWidth = 1.4;
+      if (h === 1) { ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(0, -6, 14, 11, 0, Math.PI, Math.PI * 2); ctx.closePath(); ctx.fill(); ctx.stroke(); P.rrect(ctx, -14, -8, 28, 4, 2, c, LINE, 1.2); P.blob(ctx, 0, -17.5, 3.4, 3.4, '#ffffff', LINE, 1.1); }
+      if (h === 2) { ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(0, -6, 13.5, 9.5, 0, Math.PI, Math.PI * 2); ctx.closePath(); ctx.fill(); ctx.stroke(); if (!back) { ctx.beginPath(); if (side) ctx.ellipse(-12, -6.5, 7, 2.4, 0, 0, Math.PI * 2); else ctx.ellipse(0, -5.5, 12, 3, 0, 0, Math.PI); ctx.fill(); ctx.stroke(); } P.blob(ctx, 0, -15.5, 1.4, 1.4, '#ffffff'); }
+      if (h === 3) { P.blob(ctx, 0, -7, 20, 4.5, '#f0d28a', LINE, 1.3); ctx.fillStyle = '#f0d28a'; ctx.beginPath(); ctx.ellipse(0, -8, 10.5, 8, 0, Math.PI, Math.PI * 2); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = c; ctx.fillRect(-10.4, -11, 20.8, 3); }
+      if (h === 4) { const x = side ? 2 : 8; P.blob(ctx, x - 4, -11, 4.5, 3, c, LINE, 1.2); P.blob(ctx, x + 4, -11, 4.5, 3, c, LINE, 1.2); P.blob(ctx, x, -11, 2, 2, c, LINE, 1.1); }
+      if (h === 5) for (let k = 0; k < 7; k++) { const an = Math.PI * (1.08 + k * 0.14), x = Math.cos(an) * 12.5, y = Math.sin(an) * 10 - 3; P.blob(ctx, x, y, 2.6, 2.6, k % 2 ? c : '#ffffff', LINE, 0.9); P.blob(ctx, x, y, 0.9, 0.9, '#ffd24d'); }
+      if (h === 6 || h === 7) {
+        ctx.strokeStyle = c; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(0, -4, 13, 10, 0, Math.PI * 1.08, Math.PI * 1.92); ctx.stroke(); ctx.strokeStyle = LINE; ctx.lineWidth = 1.3;
+        for (const s of side ? [1] : [-1, 1]) {
+          ctx.save(); ctx.translate(s * 7 + (side ? 1 : 0), -11); ctx.rotate(s * (h === 6 ? 0.3 : 0.15));
+          if (h === 6) { ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(-4.5, 2); ctx.lineTo(0, -8); ctx.lineTo(4.5, 2); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#ffc2d1'; ctx.beginPath(); ctx.moveTo(-2, 1); ctx.lineTo(0, -4); ctx.lineTo(2, 1); ctx.fill(); }
+          else { P.blob(ctx, 0, -9, 3.6, 10, '#ffffff', LINE, 1.3); P.blob(ctx, 0, -9, 1.7, 7, c); }
+          ctx.restore();
+        }
+      }
+      if (h === 8) { ctx.strokeStyle = '#4e8a3a'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(f * 2, -12); ctx.lineTo(f * 2, -18); ctx.stroke(); ctx.save(); ctx.translate(f * 2, -18); for (const s of [-1, 1]) { ctx.save(); ctx.rotate(s * 0.9); P.blob(ctx, 0, -4, 2.6, 4.5, '#7cc35a', LINE, 1); ctx.restore(); } ctx.restore(); }
+      if (h === 9) { ctx.fillStyle = '#ffd24d'; ctx.beginPath(); ctx.moveTo(-7, -9); ctx.lineTo(-7, -17); ctx.lineTo(-3.5, -13); ctx.lineTo(0, -19); ctx.lineTo(3.5, -13); ctx.lineTo(7, -17); ctx.lineTo(7, -9); ctx.closePath(); ctx.fill(); ctx.stroke(); P.blob(ctx, 0, -12, 1.5, 1.5, c); }
+      if (h === 10) { ctx.save(); ctx.rotate(-0.18); P.blob(ctx, 1, -10, 14, 5.5, c, LINE, 1.3); P.blob(ctx, 1, -15.5, 1.5, 1.8, c, LINE, 1); ctx.restore(); }
+      if (h === 11 && !back) { ctx.save(); ctx.translate(side ? -4 : -8, -7); ctx.fillStyle = c; ctx.beginPath(); for (let k = 0; k < 10; k++) { const r = k % 2 ? 1.6 : 3.8, an = -Math.PI / 2 + k * Math.PI / 5; ctx.lineTo(Math.cos(an) * r, Math.sin(an) * r); } ctx.closePath(); ctx.fill(); ctx.lineWidth = 0.9; ctx.stroke(); ctx.restore(); }
+      if (h === 12) { ctx.strokeStyle = '#5b4636'; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.ellipse(0, -2, 14, 12, 0, Math.PI * 1.05, Math.PI * 1.95); ctx.stroke(); for (const s of side ? [0] : [-1, 1]) P.rrect(ctx, (side ? -3 : s * 14) - 3, -4, 6, 9, 3, c, LINE, 1.2); }
     },
     hair(ctx, L, side, back) {
       const c = HAIRC[L.hairC | 0], style = L.hair | 0;
       ctx.fillStyle = c; ctx.strokeStyle = LINE; ctx.lineWidth = 1.5;
+      // 뽀글: 동글동글 덩어리로 머리 전체
+      if (style === 7) { const n = back ? 11 : 8; for (let k = 0; k < n; k++) { const an = Math.PI * (back ? 0.85 + k * 0.13 : 0.95 + k * 0.155), x = Math.cos(an) * 12, y = Math.sin(an) * 10 - 2; P.blob(ctx, x, y, 5, 5, c, LINE, 1.2); } if (back) P.blob(ctx, 0, 0, 12, 10, c); else P.blob(ctx, 0, -6, 10, 5.5, c); return; }
       ctx.beginPath();
       if (back) { ctx.ellipse(0, -1, 13.5, 12.5, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
+      else if (style === 6 || style === 12) { ctx.ellipse(0, -4, 13.4, 9, 0, Math.PI, Math.PI * 2); ctx.quadraticCurveTo(0, -8, -13.4, -4); ctx.fill(); ctx.stroke(); }
+      else if (style === 14 || style === 11) { ctx.ellipse(0, -3, 13.8, 10, 0, Math.PI, Math.PI * 2); ctx.lineTo(13.8, -1); ctx.lineTo(-13.8, -1); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+      else if (style === 8) { ctx.ellipse(0, -4, 13.6, 9.5, 0, Math.PI, Math.PI * 2); ctx.quadraticCurveTo(side ? -2 : 4, -2, side ? -14 : -6, -3); ctx.quadraticCurveTo(-11, -2, -13.6, -4); ctx.fill(); ctx.stroke(); }
       else {
         ctx.ellipse(0, -4, 13.6, 9.5, 0, Math.PI, Math.PI * 2);
         if (side) ctx.quadraticCurveTo(-4, -6, -14, 0); else { ctx.quadraticCurveTo(7, -1, 3, -4); ctx.quadraticCurveTo(-2, 0, -6, -4); ctx.quadraticCurveTo(-10, -1, -13.6, -4); }
         ctx.fill(); ctx.stroke();
       }
+      const xs = side ? [1] : [-1, 1];
       if (style === 1) { P.blob(ctx, side ? 8 : 12, 4, 4, 7, c, LINE, 1.3); if (!side) P.blob(ctx, -12, 4, 4, 7, c, LINE, 1.3); }      // 단발
       if (style === 2) { P.blob(ctx, side ? 10 : 0, -12, 5, 5, c, LINE, 1.3); }                                                         // 똥머리
-      if (style === 3) { for (const s of side ? [1] : [-1, 1]) { P.blob(ctx, s * 14, 2, 3.5, 5, c, LINE, 1.3); } }                       // 양갈래
+      if (style === 3) { for (const s of xs) { P.blob(ctx, s * 14, 2, 3.5, 5, c, LINE, 1.3); } }                                         // 양갈래
       if (style === 0 && !back) { ctx.beginPath(); ctx.moveTo(-2, -12); ctx.quadraticCurveTo(2, -17, 5, -13); ctx.stroke(); }           // 삐침 머리
+      if ((style === 4 || style === 11 || style === 13 || style === 9) && back) { for (const s of [-1, 1]) P.blob(ctx, s * 6, 10, 7, 9, c, LINE, 1.3); P.blob(ctx, 0, 6, 12, 8, c); }
+      if ((style === 4 || style === 11) && !back) for (const s of xs) P.blob(ctx, s * 12, 2, 3.4, 7.5, c, LINE, 1.2);           // 옆머리
+      if (style === 5) { if (back) { P.blob(ctx, 0, -6, 3.5, 2.6, '#ff6b6b', LINE, 1); P.blob(ctx, 0, 6, 4.5, 9, c, LINE, 1.3); } else if (!side) P.blob(ctx, 0, -12.5, 3, 2.4, '#ff6b6b', LINE, 1); }
+      if (style === 10) for (const s of xs) P.blob(ctx, s * 9 + (side ? 1 : 0), -12, 4.5, 4.5, c, LINE, 1.3);                     // 양 똥머리
+      if (style === 12 && !back) { ctx.fillStyle = c; ctx.beginPath(); for (const x of [-7, -1, 5]) { ctx.moveTo(x - 3.5, -10); ctx.lineTo(x + 1, -19); ctx.lineTo(x + 3.5, -10); } ctx.fill(); ctx.stroke(); }
+      if (style === 13 && !back) for (const s of xs) P.blob(ctx, s * 12.5, 1, 3.4, 6, c, LINE, 1.2);
+      if (style === 9 && !back) for (const s of xs) P.blob(ctx, s * 12.5, 1, 3, 5, c, LINE, 1.2);
     },
     blink(a, t) {
       // 2.2~5.8초 간격, 18% 더블 깜빡임. 닫힘 50ms → 유지 40 → 뜨기 80
