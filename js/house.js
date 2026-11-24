@@ -19,17 +19,21 @@
     { id: 'sofa', ix: 9, name: '솜사탕 소파', w: 2, h: 1, val: 900, col: true },
     { id: 'cushion', ix: 10, name: '방석', w: 1, h: 1, val: 120, col: true, layer: 'rug' },
     { id: 'clock', ix: 11, name: '탁상시계', w: 1, h: 1, val: 450 },
+    { id: 'workbench', ix: 12, name: '작업대', w: 2, h: 1, val: 0, fixed: true, hidden: true },
   ];
   G.data.table('furn', { key: 'id', ix: true, required: ['id', 'ix', 'name', 'w', 'h', 'val'] });
   G.data.add('furn', FORMS);
   // 가방 아이템: 판매가 = 값의 1/4
-  G.data.add('items', FORMS.map((f) => ({ id: 'furn:' + f.id, name: f.name, cat: 'furn', val: Math.round(f.val / 4), stack: 1, ref: f, buy: f.val })));
+  G.data.add('items', FORMS.filter((f) => !f.hidden).map((f) => ({ id: 'furn:' + f.id, name: f.name, cat: 'furn', val: Math.round(f.val / 4), stack: 1, ref: f, buy: f.val })));
 
   // ---------- 상태 ----------
   // 방: 7×6 타일, 위 2줄은 벽, 바닥 7×4, 문은 아래 가운데
   const ROOM = { w: 7, h: 6, wall: 2, door: 3 };
   const st = { items: [], starter: false, rated: 0 }; // items: {f, x, y, r, c}
-  const H = G.house = { inside: false, st, ROOM, FORMS, COLS, COLN, editing: false };
+  const H = G.house = { inside: false, st, ROOM, FORMS, SHOP_FORMS: FORMS.filter((f) => !f.hidden), COLS, COLN, editing: false };
+  // 방 크기는 둥지 단계에 따라 (텐트 7×6 → 오두막 9×7 → 작은 집 11×8). 오른쪽·아래로만 넓어져서 가구 위치는 그대로다
+  function syncRoom() { const r = G.nest ? G.nest.room() : { w: 7, h: 6 }; ROOM.w = r.w; ROOM.h = r.h; ROOM.door = Math.floor(r.w / 2); RW = ROOM.w * TILE; RH = ROOM.h * TILE; }
+  H.syncRoom = syncRoom;
 
   const form = (id) => G.data.get('furn', id);
   function fp(it) { const f = form(it.f); const sw = it.r % 2 && f.rot ? 1 : 0; return { w: sw ? f.h : f.w, h: sw ? f.w : f.h }; }
@@ -119,6 +123,14 @@
       case 'radio': P.rrect(g, 4, 6, 24, 20, 8, c, L, 1.4); P.blob(g, 12, 16, 5, 5, '#fffaf0', L, 1.1); P.blob(g, 12, 16, 2, 2, L); P.rrect(g, 19, 11, 6, 3, 1, L); P.rrect(g, 19, 17, 6, 3, 1, L); g.strokeStyle = L; g.lineWidth = 1.4; g.beginPath(); g.moveTo(22, 6); g.lineTo(27, -4); g.stroke(); break;
       case 'sofa': P.rrect(g, 2, -6, W - 4, 22, 9, c, L, 1.4); P.rrect(g, 2, 8, W - 4, 20, 8, c, L, 1.4); P.rrect(g, 0, 2, 9, 24, 5, c, L, 1.3); P.rrect(g, W - 9, 2, 9, 24, 5, c, L, 1.3); g.fillStyle = 'rgba(255,255,255,0.35)'; g.fillRect(12, 10, W - 24, 3); g.strokeStyle = 'rgba(91,70,54,0.3)'; g.beginPath(); g.moveTo(W / 2, 10); g.lineTo(W / 2, 24); g.stroke(); break;
       case 'clock': { P.rrect(g, 8, 4, 16, 22, 6, '#fff3e2', L, 1.4); P.blob(g, 16, 12, 6, 6, '#ffffff', L, 1.1); const t = Date.now() / 1000; g.strokeStyle = L; g.lineWidth = 1.2; g.beginPath(); g.moveTo(16, 12); g.lineTo(16 + Math.sin(t / 60) * 4, 12 - Math.cos(t / 60) * 4); g.moveTo(16, 12); g.lineTo(16 + Math.sin(t / 720) * 3, 12 - Math.cos(t / 720) * 3); g.stroke(); P.blob(g, 11, 27, 2.5, 1.5, woodD); P.blob(g, 21, 27, 2.5, 1.5, woodD); break; }
+      case 'workbench': {
+        P.rrect(g, 2, -8, W - 4, 22, 4, wood, L, 1.5); g.fillStyle = woodL; g.fillRect(4, -6, W - 8, 4);
+        g.fillStyle = woodD; g.fillRect(6, 14, 4, 14); g.fillRect(W - 10, 14, 4, 14); g.fillRect(6, 22, W - 12, 3);
+        // 망치와 톱
+        g.save(); g.translate(18, -10); g.rotate(-0.5); P.rrect(g, -1.5, 0, 3, 14, 1, '#a7724a'); P.rrect(g, -5, -2, 10, 5, 1.5, '#9aa5b0', L, 1); g.restore();
+        P.rrect(g, 34, -14, 20, 7, 2, '#c9d3da', L, 1); g.fillStyle = '#a7724a'; g.fillRect(50, -15, 8, 9);
+        break;
+      }
       default: P.rrect(g, 4, 4, W - 8, Hh - 8, 4, '#ddd', L);
     }
   }
@@ -132,7 +144,7 @@
   };
 
   // ---------- 실내 씬 ----------
-  const RW = ROOM.w * TILE, RH = ROOM.h * TILE;
+  let RW = ROOM.w * TILE, RH = ROOM.h * TILE;
   let ox = 0, oy = 0, PXr = 2, savedPos = null, toolbar = null;
   const ed = { sel: null, drag: null, undo: [], moved: false };
 
@@ -162,6 +174,9 @@
     const pl = G.player;
     savedPos = { x: pl.x, y: pl.y };
     H.inside = true;
+    syncRoom();
+    // 붙박이 작업대
+    if (!st.items.some((o) => o.f === 'workbench')) { const wb = { f: 'workbench', x: 0, y: ROOM.wall, r: 0, c: 0 }; const sp = H.canPlace(wb, 0, ROOM.wall) ? [0, ROOM.wall] : H.findSpot(wb); if (sp) { wb.x = sp[0]; wb.y = sp[1]; st.items.push(wb); } }
     G.fishing.cancel(true);
     pl.x = (ROOM.door + 0.5) * TILE; pl.y = RH - 6; pl.dir = 2;
     G.game.mover = H.move;
@@ -211,7 +226,7 @@
         const o = targetIn();
         H.target = o;
         if (G.ui.dialogOpen() || G.ui.open) G.ui.setAction('✋', '', '');
-        else if (o) G.ui.setAction(o.f === 'bed' ? '😴' : o.f === 'radio' ? '🎵' : '✋', o.f === 'bed' ? '쉬기' : o.f === 'radio' ? '켜기' : '만지기', form(o.f).name);
+        else if (o) G.ui.setAction(o.f === 'bed' ? '😴' : o.f === 'radio' ? '🎵' : o.f === 'workbench' ? '🔨' : '✋', o.f === 'bed' ? '쉬기' : o.f === 'radio' ? '켜기' : o.f === 'workbench' ? '만들기' : '만지기', form(o.f).name);
         else G.ui.setAction('🚪', G.player.y > RH - 30 ? '나가기' : '', '');
       }
     },
@@ -235,6 +250,7 @@
     if (!o) { if (pl.y > RH - 30) H.exit(); else { pl.squash = 0.12; G.audio.sfx('bump'); } return; }
     o.wob = 0.35;
     if (o.f === 'bed') await G.game.restMenu();
+    else if (o.f === 'workbench') await G.craft.open();
     else if (o.f === 'radio') { G.audio.sfx('chime'); G.game.kongalSay('♪'); }
     else if (o.f === 'clock') { const l = G.time.label(); await G.ui.say([{ who: 'sys', text: `똑딱똑딱. 지금은 ${l.clock}이에요.` }]); }
     else { G.audio.sfx('tap'); }
@@ -252,9 +268,16 @@
     const wallH = ROOM.wall * TILE;
     // 텐트 천장 곡선 + 벽 줄무늬
     ctx.save();
-    ctx.beginPath(); ctx.moveTo(-8, wallH); ctx.lineTo(-8, 10); ctx.quadraticCurveTo(RW / 2, -40, RW + 8, 10); ctx.lineTo(RW + 8, wallH); ctx.closePath();
-    ctx.fillStyle = '#ffd08a'; ctx.fill(); ctx.clip();
-    for (let k = 0; k < 12; k++) { ctx.fillStyle = '#ffb05a'; ctx.fillRect(k * 22 - 4, -50, 10, wallH + 60); }
+    const stage = G.nest ? G.nest.st.stage : 0;
+    ctx.beginPath();
+    if (stage === 0) { ctx.moveTo(-8, wallH); ctx.lineTo(-8, 10); ctx.quadraticCurveTo(RW / 2, -40, RW + 8, 10); ctx.lineTo(RW + 8, wallH); }
+    else { ctx.moveTo(-8, wallH); ctx.lineTo(-8, -6); ctx.lineTo(RW + 8, -6); ctx.lineTo(RW + 8, wallH); }
+    ctx.closePath();
+    ctx.fillStyle = stage === 0 ? '#ffd08a' : stage === 1 ? '#d9a877' : '#ffe6ee'; ctx.fill(); ctx.clip();
+    if (stage === 0) for (let k = 0; k < 20; k++) { ctx.fillStyle = '#ffb05a'; ctx.fillRect(k * 22 - 4, -50, 10, wallH + 60); }
+    else if (stage === 1) for (let y = -6; y < wallH; y += 12) { ctx.fillStyle = (y / 12) % 2 ? '#c99868' : '#e2b88a'; ctx.fillRect(-8, y, RW + 16, 11); P.blob(ctx, -2, y + 5, 4, 5, '#b8875a'); P.blob(ctx, RW + 2, y + 5, 4, 5, '#b8875a'); }
+    else { for (let y = 0; y < wallH; y += 16) for (let x = (y / 16) % 2 * 16; x < RW + 16; x += 32) P.blob(ctx, x, y + 6, 3, 3, '#ffc2d6'); ctx.fillStyle = '#e8c494'; ctx.fillRect(-8, wallH - 14, RW + 16, 14); }
+    if (stage > 0) { P.rrect(ctx, RW / 2 - 26, 4, 52, 30, 6, '#bfe6f5', L, 1.6); ctx.fillStyle = L; ctx.fillRect(RW / 2 - 1, 4, 2, 30); ctx.fillRect(RW / 2 - 26, 18, 52, 2); }
     ctx.fillStyle = 'rgba(91,70,54,0.12)'; ctx.fillRect(-8, wallH - 10, RW + 16, 10);
     ctx.restore();
     // 바닥 판자
@@ -366,7 +389,7 @@
   }
   function itemAt(x, y) {
     // 위에 그려진 것부터: 가구 층 → 러그 층
-    const cand = st.items.filter((o) => { const b = fp(o); const f = form(o.f); const top = f.layer === 'rug' ? 0 : 14; return x >= o.x * TILE && x < (o.x + b.w) * TILE && y >= o.y * TILE - top && y < (o.y + b.h) * TILE; });
+    const cand = st.items.filter((o) => { if (form(o.f).fixed) return false; const b = fp(o); const f = form(o.f); const top = f.layer === 'rug' ? 0 : 14; return x >= o.x * TILE && x < (o.x + b.w) * TILE && y >= o.y * TILE - top && y < (o.y + b.h) * TILE; });
     cand.sort((a, b) => (form(a.f).layer === 'rug') - (form(b.f).layer === 'rug') || (b.y - a.y));
     return cand[0] || null;
   }
@@ -460,5 +483,6 @@
     });
   }
 
+  G.on('house:stage', () => { syncRoom(); if (H.inside) layout(); });
   G.modules.add('house');
 })(globalThis.G);

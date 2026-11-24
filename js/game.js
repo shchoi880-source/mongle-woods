@@ -118,7 +118,14 @@
       return { kind: 'rod', icon: '🎣', label: water ? '던지기' : '던지기', name: water ? ({ river: '강', pond: '연못', sea: '바다' })[water] : '' };
     }
     const ft = { x: Math.floor(f.x / TILE), y: Math.floor(f.y / TILE) };
+    if (pl.tool === 'axe') {
+      const o = objAhead();
+      if (o && (o.kind === 'tree' || o.kind === 'fruit' || o.kind === 'pine')) return { kind: 'chop', ref: o, icon: '🪓', label: '찍기', name: '나무' };
+      return { kind: 'swingtool', icon: '🪓', label: '휘두르기', name: '' };
+    }
     if (pl.tool === 'shovel') {
+      const ro = objAhead();
+      if (ro && ro.kind === 'rock') return { kind: 'rockhit', ref: ro, icon: '🪨', label: '두드리기', name: '바위' };
       const dg = G.world.state.digs.find((d) => !G.world.isTaken(d.id) && Math.abs(d.tx * TILE + 16 - f.x) < 26 && Math.abs(d.ty * TILE + 16 - f.y) < 26);
       return { kind: 'dig', ref: dg, icon: '⛏️', label: '파기', name: dg ? '금 간 땅' : '' };
     }
@@ -129,7 +136,7 @@
       if (o.kind === 'museum') return { kind: 'museum', ref: o, icon: '🦴', label: G.museum.isOpen() ? '들어가기' : '살펴보기', name: '조약돌 박물관' };
       if (o.kind === 'signboard') return { kind: 'read', ref: o, icon: '📜', label: '읽기', name: '표지판' };
       if (o.kind === 'board') return { kind: 'board', ref: o, icon: '📌', label: '보기', name: '게시판' };
-      if (o.kind === 'tent') return { kind: 'tent', ref: o, icon: '⛺', label: '들어가기', name: '내 텐트' };
+      if (o.kind === 'tent') return { kind: 'tent', ref: o, icon: '🏠', label: '들어가기', name: '내 ' + G.nest.cur().name };
       if (o.kind === 'mailbox') return { kind: 'mailbox', ref: o, icon: '📮', label: '열기', name: '우체통' };
       if (o.kind === 'house') return { kind: 'house', ref: o, icon: '🚪', label: '두드리기', name: '딸랑의 집' };
       if (o.kind === 'post') return { kind: 'postoffice', ref: o, icon: '🚪', label: '두드리기', name: '우체국' };
@@ -216,6 +223,18 @@
         }, 260);
         break;
       }
+      case 'chop': case 'rockhit': {
+        const o = tg.ref; o.shakeT = 0.4; pl.busy = 0.45; pl.swing = 0.001;
+        G.audio.sfx(tg.kind === 'chop' ? 'shake' : 'dig');
+        setTimeout(() => {
+          const r = G.nest.gather(o, tg.kind === 'chop' ? 'axe' : 'shovel');
+          if (r.none) { G.audio.sfx('bump'); G.ui.toast(tg.kind === 'chop' ? '이 나무는 오늘 많이 내줬어요. 내일 또 와요.' : '이 바위는 오늘 다 두드렸어요.', { icon: tg.kind === 'chop' ? '🌳' : '🪨', ms: 1500 }); return; }
+          dropItem(r.id, o.tx * TILE + 16 + (pl.x < o.tx * TILE + 16 ? -18 : 18), o.ty * TILE + 28, 1);
+          G.audio.sfx('drop'); if (tg.kind === 'chop') leafFx(o);
+        }, 180);
+        break;
+      }
+      case 'swingtool': pl.swing = 0.001; pl.busy = 0.3; G.audio.sfx('whiff'); break;
       case 'shake': {
         const o = tg.ref; o.shakeT = 0.6; pl.busy = 0.4; G.audio.sfx('shake');
         G.emit('world:shake', { obj: o.i });
@@ -458,7 +477,7 @@
         const sp = A.building(G.museum.isOpen() ? 'museum' : 'museum_closed', A.season, night);
         R.push({ sy: foot - 2, draw: (c) => c.drawImage(sp, bx - 16, by - 44, 160, 140) });
       } else if (k === 'post' || k === 'tent' || k === 'house') {
-        const sp = A.building(k, A.season, night);
+        const sp = A.building(k === 'tent' ? ['tent', 'cabin', 'smallhouse'][G.nest.st.stage] || 'tent' : k, A.season, night);
         R.push({ sy: foot - (k === 'stall' ? 30 : 2), draw: (c) => c.drawImage(sp, bx - 16, by - 44, 160, 140) });
       } else if (k === 'lamp' || k === 'bench' || k === 'mailbox' || k === 'board' || k === 'signboard') {
         const sp = A.prop(k === 'mailbox' && G.mail.unread() ? 'mailbox_full' : k, A.season, night);
@@ -746,6 +765,7 @@
     A.season = G.time.season();
     A.clearCache();
     G.world.refresh(G.time.day());
+    if (G.nest.tick(G.time.day())) setTimeout(() => G.ui.toast(`${G.nest.cur().name} 공사가 끝났어요! 집이 넓어졌어요.`, { icon: '🏡', ms: 4000 }), 1500);
     GM.drops = (G.world.state.drops || []).map((d) => Object.assign({ vy: 0, h: 0, t: 0 }, d));
     G.npc.init();
     G.eco.clear();

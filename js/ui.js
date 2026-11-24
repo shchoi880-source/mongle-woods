@@ -413,7 +413,9 @@
           G.audio.sfx('coin');
           if (e.kind === 'tool') {
             close();
-            await UI.say([{ who: 'todak', text: '전설의 삽이에요! 땅이 알아서 파질 거예요!' }, { who: 'tosil', text: '알아서는 안 파져요. 첫 손님이라 손잡이 덮개 넣었어요. 오빠한테 말하지 마세요.' }]);
+            await UI.say(e.id === 'axe'
+              ? [{ who: 'todak', text: '전설의 도끼예요! 나무가 스스로 목재를 내놓을 거예요!' }, { who: 'tosil', text: '나무를 찍으면 목재가 나와요. 한 나무에 하루 세 번까지만요. 나무도 쉬어야 하니까요.' }]
+              : [{ who: 'todak', text: '전설의 삽이에요! 땅이 알아서 파질 거예요!' }, { who: 'tosil', text: '알아서는 안 파져요. 첫 손님이라 손잡이 덮개 넣었어요. 오빠한테 말하지 마세요.' }]);
             G.player.setTool(e.id);
           } else { UI.toast(`${e.name}을(를) 샀어요! 텐트에서 꾸미기로 놓아 보세요.`, { icon: '🛋️' }); render(); }
         };

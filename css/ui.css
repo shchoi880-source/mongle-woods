@@ -180,3 +180,11 @@ input, select, textarea { font: inherit; color: var(--ink); }
 .mailrow .muted { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; } .mailrow .gift { margin-left: auto; font-style: normal; }
 .letter { background: repeating-linear-gradient(#fffdf6 0 27px, #f1e4cf 27px 28px); border: 2px solid #f1dcc0; border-radius: 16px; padding: 16px 18px; margin-bottom: 12px; line-height: 28px; font-size: 15px; word-break: keep-all; }
 .letter p { margin: 0 0 6px; } .letter .ps { color: var(--ink2); font-size: 14px; } .lt-to { font-weight: 800; } .lt-from { text-align: right; font-weight: 800; }
+
+/* ---- 작업대 ---- */
+.recipes { display: flex; flex-direction: column; gap: 6px; }
+.recipe { display: flex; align-items: center; gap: 10px; background: #fff; border: 2px solid var(--line); border-radius: 14px; padding: 6px 10px; }
+.recipe.can { border-color: #a8e6c9; background: #f4fcf8; }
+.recipe img { width: 44px; height: 44px; } .recipe .bi { font-size: 30px; width: 44px; text-align: center; }
+.rinfo { flex: 1; min-width: 0; } .rinfo .small { font-size: 12px; } .rinfo .ok { color: #3f9f6f; font-weight: 800; } .rinfo .no { color: #c98a7a; }
+.swatch { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--ink); flex: none; }

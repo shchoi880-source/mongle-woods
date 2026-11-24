@@ -101,9 +101,10 @@
     stock(day) {
       const d = day === undefined ? G.time.day() : day;
       const list = [{ kind: 'tool', id: 'shovel', name: G.TOOLS.shovel.name, price: G.TOOLS.shovel.price, key: 'shovel' }];
+      if (G.TOOLS.axe) list.push({ kind: 'tool', id: 'axe', name: G.TOOLS.axe.name, price: G.TOOLS.axe.price, key: 'axe' });
       if (!G.house) return list;
       const R = G.rng.stream(G.rng.KEYS.SHOP, d, 2);
-      const forms = G.house.FORMS.slice();
+      const forms = G.house.SHOP_FORMS.slice();
       for (let k = 0; k < 4 && forms.length; k++) {
         const f = forms.splice(Math.floor(R() * forms.length), 1)[0];
         const c = f.col ? Math.floor(R() * G.house.COLS.length) : 0;

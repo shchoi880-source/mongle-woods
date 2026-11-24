@@ -366,6 +366,31 @@
       P.blob(g, ox + 64, oy + 38, 3, 3, '#ff6b6b');
       return;
     }
+    if (kind === 'cabin') { // 오두막 (부지 3×2, 위로 솟음)
+      P.shadow(g, ox + 48, oy + 62, 108, 0.25);
+      for (let k = 0; k < 5; k++) { P.rrect(g, ox + 2, oy + 12 + k * 10, 92, 10, 5, k % 2 ? '#c98e5a' : '#b67a48', C.line, 1.2); }
+      g.fillStyle = '#7a5a4a'; g.strokeStyle = C.line; g.lineWidth = 1.5;
+      g.beginPath(); g.moveTo(ox - 6, oy + 16); g.lineTo(ox + 48, oy - 26); g.lineTo(ox + 102, oy + 16); g.closePath(); g.fill(); g.stroke();
+      g.fillStyle = '#9a7a62'; g.beginPath(); g.moveTo(ox + 8, oy + 10); g.lineTo(ox + 48, oy - 18); g.lineTo(ox + 60, oy - 10); g.lineTo(ox + 22, oy + 14); g.fill();
+      roofSnow(g, ox + 20, oy - 14, 56);
+      P.rrect(g, ox + 38, oy + 30, 20, 32, [9, 9, 1, 1], '#8a5a3a', C.line); P.blob(g, ox + 54, oy + 47, 1.6, 1.6, '#ffe28a');
+      P.rrect(g, ox + 10, oy + 28, 18, 16, 4, win, C.line); P.rrect(g, ox + 68, oy + 28, 18, 16, 4, win, C.line);
+      P.rrect(g, ox + 70, oy - 18, 9, 18, 2, '#9aa5b0', C.line, 1.2);
+      return;
+    }
+    if (kind === 'smallhouse') { // 작은 집
+      P.shadow(g, ox + 48, oy + 62, 116, 0.25);
+      P.rrect(g, ox, oy + 6, 96, 56, 8, '#fff6e6', C.line);
+      g.fillStyle = '#f0dcc0'; g.fillRect(ox + 2, oy + 52, 92, 8);
+      g.fillStyle = '#8fc6e8'; g.strokeStyle = C.line; g.lineWidth = 1.5;
+      g.beginPath(); g.roundRect(ox - 8, oy - 24, 112, 36, [26, 26, 6, 6]); g.fill(); g.stroke();
+      g.fillStyle = '#b8dcf2'; g.beginPath(); g.ellipse(ox + 30, oy - 12, 24, 6, -0.1, 0, Math.PI * 2); g.fill();
+      roofSnow(g, ox + 8, oy - 28, 80);
+      P.rrect(g, ox + 38, oy + 26, 20, 36, [10, 10, 1, 1], '#7fbfa8', C.line); P.blob(g, ox + 54, oy + 45, 1.6, 1.6, '#fff');
+      P.rrect(g, ox + 8, oy + 24, 22, 18, 9, win, C.line); P.rrect(g, ox + 66, oy + 24, 22, 18, 9, win, C.line);
+      for (const [x, c] of [[6, '#ff9fbf'], [84, '#ffd24d']]) { P.blob(g, ox + x, oy + 60, 6, 4, '#7cc35a'); P.blob(g, ox + x, oy + 57, 2.5, 2.5, c); }
+      return;
+    }
     if (kind === 'tent') { // 텐트 (3×2)
       P.shadow(g, ox + 48, oy + 62, 100, 0.25);
       g.strokeStyle = C.line; g.lineWidth = 1.5;

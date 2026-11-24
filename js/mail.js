@@ -55,7 +55,7 @@
         const pool = LETTERS[id]; const [body, ps] = pool[Math.floor(R() * pool.length)];
         let gift = null;
         if (R() < 0.3 && G.house) {
-          const f = G.house.FORMS[Math.floor(R() * G.house.FORMS.length)];
+          const f = G.house.SHOP_FORMS[Math.floor(R() * G.house.SHOP_FORMS.length)];
           gift = { id: 'furn:' + f.id, x: { c: f.col ? Math.floor(R() * G.house.COLS.length) : 0 } };
         } else if (R() < 0.25) gift = { money: 200 + Math.floor(R() * 4) * 100 };
         st.box.unshift({ n: ++st.seq, from: id, day, body, ps, gift, read: false });
