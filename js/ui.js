@@ -165,7 +165,10 @@
     G.audio.sfx('open');
     const close = (r) => { modalEl.classList.add('hidden'); modalEl.innerHTML = ''; G.input.unlock('modal'); UI.open = null; G.audio.sfx('close'); resolve(r); };
     UI.open = { close, body, card, head };
-    modalEl.onclick = (e) => { if (e.target === modalEl) close(); };
+    // 배경을 '직접 눌렀다 뗄 때'만 닫는다 (창을 연 탭의 뒤따르는 클릭이 배경에 떨어져 바로 닫히던 문제)
+    const openedAt = performance.now(); let downOnBg = false;
+    modalEl.onpointerdown = (e) => { downOnBg = e.target === modalEl && performance.now() - openedAt > 250; };
+    modalEl.onclick = (e) => { if (e.target === modalEl && downOnBg) close(); downOnBg = false; };
     build(body, close, card);
   });
   UI.modalInput = (ev) => {

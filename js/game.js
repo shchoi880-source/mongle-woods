@@ -239,7 +239,7 @@
         break;
       }
       case 'tent': G.house.enter(); break;
-      case 'mailbox': await G.ui.say([{ who: 'sys', text: G.quest.st.letterDone ? '우체통이 비어 있어요. 내일 아침엔 편지가 올지도 몰라요.' : '우체통이 비어 있어요. 오늘 할 일은 잎첩(🍃)에서 볼 수 있어요.' }]); break;
+      case 'mailbox': await G.mail.open(); break;
       case 'house': await G.ui.say([{ who: 'sys', text: G.npc.get('ddalang').vis ? '똑똑… 대답이 없어요. 딸랑은 밖에서 놀고 있나 봐요.' : '안에서 쌔근쌔근 소리가 나요. 딸랑이 자고 있어요.' }]); break;
       case 'postoffice': await G.ui.say([{ who: 'sys', text: '우체국 문이 잠겨 있어요. 보리 할멈은 문 앞에서 기다리고 있어요.' }]); break;
       case 'stall': await GM.openShop(); break;
@@ -461,7 +461,7 @@
         const sp = A.building(k, A.season, night);
         R.push({ sy: foot - (k === 'stall' ? 30 : 2), draw: (c) => c.drawImage(sp, bx - 16, by - 44, 160, 140) });
       } else if (k === 'lamp' || k === 'bench' || k === 'mailbox' || k === 'board' || k === 'signboard') {
-        const sp = A.prop(k, A.season, night);
+        const sp = A.prop(k === 'mailbox' && G.mail.unread() ? 'mailbox_full' : k, A.season, night);
         R.push({ sy: foot - 4, draw: (c) => drawShaky(c, sp, bx + 16 + (k === 'bench' || k === 'board' ? 16 : 0), foot - 4, -32, -76, o, 64, 80, 0.04) });
       }
     }
@@ -767,6 +767,7 @@
     } else if (!fresh) {
       const k = G.time.st.playDays;
       G.ui.toast(`어서 와요, ${pl.name}! ${G.time.label().date}`, { icon: '🍃' });
+      setTimeout(() => G.mail.ritual(), 900);
       if (G.npc.get('ddalang')) { /* 아침 의식(꿈·우체통)은 M-b */ }
       void k;
     }

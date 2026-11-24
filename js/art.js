@@ -437,11 +437,12 @@
       P.rrect(g, ox + 2, oy + 12, 60, 8, 3, C.wood, C.line, 1.2);
       g.fillStyle = C.woodD; g.fillRect(ox + 8, oy + 20, 4, 8); g.fillRect(ox + 52, oy + 20, 4, 8);
       if (season === 'winter') P.blob(g, ox + 32, oy + 12, 24, 3, '#ffffff');
-    } else if (kind === 'mailbox') {
+    } else if (kind === 'mailbox' || kind === 'mailbox_full') {
       P.shadow(g, ox + 16, oy + 28, 20);
       g.fillStyle = C.woodD; g.fillRect(ox + 14, oy + 6, 4, 22);
       P.rrect(g, ox + 4, oy - 12, 24, 18, [10, 10, 3, 3], '#ff8a7a', C.line, 1.5);
-      g.fillStyle = '#ffe28a'; g.fillRect(ox + 26, oy - 14, 2, 10); g.fillRect(ox + 26, oy - 14, 6, 4);
+      if (kind === 'mailbox_full') { g.fillStyle = '#ff6b6b'; g.fillRect(ox + 26, oy - 24, 2, 14); g.fillRect(ox + 26, oy - 24, 8, 5); P.rrect(g, ox + 8, oy - 15, 14, 8, 1, '#ffffff', C.line, 1); }
+      else { g.fillStyle = '#ffe28a'; g.fillRect(ox + 26, oy - 14, 2, 10); g.fillRect(ox + 26, oy - 14, 6, 4); }
     } else if (kind === 'board') {
       P.shadow(g, ox + 32, oy + 28, 52);
       g.fillStyle = C.woodD; g.fillRect(ox + 8, oy, 4, 28); g.fillRect(ox + 52, oy, 4, 28);

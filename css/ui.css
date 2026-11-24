@@ -172,3 +172,11 @@ input, select, textarea { font: inherit; color: var(--ink); }
 .folkcard.unknown .folkpic { filter: brightness(0) opacity(.2); }
 .folkinfo { font-size: 14px; line-height: 1.5; }
 .hearts { color: #ff6b8b; letter-spacing: 1px; } .hearts i { font-style: normal; color: #f1dcd6; }
+
+/* ---- 우체통·편지 ---- */
+.mailist { display: flex; flex-direction: column; gap: 6px; }
+.mailrow { display: flex; align-items: center; gap: 8px; background: #fff; border: 2px solid var(--line); border-radius: 14px; padding: 8px 12px; text-align: left; position: relative; }
+.mailrow.new { border-color: #ffb3c7; background: #fff6f9; } .mailrow .env { font-size: 20px; } .mailrow b { flex: none; }
+.mailrow .muted { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; } .mailrow .gift { margin-left: auto; font-style: normal; }
+.letter { background: repeating-linear-gradient(#fffdf6 0 27px, #f1e4cf 27px 28px); border: 2px solid #f1dcc0; border-radius: 16px; padding: 16px 18px; margin-bottom: 12px; line-height: 28px; font-size: 15px; word-break: keep-all; }
+.letter p { margin: 0 0 6px; } .letter .ps { color: var(--ink2); font-size: 14px; } .lt-to { font-weight: 800; } .lt-from { text-align: right; font-weight: 800; }

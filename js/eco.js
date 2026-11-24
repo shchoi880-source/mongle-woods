@@ -41,7 +41,8 @@
     let cands = G.data.all('bugs').filter((sp) => available(sp, month, hour));
     if (wx.type === 'rain' || wx.type === 'snow') cands = cands.filter((sp) => sp.loc !== 'air' && sp.loc !== 'flower');
     if (!cands.length) return;
-    const sp = u.pickW(cands.map((s) => ({ s, w: TIER_W[s.tier] })), R()).s;
+    const dream = G.mail ? G.mail.dreamSpecies() : '';
+    const sp = u.pickW(cands.map((s) => ({ s, w: TIER_W[s.tier] * (dream === 'bug:' + s.id ? 6 : 1) })), R()).s;
     const spot = findSpot(sp.loc, p.x, p.y, R); if (!spot) return;
     const [tx, ty, alt, obj] = spot;
     const giant = R() < GIANT;
@@ -66,7 +67,8 @@
       if (Math.abs(tx - ptx) < 2 && Math.abs(ty - pty) < 2) continue;
       const cands = G.data.all('fish').filter((f) => f.loc === wk && available(f, month, hour));
       if (!cands.length) return;
-      const sp = u.pickW(cands.map((s) => ({ s, w: TIER_W[s.tier] * (s.rare || 1) })), R()).s;
+      const dream = G.mail ? G.mail.dreamSpecies() : '';
+      const sp = u.pickW(cands.map((s) => ({ s, w: TIER_W[s.tier] * (s.rare || 1) * (dream === 'fish:' + s.id ? 6 : 1) })), R()).s;
       const giant = R() < GIANT;
       fish.push({ kind: 'fish', sp, shadow: giant ? Math.min(5, sp.shadow + 1) : sp.shadow, x: tx * TILE + 16, y: ty * TILE + 16, ang: R() * 6.28, spd: 0, t: 0, seed: R() * 10, state: 'swim', v: giant ? 1 : 0, size: rollSize(sp, R(), giant), fade: 0 });
       return;
