@@ -659,9 +659,10 @@
         if (!total) return;
         const got = G.market.sell([...sel]); sel.clear();
         G.audio.sfx('coin');
-        const t1 = G.lines('todak', 'sold'), t2 = G.lines('tosil', 'sold');
-        close();
-        await UI.say([{ who: 'todak', text: G.u.pick(t1, Math.random()).text }, { who: 'tosil', text: G.str(G.u.pick(t2, Math.random()).text, { total: G.fmt.money(got) }) }]);
+        // 사고팔 때 창을 닫지 않는다(오너 요청: 매번 닫혀서 불편) — 말은 알림으로
+        const t2 = G.lines('tosil', 'sold');
+        UI.toast('토실: ' + G.str(G.u.pick(t2, Math.random()).text, { total: G.fmt.money(got) }), { icon: '🪙', ms: 3200 });
+        render();
       };
       foot.append(sb);
       // 구매
@@ -675,15 +676,14 @@
           const r = G.shop.buy(e);
           if (!r.ok) { G.audio.sfx('error'); UI.toast(r.why, { icon: '🪙' }); return; }
           G.audio.sfx('coin');
-          if (e.kind === 'animal') { close(); await UI.say(r.first ? [{ who: 'tosil', text: '아기 동물은 오빠 친구 목장에서 데려왔어요. 집 옆에 울타리도 세워 뒀어요.' }, { who: 'todak', text: '전설의 목장이에요! …아직 울타리뿐이지만요!' }, { who: 'sys', text: '쓰다듬어 주면 몇 분 뒤 선물을 줘요. 거두고 또 쓰다듬으면 또 줘요! 아기는 마을 하루(24분)면 다 자라요.' }] : [{ who: 'tosil', text: `${e.name}가 목장에 도착했어요. 이름은 목장에서 확인해 보세요.` }]); return; }
-          if (r.gift) { close(); await UI.say([{ who: 'tosil', text: '씨앗 첫 손님이시네요. 물뿌리개는 덤이에요. 오빠한테는 비밀이에요.' }, { who: 'todak', text: '전설의 물뿌리개예요! 물이 알아서… 아, 이건 진짜로 물이 나와요.' }]); G.ui.toast('물뿌리개를 받았어요! 텃밭은 집 옆에 있어요.', { icon: '🚿', ms: 3500 }); return; }
-          if (e.kind === 'tool') {
-            close();
-            await UI.say(e.id === 'axe'
-              ? [{ who: 'todak', text: '전설의 도끼예요! 나무가 스스로 목재를 내놓을 거예요!' }, { who: 'tosil', text: '나무를 찍으면 목재가 나와요. 한 나무에 하루 세 번까지만요. 나무도 쉬어야 하니까요.' }]
-              : [{ who: 'todak', text: '전설의 삽이에요! 땅이 알아서 파질 거예요!' }, { who: 'tosil', text: '알아서는 안 파져요. 첫 손님이라 손잡이 덮개 넣었어요. 오빠한테 말하지 마세요.' }]);
-            G.player.setTool(e.id);
-          } else { UI.toast(`${e.name}을(를) 샀어요! 텐트에서 꾸미기로 놓아 보세요.`, { icon: '🛋️' }); render(); }
+          // 사고 나서도 창은 그대로 (계속 살 수 있게). 설명은 알림으로
+          const tip = (t, ic, ms) => UI.toast(t, { icon: ic, ms: ms || 3200 });
+          if (e.kind === 'animal') { tip(r.first ? `${e.name}가 집 옆 목장에 왔어요! 쓰다듬으면 몇 분 뒤 선물을 줘요.` : `${e.name}가 목장에 도착했어요!`, '🐣', 4000); }
+          else if (r.gift) { tip('씨앗 첫 손님 덤으로 물뿌리개를 받았어요! 텃밭은 집 옆에 있어요.', '🚿', 4000); }
+          else if (e.kind === 'tool') { G.player.setTool(e.id); tip(e.id === 'axe' ? '도끼를 샀어요! 나무를 찍으면 목재가 나와요.' : e.id === 'can' ? '물뿌리개를 샀어요! 텃밭에 물을 줘요.' : '삽을 샀어요! 땅의 금(✕)을 파 보세요.', '🧰'); }
+          else if (e.kind === 'seed') tip(`${e.name}를 샀어요! 집 옆 텃밭에 심어요.`, '🌱');
+          else tip(`${e.name}을(를) 샀어요! 집에서 꾸미기로 놓아 보세요.`, '🛋️');
+          render();
         };
         buy.append(b);
       }
