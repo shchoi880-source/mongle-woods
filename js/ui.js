@@ -496,6 +496,8 @@
     pane.dataset.settings = '1'; pane.innerHTML = '';
     const row = (label, el) => { const r = $('label', 'setrow', `<span>${label}</span>`); r.append(el); return r; };
     const slider = (key) => { const s = $('input'); s.type = 'range'; s.min = 0; s.max = 1; s.step = 0.05; s.value = G.settings.get(key); s.oninput = () => G.settings.set(key, +s.value); return s; };
+    const me = $('button', 'btn', '🪞 내 이름·모습 바꾸기'); me.onclick = () => { G.audio.sfx('tap'); UI.open.body.querySelector('[data-t=me]').click(); };
+    pane.append(me);
     pane.append(row('배경 음악', slider('bgm')), row('효과음', slider('sfx')), row('목소리', slider('voice')));
     const sp = $('select'); [['느리게', 22], ['보통', 32], ['빠르게', 50], ['즉시', 999]].forEach(([n, v]) => { const o = $('option', null, n); o.value = v; if (G.settings.get('textSpeed') === v) o.selected = true; sp.append(o); });
     sp.onchange = () => G.settings.set('textSpeed', +sp.value);
