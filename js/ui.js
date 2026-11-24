@@ -86,8 +86,8 @@
     clearTimeout(popTimer);
     const it = G.items.get(id) || { name: id };
     const nm = G.items.name(id, x);
-    popEl.innerHTML = `<div class="pop-ico"><img src="${G.art.iconURL(G.items.icon(id, x), 96)}" alt=""></div><div class="pop-txt"><b>${esc(msg || G.josa(nm, '을/를') + ' 얻었다!')}</b>${x && x.size ? `<span>${x.size}cm${x.v === 1 ? ' · 거대!' : ''}</span>` : ''}${x && x.newSp ? '<em>도감에 새로 등록!</em>' : ''}</div>`;
-    popEl.className = 'itempop' + (x && x.v === 1 ? ' is-giant' : '') + (it.ref && it.ref.tier >= 3 ? ' rare' : '');
+    popEl.innerHTML = `<div class="pop-ico"><img src="${G.art.iconURL(G.items.icon(id, x), 96)}" alt=""></div><div class="pop-txt"><b>${esc(msg || G.josa(nm, '을/를') + ' 얻었다!')}</b>${x && x.size ? `<span>${x.size}cm${x.v ? ' · ' + (x.v === 5 ? '계절빛' : G.VARIANTS[x.v].name) + '!' : ''}</span>` : ''}${x && x.newSp ? '<em>도감에 새로 등록!</em>' : ''}</div>`;
+    popEl.className = 'itempop' + (x && x.v ? ' is-giant' : '') + (it.ref && it.ref.tier >= 3 ? ' rare' : '');
     popTimer = setTimeout(() => popEl.classList.add('hidden'), short ? 900 : 2000);
   };
 
@@ -193,7 +193,7 @@
       const s = slots[i];
       const c = $('button', 'slot' + (s ? '' : ' empty') + (sel && sel.has(i) ? ' sel' : ''));
       if (s) {
-        c.innerHTML = `<img src="${G.art.iconURL(G.items.icon(s.id, s.x), 64)}" alt="">${s.n > 1 ? `<b>${s.n}</b>` : ''}${s.x && s.x.v === 1 ? '<i class="giant">거대</i>' : ''}`;
+        c.innerHTML = `<img src="${G.art.iconURL(G.items.icon(s.id, s.x), 64)}" alt="">${s.n > 1 ? `<b>${s.n}</b>` : ''}${s.x && s.x.v ? `<i class="giant v${s.x.v}">${G.VARIANTS[s.x.v].name}</i>` : ''}`;
         c.onclick = () => onTap(i, s, c);
       }
       grid.append(c);
@@ -254,12 +254,14 @@
         const now = r.months && r.months.includes(G.time.month());
         const c = $('button', 'dexcell' + (has ? '' : ' unknown') + (now ? ' now' : ''));
         const id = (k === 'fossil' ? 'fossil:' : k + ':') + r.id;
-        c.innerHTML = `<img src="${G.art.iconURL(id, 64)}" alt=""><span>${has ? esc(r.name) : '???'}</span>${has && k !== 'fossil' && G.collect.has(k, r.ix, 1) ? '<i class="giant">거대</i>' : ''}`;
+        const dots = k === 'fossil' || !has ? '' : '<i class="vdots">' + G.VARIANTS.map((vr) => `<b class="${G.collect.has(k, r.ix, vr.v) ? 'on' : ''}" title="${vr.name || '일반'}"></b>`).join('') + '</i>';
+        c.innerHTML = `<img src="${G.art.iconURL(id, 64)}" alt=""><span>${has ? esc(r.name) : '???'}</span>${dots}`;
         c.onclick = () => {
           G.audio.sfx('tap');
           if (!has) { info.innerHTML = `<b>???</b><br><span class="muted">${r.loc ? '힌트: ' + ({ flower: '꽃 근처', air: '풀밭 하늘', ground: '땅 위', rock: '돌 옆', tree: '나무 줄기', water: '물가', lamp: '밤의 가로등', river: '강', pond: '연못', sea: '바다' })[r.loc] : '땅속 어딘가'}${r.hours ? ' · ' + hoursText(r.hours) : ''}</span>`; return; }
           const best = G.collect.best(k, r.ix);
-          info.innerHTML = `<b>${esc(r.name)}</b>${r.tier ? ' ' + '★'.repeat(r.tier) : ''}<br><span class="muted">${r.months ? monthsText(r.months) + ' · ' + hoursText(r.hours) : '화석'}${best ? ' · 최고 기록 ' + best + 'cm' : ''}</span>`;
+          const vlist = k === 'fossil' ? '' : '<br><span class="muted small">변이: ' + G.VARIANTS.map((vr) => (G.collect.has(k, r.ix, vr.v) ? '●' : '○') + (vr.name || '일반')).join(' ') + '</span>';
+          info.innerHTML = `<b>${esc(r.name)}</b>${r.tier ? ' ' + '★'.repeat(r.tier) : ''}<br><span class="muted">${r.months ? monthsText(r.months) + ' · ' + hoursText(r.hours) : '화석'}${best ? ' · 최고 기록 ' + best + 'cm' : ''}</span>${vlist}`;
         };
         grid.append(c);
       }

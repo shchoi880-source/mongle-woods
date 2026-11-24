@@ -154,5 +154,22 @@
   D.add('lines', L);
   G.lines = (who, sit) => G.data.all('lines').filter((l) => l.who === who && l.sit === sit);
 
+  // ---------- 변이 6종 (도감 칸 = 종 × 6) ----------
+  // 0 일반 · 1 거대 · 2 새하얀(알비노) · 3 줄무늬(희귀 무늬) · 4 황금 · 5 계절빛
+  G.VARIANTS = [
+    { v: 0, name: '', mul: 1 },
+    { v: 1, name: '거대', mul: 1.5 },
+    { v: 2, name: '새하얀', mul: 2 },
+    { v: 3, name: '줄무늬', mul: 1.8 },
+    { v: 4, name: '황금', mul: 5 },
+    { v: 5, name: '계절빛', mul: 1.6 },
+  ];
+  // 확률: 거대 5% · 새하얀 1.2%(밤 ×2) · 줄무늬 2%(비·눈 ×2) · 계절빛 3% · 황금은 등불 1 점등 후(베타는 잠김)
+  G.rollVariant = (r, ctx) => {
+    const night = ctx && ctx.night, wet = ctx && ctx.wet;
+    const t = [[1, 0.05], [2, 0.012 * (night ? 2 : 1)], [3, 0.02 * (wet ? 2 : 1)], [5, 0.03], [4, ctx && ctx.golden ? 0.004 : 0]];
+    let acc = 0; for (const [v, p] of t) { acc += p; if (r < acc) return v; }
+    return 0;
+  };
   G.modules.add('data');
 })(globalThis.G);

@@ -188,3 +188,8 @@ input, select, textarea { font: inherit; color: var(--ink); }
 .recipe img { width: 44px; height: 44px; } .recipe .bi { font-size: 30px; width: 44px; text-align: center; }
 .rinfo { flex: 1; min-width: 0; } .rinfo .small { font-size: 12px; } .rinfo .ok { color: #3f9f6f; font-weight: 800; } .rinfo .no { color: #c98a7a; }
 .swatch { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--ink); flex: none; }
+
+/* ---- 변이 ---- */
+.vdots { display: flex; gap: 2px; margin-top: 2px; font-style: normal; } .vdots b { width: 6px; height: 6px; border-radius: 50%; background: #eadfce; } .vdots b.on { background: #ff9f43; }
+.giant.v2 { background: #b9b4d6; } .giant.v3 { background: #8a7466; } .giant.v4 { background: #e0a21c; } .giant.v5 { background: #ff8fb1; }
+.yeongcha { position: absolute; left: 50%; top: 38%; transform: translateX(-50%); font-size: 30px; font-weight: 900; color: #fff; -webkit-text-stroke: 3px var(--ink); paint-order: stroke fill; pointer-events: none !important; animation: popin .25s; }

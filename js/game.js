@@ -91,7 +91,7 @@
     pl.hold = { id, x }; pl.holdT = short ? 0.4 : 1.2; pl.busy = Math.max(pl.busy, short ? 0.35 : 0.9);
     pl.dir = 0;
     G.ui.itemPop(id, x, opt.msg, short);
-    if (opt.sfx !== false) G.audio.sfx(it && it.ref && it.ref.tier >= 3 || (x && x.v === 1) ? 'rare' : opt.sfx || 'pickup');
+    if (opt.sfx !== false) G.audio.sfx(it && it.ref && it.ref.tier >= 3 || (x && x.v) ? 'rare' : opt.sfx || 'pickup');
     G.emit('item:gain', { id, n, src: opt.src });
     return true;
   };
@@ -113,7 +113,7 @@
     // 3) 도구별
     if (pl.tool === 'net') { const b = G.eco.nearest('bug', f.x, f.y, 48); return { kind: 'net', ref: b, icon: '🪲', label: '휘두르기', name: b && b.fade > 0.5 ? b.sp.name : '' }; }
     if (pl.tool === 'rod') {
-      if (G.fishing.state !== 'idle') return { kind: 'rod', icon: '🎣', label: G.fishing.state === 'bite' ? '당기기!' : '거두기' };
+      if (G.fishing.state !== 'idle') return { kind: 'rod', icon: '🎣', label: G.fishing.state === 'reel' ? '영차!' : G.fishing.state === 'bite' ? '당기기!' : '거두기' };
       const water = waterAhead();
       return { kind: 'rod', icon: '🎣', label: water ? '던지기' : '던지기', name: water ? ({ river: '강', pond: '연못', sea: '바다' })[water] : '' };
     }
@@ -161,6 +161,14 @@
   }
 
   // ---------- 행동 ----------
+  function landFish(f) {
+    const res = G.collect.record('fish', f.sp.ix, f.v, f.size);
+    G.emit('eco:caught', { kind: 'fish', ix: f.sp.ix, v: f.v, size: f.size });
+    const x = { size: f.size, v: f.v, newSp: res.newSp }; if (f.v === 5) x.s = A.season;
+    if (GM.gain('fish:' + f.sp.id, 1, x, { msg: `${G.josa(G.items.name('fish:' + f.sp.id, x), '을/를')} 낚았다!` })) { kongalReact('jump'); kongalSay('폴짝!'); }
+    fxSplash(f.x, f.y);
+  }
+  G.on('fishing:auto', () => { const r = G.fishing.press(pl); while (r && r.reel) { const q = G.fishing.press(pl); if (q.caught) { landFish(q.caught); return; } } if (r && r.caught) landFish(r.caught); });
   async function doAction() {
     if (pl.busy > 0) return;
     const tg = findTarget();
@@ -183,7 +191,7 @@
           if (b) {
             const r = G.collect.record('bug', b.sp.ix, b.v, b.size);
             G.emit('eco:caught', { kind: 'bug', ix: b.sp.ix, v: b.v, size: b.size });
-            const x = { size: b.size, v: b.v, newSp: r.newSp };
+            const x = { size: b.size, v: b.v, newSp: r.newSp }; if (b.v === 5) x.s = A.season;
             GM.gain('bug:' + b.sp.id, 1, x, { msg: `${G.josa(G.items.name('bug:' + b.sp.id, x), '을/를')} 잡았다!` });
             kongalReact('jump'); kongalSay(u.pick(G.lines('kongal', 'catch'), Math.random()).text);
             if (!G.inv.canFit('bug:' + b.sp.id, x) && !G.inv.has('bug:' + b.sp.id)) { /* gain 실패 시 놓아줌 */ }
@@ -197,14 +205,9 @@
           else { pl.swing = 0.001; }
         } else {
           const r = G.fishing.press(pl);
-          if (r.caught) {
-            const f = r.caught;
-            const res = G.collect.record('fish', f.sp.ix, f.v, f.size);
-            G.emit('eco:caught', { kind: 'fish', ix: f.sp.ix, v: f.v, size: f.size });
-            const x = { size: f.size, v: f.v, newSp: res.newSp };
-            if (GM.gain('fish:' + f.sp.id, 1, x, { msg: `${G.josa(G.items.name('fish:' + f.sp.id, x), '을/를')} 낚았다!` })) { kongalReact('jump'); kongalSay('폴짝!'); }
-            fxSplash(f.x, f.y);
-          } else if (r.early) { kongalSay(u.pick(G.lines('kongal', 'miss'), Math.random()).text); G.emit('eco:miss', { kind: 'fish' }); }
+          if (r.reel) { pl.squash = 0.1; if (G.fishing.reel === 0) kongalSay('영차!'); }
+          else if (r.caught) landFish(r.caught);
+          else if (r.early) { kongalSay(u.pick(G.lines('kongal', 'miss'), Math.random()).text); G.emit('eco:miss', { kind: 'fish' }); }
         }
         break;
       }
@@ -445,6 +448,7 @@
     for (const n of G.npc.list) if (n.vis && n.emote) A.emote(ctx, n.x, n.y - 62 - (n.species === 'rabbit' ? 10 : 0), n.emote, Math.min(1, n.emoteT / 0.3));
     if (pl.hold) drawHeld(t);
     if (kg.sayT > 0 && !G.ui.dialogOpen()) bubble(pl.x, pl.y - 74 - kg.jump, kg.say, Math.min(1, kg.sayT * 3));
+    G.fishing.drawPost(ctx, pl);
     drawAim(t);
   }
   function collectObjects(rect, t) {

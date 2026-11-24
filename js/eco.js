@@ -3,7 +3,6 @@
   'use strict';
   const u = G.u, TILE = G.C.TILE;
   const TIER_W = [0, 10, 5, 2, 0.7, 0.25];
-  const GIANT = 0.05;
 
   const bugs = [], fish = [];
   let spawnT = 0, fishT = 0;
@@ -45,11 +44,12 @@
     const sp = u.pickW(cands.map((s) => ({ s, w: TIER_W[s.tier] * (dream === 'bug:' + s.id ? 6 : 1) })), R()).s;
     const spot = findSpot(sp.loc, p.x, p.y, R); if (!spot) return;
     const [tx, ty, alt, obj] = spot;
-    const giant = R() < GIANT;
+    const v = G.rollVariant(R(), { night: G.time.isNight(), wet: wx.type !== 'clear' && wx.type !== 'cloudy' });
+    const giant = v === 1;
     const b = {
       kind: 'bug', sp, x: tx * TILE + 16 + (R() - 0.5) * 12, y: ty * TILE + 20, alt, baseAlt: alt,
       hx: tx * TILE + 16, hy: ty * TILE + 20, vx: 0, vy: 0, t: R() * 10, state: 'idle', seed: R() * 10, face: 1,
-      v: giant ? 1 : 0, size: rollSize(sp, R(), giant), sizeK: giant ? 1 : 0, fade: 0, obj,
+      v, size: rollSize(sp, R(), giant), sizeK: giant ? 1 : 0, fade: 0, obj,
     };
     if (sp.loc === 'tree' && obj) { b.x = obj.tx * TILE + 16; b.y = obj.ty * TILE + 30; }
     bugs.push(b);
@@ -69,8 +69,10 @@
       if (!cands.length) return;
       const dream = G.mail ? G.mail.dreamSpecies() : '';
       const sp = u.pickW(cands.map((s) => ({ s, w: TIER_W[s.tier] * (s.rare || 1) * (dream === 'fish:' + s.id ? 6 : 1) })), R()).s;
-      const giant = R() < GIANT;
-      fish.push({ kind: 'fish', sp, shadow: giant ? Math.min(5, sp.shadow + 1) : sp.shadow, x: tx * TILE + 16, y: ty * TILE + 16, ang: R() * 6.28, spd: 0, t: 0, seed: R() * 10, state: 'swim', v: giant ? 1 : 0, size: rollSize(sp, R(), giant), fade: 0 });
+      const wx = G.weather.now();
+      const v = G.rollVariant(R(), { night: G.time.isNight(), wet: wx.type !== 'clear' && wx.type !== 'cloudy' });
+      const giant = v === 1;
+      fish.push({ kind: 'fish', sp, shadow: giant ? Math.min(5, sp.shadow + 1) : sp.shadow, x: tx * TILE + 16, y: ty * TILE + 16, ang: R() * 6.28, spd: 0, t: 0, seed: R() * 10, state: 'swim', v, size: rollSize(sp, R(), giant), fade: 0 });
       return;
     }
   }
@@ -221,7 +223,14 @@
     },
     // 액션 버튼
     press(p) {
-      if (F.state === 'bite') {
+      // 큰 그림자(4+)는 '영차' 세 번으로 끌어올린다 (실패 없음)
+      if (F.state === 'bite' && F.target.shadow >= 4) { F.state = 'reel'; F.t = 0; F.reel = 0; F.pop = 1; G.audio.sfx('bite'); return { reel: true }; }
+      if (F.state === 'reel') {
+        F.reel++; F.pop = 1; G.audio.sfx('nibble');
+        if (G.settings.get('vibrate') && navigator.vibrate) navigator.vibrate(25);
+        if (F.reel < 3) return { reel: true };
+      }
+      if (F.state === 'bite' || F.state === 'reel') {
         const f = F.target; F.state = 'idle'; F.bob = null; F.target = null;
         fish.splice(fish.indexOf(f), 1);
         return { caught: f };
@@ -284,6 +293,14 @@
         }
         return;
       }
+      if (F.state === 'reel') {
+        // 물고기가 찌 쪽으로 끌려온다. 3.5초가 지나도 못 당기면 알아서 올라온다(벌 없음)
+        F.pop = Math.max(0, (F.pop || 0) - dt * 3);
+        f.x += (p.x - f.x) * dt * 0.6 * (1 + F.reel); f.y += (p.y + 20 - f.y) * dt * 0.3;
+        b.x = f.x; b.y = f.y; b.dip = 7 + Math.sin(F.t * 20) * 2;
+        if (F.t > 3.5) { G.emit('fishing:auto', {}); }
+        return;
+      }
       if (F.state === 'bite') {
         b.dip = 7;
         if (F.t > F.window) { // 놓침
@@ -315,6 +332,16 @@
       if (F.state === 'bite') {
         ctx.fillStyle = '#ff8a3a'; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center';
         ctx.fillText('!', bx, by - 16 - Math.sin(F.t * 20) * 2);
+      }
+    },
+    // 그레이딩 뒤(밤에도 밝게)에 그리는 '영차' 글자
+    drawPost(ctx, p) {
+      if (F.state === 'reel') {
+        const s = 1 + (F.pop || 0) * 0.35;
+        ctx.save(); ctx.translate(p.x, p.y - 100); ctx.scale(s, s);
+        ctx.font = 'bold 15px sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 3.5; ctx.strokeStyle = '#5b4636'; ctx.fillStyle = '#fff';
+        const txt = '영차!' + ' ●'.repeat(F.reel) + ' ○'.repeat(3 - F.reel);
+        ctx.strokeText(txt, 0, 0); ctx.fillText(txt, 0, 0); ctx.restore();
       }
     },
   };

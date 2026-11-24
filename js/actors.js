@@ -246,7 +246,7 @@
 
   // ---------- 곤충 ----------
   A.bug = (ctx, b, t) => {
-    const sp = b.sp, col = sp.col, s = 0.9 + (b.sizeK || 0) * 0.35;
+    const sp = b.sp, col = A.vcol(sp.col, b.v, b.s), s = 0.9 + (b.sizeK || 0) * 0.35;
     ctx.save(); ctx.translate(b.x, b.y - (b.alt || 0));
     if (b.alt) { ctx.save(); ctx.translate(0, b.alt); P.shadow(ctx, 0, 0, 8, 0.18); ctx.restore(); } else P.shadow(ctx, 0, 1, 7, 0.18);
     ctx.scale(s * (b.face < 0 ? -1 : 1), s);
@@ -269,7 +269,7 @@
         P.rrect(ctx, -1.4, -6, 2.8, 14, 1.4, col[0], LINE, 1); P.blob(ctx, 0, -6, 2.4, 2.2, col[1]);
         break;
       }
-      case 'ladybug': P.blob(ctx, 0, 0, 4.5, 4, col[0], LINE, 1.1); P.blob(ctx, 0, -4, 2.4, 1.8, col[1]); ctx.fillStyle = col[1]; ctx.fillRect(-0.4, -3, 0.8, 7); P.blob(ctx, -2, 0, 1, 1, col[1]); P.blob(ctx, 2, 1.5, 1, 1, col[1]); break;
+      case 'ladybug': P.blob(ctx, 0, 0, 4.5, 4, col[0], LINE, 1.1); if (b.v === 3) { ctx.fillStyle = col[1]; ctx.fillRect(-4, -0.5, 8, 1); } P.blob(ctx, 0, -4, 2.4, 1.8, col[1]); ctx.fillStyle = col[1]; ctx.fillRect(-0.4, -3, 0.8, 7); P.blob(ctx, -2, 0, 1, 1, col[1]); P.blob(ctx, 2, 1.5, 1, 1, col[1]); break;
       case 'pillbug': for (let k = 0; k < 4; k++) P.blob(ctx, -3 + k * 2, 0, 2.6, 3.4, k % 2 ? col[0] : col[1], k === 0 ? LINE : null, 1); P.blob(ctx, -5, 0, 1.6, 2.4, col[1], LINE, 1); break;
       case 'ant': P.blob(ctx, -3.5, 0, 2.4, 2, col[0]); P.blob(ctx, 0, 0, 1.6, 1.4, col[0]); P.blob(ctx, 3.2, 0, 2.8, 2.2, col[0]); ctx.strokeStyle = col[1]; ctx.lineWidth = 0.7; ctx.beginPath(); for (const x of [-1, 0.5, 2]) { ctx.moveTo(x, 0); ctx.lineTo(x - 1 + flap * 0.6, 3); ctx.moveTo(x, 0); ctx.lineTo(x - 1 - flap * 0.6, -3); } ctx.stroke(); break;
       case 'cricket': P.blob(ctx, 0, 0, 5.5, 2.8, col[0], LINE, 1); P.blob(ctx, -5, -0.5, 2.2, 2.2, col[1]); ctx.strokeStyle = col[1]; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(2, 0); ctx.lineTo(5, -4); ctx.lineTo(7, 1); ctx.moveTo(-6, -1); ctx.lineTo(-10, -5); ctx.stroke(); break;
@@ -282,11 +282,23 @@
       }
       default: P.blob(ctx, 0, 0, 4, 3, col[0], LINE, 1);
     }
+    // 줄무늬 변이: 날개·몸에 띠
+    if (b.v === 3 && (sp.tpl === 'butterfly' || sp.tpl === 'moth' || sp.tpl === 'beetle' || sp.tpl === 'dragonfly')) { ctx.strokeStyle = 'rgba(60,40,60,0.55)'; ctx.lineWidth = 1; ctx.beginPath(); for (const x of [-6, -3, 3, 6]) { ctx.moveTo(x, -6); ctx.lineTo(x, 4); } ctx.stroke(); }
     ctx.restore();
+    // 황금·희귀 변이 반짝
+    if (b.v === 4 || b.v === 2) { const k = (t * 1.2 + b.seed) % 1; ctx.fillStyle = b.v === 4 ? `rgba(255,220,90,${1 - k})` : `rgba(255,255,255,${1 - k})`; ctx.beginPath(); ctx.arc(b.x + Math.cos(b.seed * 7) * 7, b.y - (b.alt || 0) - 6 - k * 6, 1.5, 0, 6.28); ctx.fill(); }
     // ★4+ 반짝 링
     if (sp.tier >= 3) { const k = (t * 0.8 + b.seed) % 1; ctx.strokeStyle = `rgba(255,240,150,${0.6 * (1 - k)})`; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(b.x, b.y - (b.alt || 0), 6 + k * 8, 0, Math.PI * 2); ctx.stroke(); }
   };
 
+  // 변이 색: 2 새하얀 / 4 황금 / 5 계절빛 (나머지는 원래 색)
+  const SEASON_TINT = { spring: ['#ffb3cf', '#ff8fb1'], summer: ['#7fdc9a', '#3fa86a'], autumn: ['#ff9a4a', '#c45a2a'], winter: ['#bcd6ff', '#7f9fd6'] };
+  A.vcol = (col, v, s) => {
+    if (v === 2) return ['#fbfbff', '#e6e2ee'];
+    if (v === 4) return ['#ffd24d', '#e0a21c'];
+    if (v === 5) return SEASON_TINT[s || A.season] || col;
+    return col;
+  };
   // ---------- 물고기 그림자 ----------
   A.fishShadow = (ctx, f, t) => {
     const s = [0, 5, 7, 9, 12, 15][f.shadow] || 6;
@@ -302,20 +314,24 @@
   const FISHCOL = { pale_chub: ['#cfe0f0', '#ff9a8a'], minnow: ['#c8c39a', '#8b8a64'], catfish: ['#6b6258', '#4a433c'], medaka: ['#f3e2b0', '#c9b27a'], crucian: ['#c9b37a', '#9c8550'], carp: ['#f39a5a', '#fff2e0'], smelt: ['#e8f0ff', '#a8b8d8'], horse_mackerel: ['#a9c3d6', '#e9eef2'], mackerel: ['#6a9fc0', '#2f5a7a'], red_seabream: ['#ff8c8c', '#ffd1c4'] };
   A.drawIcon = (g, id, t = 0) => {
     if (id.startsWith('furn:')) { const [k, c] = id.slice(5).split('#'); G.house.drawIcon(g, k, { c: +c || 0 }); return; }
+    let vv = 0, vs = '';
+    if (id.indexOf('#') > 0) { const [base, rest] = id.split('#'); id = base; const [a, b] = rest.split('.'); vv = +a || 0; vs = b || ''; }
     const [cat, key] = id.indexOf(':') > 0 ? id.split(':') : [id, id];
     g.save();
     if (cat === 'bug') {
       const sp = G.data.get('bugs', key);
       g.translate(16, 17); g.scale(2.1, 2.1);
-      A.bug(g, { sp, x: 0, y: 0, seed: 0.3, alt: 0, face: 1 }, 0.07);
+      A.bug(g, { sp, x: 0, y: 0, seed: 0.3, alt: 0, face: 1, v: vv, s: vs }, 0.07);
     } else if (cat === 'fish') {
-      const [c1, c2] = FISHCOL[key] || ['#9fc5e0', '#ffffff'];
+      const [c1, c2] = A.vcol(FISHCOL[key] || ['#9fc5e0', '#ffffff'], vv, vs);
       g.translate(16, 17);
       g.fillStyle = c1; g.strokeStyle = LINE; g.lineWidth = 1.4;
       g.beginPath(); g.ellipse(1, 0, 11, 6.5, 0, 0, Math.PI * 2); g.fill(); g.stroke();
       g.beginPath(); g.moveTo(-9, 0); g.lineTo(-15, -6); g.lineTo(-15, 6); g.closePath(); g.fill(); g.stroke();
       g.fillStyle = c2; g.beginPath(); g.ellipse(2, 2.5, 7, 2.5, 0, 0, Math.PI * 2); g.fill();
-      P.blob(g, 7, -1.5, 1.6, 1.6, '#2d2430'); P.blob(g, 6.5, -2.1, 0.6, 0.6, '#fff');
+      if (vv === 3) { g.strokeStyle = 'rgba(60,40,60,0.45)'; g.lineWidth = 1.4; g.beginPath(); for (const x of [-4, 0, 4]) { g.moveTo(x, -5); g.lineTo(x, 5); } g.stroke(); }
+      P.blob(g, 7, -1.5, 1.6, 1.6, vv === 2 ? '#e0405a' : '#2d2430'); P.blob(g, 6.5, -2.1, 0.6, 0.6, '#fff');
+      if (vv === 4) { g.fillStyle = 'rgba(255,255,255,0.8)'; g.beginPath(); g.ellipse(-2, -3, 4, 1.2, -0.3, 0, 6.28); g.fill(); }
       if (key === 'catfish') { g.strokeStyle = LINE; g.beginPath(); g.moveTo(11, 1); g.quadraticCurveTo(15, 3, 14, 7); g.stroke(); }
     } else if (cat === 'fossil') {
       P.blob(g, 16, 18, 12, 10, '#d8c7a8', LINE, 1.4);

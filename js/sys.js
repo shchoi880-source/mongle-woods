@@ -9,15 +9,17 @@
     name(id, x) {
       const it = G.items.get(id); if (!it) return '잃어버린 물건';
       if (it.cat === 'furn' && it.ref.col && G.house) return G.house.COLN[(x && x.c) || 0] + ' ' + it.name;
-      return (x && x.v === 1 ? '거대 ' : '') + it.name;
+      const vn = x && x.v ? G.VARIANTS[x.v].name : '';
+      if (vn === '계절빛') return ({ spring: '봄빛', summer: '여름빛', autumn: '가을빛', winter: '겨울빛' })[x.s || 'autumn'] + ' ' + it.name;
+      return (vn ? vn + ' ' : '') + it.name;
     },
     // 아이콘 id (가구는 색을 붙인다)
-    icon(id, x) { return id.startsWith('furn:') ? id + '#' + ((x && x.c) || 0) : id; },
+    icon(id, x) { if (id.startsWith('furn:')) return id + '#' + ((x && x.c) || 0); if (x && x.v > 1 && (id.startsWith('bug:') || id.startsWith('fish:'))) return id + '#' + x.v + (x.s ? '.' + x.s : ''); return id; },
     // 판매가: val × 변이 배율 × 유행 바람
     sellPrice(id, x) {
       const it = G.items.get(id); if (!it || it.nosell) return 0;
       let p = it.val;
-      if (x && x.v === 1) p *= 1.5;
+      if (x && x.v) p *= G.VARIANTS[x.v].mul;
       const tr = G.market.trend();
       if (tr && tr.test(it)) p *= 1.2;
       return Math.round(p);
