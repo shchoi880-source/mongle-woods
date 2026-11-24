@@ -24,7 +24,9 @@
       if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
       I.lastTouch = false; I.lastKey = true;
       if (!e.repeat) {
-        if (e.code === 'Space' || e.code === 'Enter' || e.code === 'KeyE' || e.code === 'KeyZ') { I.emit('act'); e.preventDefault(); }
+        // 친구와 함께 있을 땐 Enter = 채팅 (오너 요청). 그 밖엔 행동
+        if ((e.code === 'Enter' || e.code === 'NumpadEnter') && G.net && G.net.active) { I.emit('chat'); e.preventDefault(); }
+        else if (e.code === 'Space' || e.code === 'Enter' || e.code === 'KeyE' || e.code === 'KeyZ') { I.emit('act'); e.preventDefault(); }
         else if (e.code === 'KeyQ' || e.code === 'KeyR') I.emit('tool');
         else if (e.code === 'Tab' || e.code === 'KeyI' || e.code === 'KeyB') { I.emit('menu'); e.preventDefault(); }
         else if (e.code === 'KeyM') I.emit('map');
