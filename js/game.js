@@ -110,6 +110,9 @@
       const sx = s.tx * TILE + 16, sy = s.ty * TILE + 18;
       if (u.dist(sx, sy, f.x, f.y) < 22 || u.dist(sx, sy, pl.x, pl.y) < 18) return { kind: 'shell', ref: s, icon: '🤲', label: '줍기', name: G.items.name(s.item) };
     }
+    // 2.5) 썰물 때 조수 웅덩이 생물 (맨손으로 잡는다 — 어떤 도구를 들고 있어도)
+    const tp = G.tide.near(f.x, f.y, 26) || G.tide.near(pl.x, pl.y, 22);
+    if (tp) return { kind: 'pool', ref: tp, icon: '🦀', label: '잡기', name: '조수 웅덩이' };
     // 3) 도구별
     if (pl.tool === 'net') { const b = G.eco.nearest('bug', f.x, f.y, 48); return { kind: 'net', ref: b, icon: '🪲', label: '휘두르기', name: b && b.fade > 0.5 ? b.sp.name : '' }; }
     if (pl.tool === 'rod') {
@@ -226,6 +229,7 @@
         }, 260);
         break;
       }
+      case 'pool': { pl.busy = 0.3; pl.squash = 0.12; G.audio.sfx('plop'); if (G.tide.catch(tg.ref)) { kongalReact('jump'); fxSplash(tg.ref.tx * TILE + 16, tg.ref.ty * TILE + 22); } break; }
       case 'chop': case 'rockhit': {
         const o = tg.ref; o.shakeT = 0.4; pl.busy = 0.45; pl.swing = 0.001;
         G.audio.sfx(tg.kind === 'chop' ? 'shake' : 'dig');
@@ -415,6 +419,7 @@
     A.drawWater(ctx, rect, t);
     G.eco.drawWater(ctx, rect, t);
     drawDecals(t, rect);
+    G.tide.draw(ctx, rect, t);
     // 레이어 3: y-정렬
     R.length = 0;
     collectObjects(rect, t);
@@ -782,6 +787,7 @@
     G.world.refresh(G.time.day());
     if (G.nest.tick(G.time.day())) setTimeout(() => G.ui.toast(`${G.nest.cur().name} 공사가 끝났어요! 집이 넓어졌어요.`, { icon: '🏡', ms: 4000 }), 1500);
     G.requests.daily(G.time.day());
+    G.tide.refresh(G.time.day());
     GM.drops = (G.world.state.drops || []).map((d) => Object.assign({ vy: 0, h: 0, t: 0 }, d));
     G.npc.init();
     G.eco.clear();

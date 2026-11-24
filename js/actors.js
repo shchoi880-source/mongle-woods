@@ -288,10 +288,16 @@
         break;
       }
       case 'ladybug': P.blob(ctx, 0, 0, 4.5, 4, col[0], LINE, 1.1); if (b.v === 3) { ctx.fillStyle = col[1]; ctx.fillRect(-4, -0.5, 8, 1); } P.blob(ctx, 0, -4, 2.4, 1.8, col[1]); ctx.fillStyle = col[1]; ctx.fillRect(-0.4, -3, 0.8, 7); P.blob(ctx, -2, 0, 1, 1, col[1]); P.blob(ctx, 2, 1.5, 1, 1, col[1]); break;
-      case 'pillbug': for (let k = 0; k < 4; k++) P.blob(ctx, -3 + k * 2, 0, 2.6, 3.4, k % 2 ? col[0] : col[1], k === 0 ? LINE : null, 1); P.blob(ctx, -5, 0, 1.6, 2.4, col[1], LINE, 1); break;
+      case 'pillbug': if (b.state === 'curl') { P.blob(ctx, 0, -1, 4, 4, col[0], LINE, 1.1); ctx.strokeStyle = col[1]; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.arc(0, -1, 2.4, -2.4, 0.8); ctx.stroke(); break; } for (let k = 0; k < 4; k++) P.blob(ctx, -3 + k * 2, 0, 2.6, 3.4, k % 2 ? col[0] : col[1], k === 0 ? LINE : null, 1); P.blob(ctx, -5, 0, 1.6, 2.4, col[1], LINE, 1); break;
       case 'ant': P.blob(ctx, -3.5, 0, 2.4, 2, col[0]); P.blob(ctx, 0, 0, 1.6, 1.4, col[0]); P.blob(ctx, 3.2, 0, 2.8, 2.2, col[0]); ctx.strokeStyle = col[1]; ctx.lineWidth = 0.7; ctx.beginPath(); for (const x of [-1, 0.5, 2]) { ctx.moveTo(x, 0); ctx.lineTo(x - 1 + flap * 0.6, 3); ctx.moveTo(x, 0); ctx.lineTo(x - 1 - flap * 0.6, -3); } ctx.stroke(); break;
       case 'cricket': P.blob(ctx, 0, 0, 5.5, 2.8, col[0], LINE, 1); P.blob(ctx, -5, -0.5, 2.2, 2.2, col[1]); ctx.strokeStyle = col[1]; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(2, 0); ctx.lineTo(5, -4); ctx.lineTo(7, 1); ctx.moveTo(-6, -1); ctx.lineTo(-10, -5); ctx.stroke(); break;
       case 'beetle': P.blob(ctx, 0, 1, 5, 6, col[0], LINE, 1.2); P.blob(ctx, 0, -5, 3, 2.4, col[1], LINE, 1); ctx.strokeStyle = col[1]; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(0, -6); ctx.quadraticCurveTo(0, -11, 3, -12); ctx.stroke(); P.blob(ctx, -1.5, -1, 1.4, 2.4, 'rgba(255,255,255,0.35)'); break;
+      case 'whirligig': {
+        const k = (t * 1.3 + b.seed) % 1;
+        ctx.strokeStyle = `rgba(255,255,255,${0.7 * (1 - k)})`; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.ellipse(0, 1, 5 + k * 6, 2 + k * 3, 0, 0, Math.PI * 2); ctx.stroke();
+        P.blob(ctx, 0, 0, 3.6, 2.6, col[0], LINE, 1); P.blob(ctx, -1, -0.8, 1.6, 0.8, col[1]);
+        break;
+      }
       case 'firefly': {
         const glow = 0.5 + 0.5 * Math.sin(t * 3 + b.seed);
         ctx.globalAlpha = glow * 0.6; P.blob(ctx, 0, 2, 7, 7, '#efff9a'); ctx.globalAlpha = 1;

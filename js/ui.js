@@ -236,7 +236,7 @@
   }
 
   function dexPane(pane) {
-    const kinds = [['bug', '곤충', 'bugs'], ['fish', '물고기', 'fish'], ['fossil', '화석', 'fossils']];
+    const kinds = [['bug', '곤충', 'bugs'], ['fish', '물고기', 'fish'], ['sea', '바다', 'sea'], ['fossil', '화석', 'fossils']];
     let k = 'bug';
     const render = () => {
       pane.innerHTML = '';
@@ -258,10 +258,10 @@
         c.innerHTML = `<img src="${G.art.iconURL(id, 64)}" alt=""><span>${has ? esc(r.name) : '???'}</span>${dots}`;
         c.onclick = () => {
           G.audio.sfx('tap');
-          if (!has) { info.innerHTML = `<b>???</b><br><span class="muted">${r.loc ? '힌트: ' + ({ flower: '꽃 근처', air: '풀밭 하늘', ground: '땅 위', rock: '돌 옆', tree: '나무 줄기', water: '물가', lamp: '밤의 가로등', river: '강', pond: '연못', sea: '바다' })[r.loc] : '땅속 어딘가'}${r.hours ? ' · ' + hoursText(r.hours) : ''}</span>`; return; }
+          if (!has) { info.innerHTML = `<b>???</b><br><span class="muted">${k === 'sea' ? '힌트: 썰물 때 해변의 조수 웅덩이' : r.loc ? '힌트: ' + ({ flower: '꽃 근처', air: '풀밭 하늘', ground: '땅 위', rock: '돌 옆', tree: '나무 줄기', water: '물가', lamp: '밤의 가로등', surface: '연못·강 물 위', river: '강', pond: '연못', sea: '바다' })[r.loc] : '땅속 어딘가'}${r.hours ? ' · ' + hoursText(r.hours) : ''}</span>`; return; }
           const best = G.collect.best(k, r.ix);
           const vlist = k === 'fossil' ? '' : '<br><span class="muted small">변이: ' + G.VARIANTS.map((vr) => (G.collect.has(k, r.ix, vr.v) ? '●' : '○') + (vr.name || '일반')).join(' ') + '</span>';
-          info.innerHTML = `<b>${esc(r.name)}</b>${r.tier ? ' ' + '★'.repeat(r.tier) : ''}<br><span class="muted">${r.months ? monthsText(r.months) + ' · ' + hoursText(r.hours) : '화석'}${best ? ' · 최고 기록 ' + best + 'cm' : ''}</span>${vlist}`;
+          info.innerHTML = `<b>${esc(r.name)}</b>${r.tier ? ' ' + '★'.repeat(r.tier) : ''}<br><span class="muted">${k === 'sea' ? monthsText(r.months) + ' · 썰물 때' : r.months ? monthsText(r.months) + ' · ' + hoursText(r.hours) : '화석'}${best ? ' · 최고 기록 ' + best + 'cm' : ''}</span>${vlist}`;
         };
         grid.append(c);
       }

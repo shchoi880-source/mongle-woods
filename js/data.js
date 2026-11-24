@@ -13,17 +13,18 @@
   const ALL = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
   const DAY = [[6, 18]], NIGHT = [[19, 24], [0, 5]], ALLDAY = [[0, 24]];
 
-  // 곤충 — tpl: 그림 원형, loc: 출현 위치, beh: A 날아다님 / B 땅을 기어다님 / C 나무에 붙어 있음
+  // 곤충 — tpl: 그림 원형, loc: 출현 위치, beh: A 날아다님 / B 기어다님 / C 나무에 붙음 / D 폴짝 뜀 / E 놀라면 동글 말림(잡기 쉬움) / F 나무 줄기 오르내림 / G 물 위 빙글빙글
   D.add('bugs', [
     { id: 'yellow_butterfly', ix: 0, name: '노랑나비', tpl: 'butterfly', col: ['#ffd84d', '#f0a81c'], months: [3, 4, 5, 6, 7, 8, 9, 10], hours: [[6, 17]], loc: 'flower', tier: 1, val: 120, size: [4, 6], beh: 'A', spd: 1.6, flee: 2.2 },
     { id: 'white_butterfly', ix: 1, name: '배추흰나비', tpl: 'butterfly', col: ['#fbfbf4', '#b9c2c9'], months: [3, 4, 5, 6, 7, 8, 9, 10, 11], hours: [[6, 17]], loc: 'flower', tier: 1, val: 100, size: [4, 5.5], beh: 'A', spd: 1.5, flee: 2.2 },
     { id: 'red_dragonfly', ix: 2, name: '고추잠자리', tpl: 'dragonfly', col: ['#ff6b4a', '#c43d2a'], months: [8, 9, 10, 11], hours: [[8, 17]], loc: 'air', tier: 2, val: 260, size: [4, 5], beh: 'A', spd: 2.6, flee: 2.8 },
     { id: 'ladybug', ix: 3, name: '무당벌레', tpl: 'ladybug', col: ['#ff5252', '#2b2b2b'], months: [3, 4, 5, 6, 9, 10, 11], hours: [[8, 17]], loc: 'flower', tier: 1, val: 150, size: [0.6, 0.9], beh: 'B', spd: 0.5, flee: 1.2 },
-    { id: 'pillbug', ix: 4, name: '공벌레', tpl: 'pillbug', col: ['#8b8fa3', '#5d6175'], months: ALL, hours: [[5, 19]], loc: 'rock', tier: 1, val: 80, size: [1, 1.5], beh: 'B', spd: 0.4, flee: 1.0 },
+    { id: 'pillbug', ix: 4, name: '공벌레', tpl: 'pillbug', col: ['#8b8fa3', '#5d6175'], months: ALL, hours: [[5, 19]], loc: 'rock', tier: 1, val: 80, size: [1, 1.5], beh: 'E', spd: 0.4, flee: 1.0 },
     { id: 'ant', ix: 5, name: '개미', tpl: 'ant', col: ['#4a3a35', '#2a201d'], months: ALL, hours: [[6, 18]], loc: 'ground', tier: 1, val: 60, size: [0.5, 1], beh: 'B', spd: 0.9, flee: 1.0 },
-    { id: 'cricket', ix: 6, name: '귀뚜라미', tpl: 'cricket', col: ['#8a6a3c', '#5b4424'], months: [8, 9, 10, 11], hours: [[17, 24], [0, 5]], loc: 'ground', tier: 2, val: 300, size: [2, 3], beh: 'B', spd: 1.2, flee: 1.8 },
-    { id: 'rhino_beetle', ix: 7, name: '장수풍뎅이', tpl: 'beetle', col: ['#6b3f22', '#3b2213'], months: [6, 7, 8], hours: [[17, 24], [0, 8]], loc: 'tree', tier: 4, val: 3000, size: [5, 8], beh: 'C', spd: 1.0, flee: 1.6 },
+    { id: 'cricket', ix: 6, name: '귀뚜라미', tpl: 'cricket', col: ['#8a6a3c', '#5b4424'], months: [8, 9, 10, 11], hours: [[17, 24], [0, 5]], loc: 'ground', tier: 2, val: 300, size: [2, 3], beh: 'D', spd: 1.2, flee: 1.8 },
+    { id: 'rhino_beetle', ix: 7, name: '장수풍뎅이', tpl: 'beetle', col: ['#6b3f22', '#3b2213'], months: [6, 7, 8], hours: [[17, 24], [0, 8]], loc: 'tree', tier: 4, val: 3000, size: [5, 8], beh: 'F', spd: 1.0, flee: 1.6 },
     { id: 'firefly', ix: 8, name: '반딧불이', tpl: 'firefly', col: ['#d9ff6b', '#3a3a2a'], months: [6, 7], hours: [[19, 24], [0, 4]], loc: 'water', tier: 3, val: 1200, size: [1, 1.5], beh: 'A', spd: 0.8, flee: 1.6 },
+    { id: 'whirligig', ix: 10, name: '물맴이', tpl: 'whirligig', col: ['#3d4c5e', '#a9c4d8'], months: [4, 5, 6, 7, 8, 9, 10], hours: [[6, 18]], loc: 'surface', tier: 2, val: 350, size: [0.6, 1], beh: 'G', spd: 1.6, flee: 1.6 },
     { id: 'starlight_moth', ix: 9, name: '별빛나방', tpl: 'moth', col: ['#cfd6ff', '#7e86c9'], months: ALL, hours: [[19, 24], [0, 5]], loc: 'lamp', tier: 2, val: 400, size: [5, 7], beh: 'A', spd: 1.2, flee: 2.0 },
   ]);
 

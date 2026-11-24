@@ -144,7 +144,7 @@
   // ---------- 도감 ----------
   // 종 × 변이 6 비트셋 (0 일반, 1 거대, 2 알비노, 3 희귀무늬, 4 황금, 5 계절색). M-a는 0·1만 사용
   const NV = 6;
-  const col = { bug: new G.Bits(64 * NV), fish: new G.Bits(64 * NV), fossil: new G.Bits(64), best: {}, count: 0 };
+  const col = { bug: new G.Bits(64 * NV), fish: new G.Bits(64 * NV), sea: new G.Bits(64 * NV), fossil: new G.Bits(64), best: {}, count: 0 };
   G.collect = {
     NV,
     record(kind, ix, v, size) {
@@ -161,12 +161,12 @@
     },
     has(kind, ix, v) { return kind === 'fossil' ? col.fossil.has(ix) : v === undefined ? [0, 1, 2, 3, 4, 5].some((vv) => col[kind].has(ix * NV + vv)) : col[kind].has(ix * NV + v); },
     best: (kind, ix) => col.best[kind + ix] || 0,
-    total() { let n = 0; for (const b of G.data.all('bugs')) if (G.collect.has('bug', b.ix)) n++; for (const f of G.data.all('fish')) if (G.collect.has('fish', f.ix)) n++; for (const f of G.data.all('fossils')) if (G.collect.has('fossil', f.ix)) n++; return n; },
+    total() { let n = 0; for (const b of G.data.all('bugs')) if (G.collect.has('bug', b.ix)) n++; for (const f of G.data.all('fish')) if (G.collect.has('fish', f.ix)) n++; for (const f of G.data.all('fossils')) if (G.collect.has('fossil', f.ix)) n++; for (const f of G.data.all('sea')) if (G.collect.has('sea', f.ix)) n++; return n; },
   };
   G.save.section('collect', {
     v: 1, def: () => ({ bug: '', fish: '', fossil: '', best: {}, count: 0 }),
-    get: () => ({ bug: col.bug.toStr(), fish: col.fish.toStr(), fossil: col.fossil.toStr(), best: col.best, count: col.count }),
-    set: (d) => { col.bug = G.Bits.from(d.bug, 64 * NV); col.fish = G.Bits.from(d.fish, 64 * NV); col.fossil = G.Bits.from(d.fossil, 64); col.best = d.best || {}; col.count = d.count || 0; },
+    get: () => ({ bug: col.bug.toStr(), fish: col.fish.toStr(), sea: col.sea.toStr(), fossil: col.fossil.toStr(), best: col.best, count: col.count }),
+    set: (d) => { col.bug = G.Bits.from(d.bug, 64 * NV); col.fish = G.Bits.from(d.fish, 64 * NV); col.fossil = G.Bits.from(d.fossil, 64); col.sea = G.Bits.from(d.sea, 64 * NV); col.best = d.best || {}; col.count = d.count || 0; },
   });
 
   // ---------- 첫날 할 일 카드 (순서 자유) ----------

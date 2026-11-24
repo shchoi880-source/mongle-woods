@@ -2,8 +2,8 @@
 (function (G) {
   'use strict';
   const u = G.u;
-  const KINDS = [['bug', '곤충', 'bugs'], ['fish', '물고기', 'fish'], ['fossil', '화석', 'fossils']];
-  const st = { bug: new G.Bits(64), fish: new G.Bits(64), fossil: new G.Bits(64), greeted: false, appraised: 0 };
+  const KINDS = [['bug', '곤충', 'bugs'], ['fish', '물고기', 'fish'], ['sea', '바다', 'sea'], ['fossil', '화석', 'fossils']];
+  const st = { bug: new G.Bits(64), fish: new G.Bits(64), sea: new G.Bits(64), fossil: new G.Bits(64), greeted: false, appraised: 0 };
 
   G.data.add('items', [{ id: 'fossil_raw', name: '수상한 화석', cat: 'fossil', val: 100, stack: 1 }]);
 
@@ -12,14 +12,14 @@
     // 이사한 다음 날(05시 기준) 문을 연다
     isOpen() { const created = (G.save.sections.get('meta').get() || {}).created || 0; return !!G.world.map && !!G.world.map.plots.museum2 && G.time.day() > created; },
     donated: (kind, ix) => st[kind].has(ix),
-    count(kind) { return G.data.all(KINDS.find((k) => k[0] === kind)[2]).filter((r) => st[kind].has(r.ix)).length; },
+    count(kind) { if (!G.data.all(KINDS.find((k) => k[0] === kind)[2]).length) return 0; return G.data.all(KINDS.find((k) => k[0] === kind)[2]).filter((r) => st[kind].has(r.ix)).length; },
     total() { return KINDS.reduce((a, [k]) => a + M.count(k), 0); },
     // 가방 속 기증 가능한 칸
     donatable() {
       const out = [];
       G.inv.slots.forEach((s, i) => {
         const [cat, id] = s.id.split(':'); if (!id) return;
-        const tb = cat === 'bug' ? 'bugs' : cat === 'fish' ? 'fish' : cat === 'fossil' ? 'fossils' : null; if (!tb) return;
+        const tb = cat === 'bug' ? 'bugs' : cat === 'fish' ? 'fish' : cat === 'fossil' ? 'fossils' : cat === 'sea' ? 'sea' : null; if (!tb) return;
         const r = G.data.get(tb, id); if (!r || st[cat].has(r.ix)) return;
         if (out.some((o) => o.cat === cat && o.r.ix === r.ix)) return; // 같은 종은 하나만
         out.push({ i, s, cat, r });
@@ -133,8 +133,8 @@
 
   G.save.section('museum', {
     v: 1, def: () => ({ bug: '', fish: '', fossil: '', greeted: false, appraised: 0 }),
-    get: () => ({ bug: st.bug.toStr(), fish: st.fish.toStr(), fossil: st.fossil.toStr(), greeted: st.greeted, appraised: st.appraised }),
-    set: (d) => { st.bug = G.Bits.from(d.bug, 64); st.fish = G.Bits.from(d.fish, 64); st.fossil = G.Bits.from(d.fossil, 64); st.greeted = !!d.greeted; st.appraised = d.appraised || 0; },
+    get: () => ({ bug: st.bug.toStr(), fish: st.fish.toStr(), sea: st.sea.toStr(), fossil: st.fossil.toStr(), greeted: st.greeted, appraised: st.appraised }),
+    set: (d) => { st.bug = G.Bits.from(d.bug, 64); st.fish = G.Bits.from(d.fish, 64); st.fossil = G.Bits.from(d.fossil, 64); st.sea = G.Bits.from(d.sea, 64); st.greeted = !!d.greeted; st.appraised = d.appraised || 0; },
   });
 
   G.modules.add('museum');

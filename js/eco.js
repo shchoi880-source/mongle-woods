@@ -29,6 +29,8 @@
       if (loc === 'tree' && o && (o.kind === 'tree' || o.kind === 'fruit') && !o.deco) return [tx, ty, 22, o];
       if (loc === 'water' && grassy && !o && [[0, 1], [1, 0], [-1, 0], [0, -1]].some(([dx, dy]) => W.isWater(W.tile(tx + dx, ty + dy)))) return [tx, ty, 10];
       if (loc === 'lamp' && o && o.kind === 'lamp') return [tx, ty + 1, 26];
+      // 물 위(물가에서 한 칸 안쪽): 잠자리채가 닿는 거리
+      if (loc === 'surface' && W.tile(tx, ty) === G.TERR.WATER && [[0, 1], [1, 0], [-1, 0], [0, -1]].some(([dx, dy]) => W.walkableTile(tx + dx, ty + dy))) return [tx, ty, 0];
     }
     return null;
   }
@@ -93,9 +95,10 @@
         const b = bugs[i]; b.t += dt; b.fade = Math.min(1, b.fade + dt * 2);
         const d = u.dist(b.x, b.y, p.x, p.y);
         if (d > TILE * 20 || (b.state === 'flee' && b.t > 2.2)) { bugs.splice(i, 1); continue; }
+        if (b.state === 'curl' && b.t > 4) { b.state = 'idle'; b.t = 0; } // 4초 뒤 다시 펴짐
         if (b.state === 'held') continue;
         // 도망 판정: 살금이 아닌 이동으로 반경 안에 들어오면
-        if (b.state !== 'flee' && p.moving && p.mode !== 'sneak' && d < b.sp.flee * TILE * (p.mode === 'run' ? 1.4 : 1)) E.scare(b, p);
+        if (b.state !== 'flee' && b.state !== 'curl' && p.moving && p.mode !== 'sneak' && d < b.sp.flee * TILE * (p.mode === 'run' ? 1.4 : 1)) E.scare(b, p);
         behave(b, dt, p);
       }
       // 물고기
@@ -116,6 +119,7 @@
     },
     scare(b, p) {
       if (b.state === 'flee') return;
+      if (b.sp.beh === 'E') { if (b.state !== 'curl') { b.state = 'curl'; b.t = 0; G.emit('eco:flee', { e: b }); } return; } // 동글 말림: 도망 대신 그 자리에
       b.state = 'flee'; b.t = 0;
       const a = Math.atan2(b.y - p.y, b.x - p.x);
       b.vx = Math.cos(a) * 140; b.vy = Math.sin(a) * 140;
@@ -167,9 +171,12 @@
 
   function behave(b, dt, p) {
     const sp = b.sp;
+    if (b.state === 'curl') { b.alt = 0; return; }
     if (b.state === 'flee') {
+      if (sp.beh === 'G') { b.fade = Math.max(0, 1 - b.t * 2); return; } // 물속으로 쏙
       b.x += b.vx * dt; b.y += b.vy * dt;
-      if (sp.beh === 'A' || sp.beh === 'C') b.alt = (b.alt || 0) + 60 * dt;
+      if (sp.beh === 'A' || sp.beh === 'C' || sp.beh === 'F') b.alt = (b.alt || 0) + 60 * dt;
+      if (sp.beh === 'D') b.alt = Math.abs(Math.sin(b.t * 7)) * 18;
       b.face = b.vx < 0 ? -1 : 1;
       return;
     }
@@ -189,6 +196,26 @@
       if (b.vx) b.face = b.vx < 0 ? -1 : 1;
     } else if (sp.beh === 'C') {
       b.alt = b.baseAlt + Math.sin(b.t * 0.8) * 1.5;
+    } else if (sp.beh === 'D') {
+      // 쉬다가 폴짝: 0.45초 포물선
+      b.hop = (b.hop || 0) - dt;
+      if (b.hop <= -0.45 - (b.seed % 1.2)) { b.hop = 0.45; const a = Math.random() * 6.28; b.vx = Math.cos(a) * 70; b.vy = Math.sin(a) * 50; }
+      if (b.hop > 0) {
+        const nx = b.x + b.vx * dt, ny = b.y + b.vy * dt;
+        if (G.world.canStand(nx, ny, 2) && u.dist(nx, ny, b.hx, b.hy) < TILE * 3) { b.x = nx; b.y = ny; }
+        b.alt = Math.sin((1 - b.hop / 0.45) * Math.PI) * 14; b.face = b.vx < 0 ? -1 : 1;
+      } else b.alt = 0;
+    } else if (sp.beh === 'E') {
+      if (b.t > 1.5 + (b.seed % 1.5)) { b.t = 0; const a = Math.random() * 6.28; const s = Math.random() < 0.4 ? 0 : sp.spd * 24; b.vx = Math.cos(a) * s; b.vy = Math.sin(a) * s; }
+      const nx = b.x + b.vx * dt, ny = b.y + b.vy * dt;
+      if (G.world.canStand(nx, ny, 2) && u.dist(nx, ny, b.hx, b.hy) < TILE * 1.5) { b.x = nx; b.y = ny; }
+      if (b.vx) b.face = b.vx < 0 ? -1 : 1;
+    } else if (sp.beh === 'F') {
+      // 나무 줄기를 천천히 오르내린다
+      b.alt = b.baseAlt - 6 + (Math.sin(b.t * 0.45 + b.seed) * 0.5 + 0.5) * 22;
+    } else if (sp.beh === 'G') {
+      const k = b.t * sp.spd * 1.6 + b.seed;
+      b.x = b.hx + Math.cos(k) * 9; b.y = b.hy + Math.sin(k) * 5; b.face = Math.sin(k) > 0 ? -1 : 1; b.alt = 0;
     }
   }
 

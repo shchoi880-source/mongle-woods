@@ -8,7 +8,7 @@
   function cur() { const d = G.time.day(); if (!st.today || st.today.day !== d) { if (st.today && st.today.day === d - 1) st.yest = st.today; else if (st.today && st.today.day < d - 1) st.yest = blank(d - 1); st.today = blank(d); } return st.today; }
   G.on('eco:caught', (p) => {
     const t = cur(); t.catches++;
-    const sp = G.data.byIx(p.kind === 'bug' ? 'bugs' : 'fish', p.ix);
+    const sp = G.data.byIx(({ bug: 'bugs', fish: 'fish', sea: 'sea' })[p.kind] || 'fish', p.ix);
     if (sp && (!t.best || p.size / sp.size[1] > t.best.k)) t.best = { name: (p.v ? G.VARIANTS[p.v].name + ' ' : '') + sp.name, size: p.size, k: p.size / sp.size[1], kind: p.kind };
     G.save.mark('news');
   });
