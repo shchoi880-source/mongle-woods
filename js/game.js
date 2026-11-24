@@ -112,6 +112,9 @@
       const sx = s.tx * TILE + 16, sy = s.ty * TILE + 18;
       if (u.dist(sx, sy, f.x, f.y) < 22 || u.dist(sx, sy, pl.x, pl.y) < 18) return { kind: 'shell', ref: s, icon: '🤲', label: '줍기', name: G.items.name(s.item) };
     }
+    // 2.3) 목장
+    const rk = G.ranch.target(f.x, f.y, pl.x, pl.y);
+    if (rk) return rk;
     // 2.4) 텃밭
     const fm = G.farm.target(f.x, f.y) || G.farm.target(pl.x, pl.y);
     if (fm) return fm;
@@ -156,6 +159,7 @@
       if (o.kind === 'rock') return { kind: 'rock', ref: o, icon: '🪨', label: '살펴보기', name: '바위' };
       if (o.kind === 'lamp' || o.kind === 'bench') return { kind: 'poke', ref: o, icon: '✋', label: '만지기', name: o.kind === 'lamp' ? '가로등' : '벤치' };
     }
+    if (G.ranch.st.riding) return { kind: 'none', icon: '🐴', label: '내리기', name: '' };
     return { kind: 'none', icon: '✋', label: '', name: '' };
   }
   function objAhead() {
@@ -239,6 +243,7 @@
         break;
       }
       case 'farm': await G.farm.act(tg); break;
+      case 'ranch': await G.ranch.act(tg); break;
       case 'pool': { pl.busy = 0.3; pl.squash = 0.12; G.audio.sfx('plop'); if (G.tide.catch(tg.ref)) { kongalReact('jump'); fxSplash(tg.ref.tx * TILE + 16, tg.ref.ty * TILE + 22); } break; }
       case 'chop': case 'rockhit': {
         const o = tg.ref; o.shakeT = 0.4; pl.busy = 0.45; pl.swing = 0.001;
@@ -286,6 +291,7 @@
       case 'snowman': await G.events.snowmanTalk(); break;
       default:
         if (await G.events.tryWish()) break; // 별똥별이 지나가는 중이면 소원
+        if (G.ranch.dismount()) break;       // 조랑말에서 내리기
         // 대상이 없어도 반응한다(죽은 입력 0): 작은 깡충 + 소리
         pl.squash = 0.12; G.audio.sfx('bump');
         if (Math.random() < 0.3) kongalSay(u.pick(G.lines('kongal', 'idle'), Math.random()).text);
@@ -353,7 +359,7 @@
     pl.squash = Math.max(0, pl.squash - dt * 0.8);
     const canMove = pl.busy <= 0 && !pl.hold;
     if (mv.mag > 0 && canMove) {
-      const speed = (G.input.mode === 'run' ? 6.5 : G.input.mode === 'sneak' ? 1.6 : 4.0) * TILE;
+      const speed = (G.input.mode === 'run' ? 6.5 : G.input.mode === 'sneak' ? 1.6 : 4.0) * TILE * (G.house && G.house.inside ? 1 : G.ranch.speedMul());
       const s = speed * (G.input.stick ? Math.max(0.35, mv.mag) : 1) * dt;
       if (G.fishing.state !== 'idle') G.fishing.cancel(true);
       const ox = pl.x, oy = pl.y;
@@ -432,6 +438,7 @@
     A.drawWater(ctx, rect, t);
     G.eco.drawWater(ctx, rect, t);
     G.farm.drawSoil(ctx, rect);
+    G.ranch.drawPen(ctx, rect, t);
     drawDecals(t, rect);
     G.tide.draw(ctx, rect, t);
     // 레이어 3: y-정렬
@@ -439,6 +446,7 @@
     collectObjects(rect, t);
     G.eco.collect(R, rect, t);
     G.farm.collect(R, rect, t);
+    G.ranch.collect(R, rect, t);
     for (const n of G.npc.list) if (n.vis && n.x > rect.x - 60 && n.x < rect.x + rect.w + 60) R.push({ sy: n.y, draw: (c) => { if (n.alpha !== undefined && n.alpha < 1) { c.globalAlpha = n.alpha; A.actor.draw(c, n, t); c.globalAlpha = 1; } else A.actor.draw(c, n, t); } });
     R.push({ sy: pl.y, draw: (c) => drawPlayer(c, t) });
     const sm = G.events.snowmanPos();
@@ -573,13 +581,17 @@
   function drawPlayer(c, t) {
     pl.t = t;
     const a = pl;
+    // 조랑말 타기: 말을 먼저 그리고 사람을 조금 올린다
+    const pony = !G.house.inside && G.ranch.ridingAnimal();
+    if (pony) { pony.face = pl.dir === 1 ? -1 : pl.dir === 3 ? 1 : (pony.face || 1); pony.moving = pl.moving; pony.x = pl.x; pony.y = pl.y + 2; G.ranch.drawAnimal(c, pony, t, true); }
+    a.hop = pony ? 13 : 0;
     a.tool = pl.tool; a.swing = pl.swing > 0 ? Math.sin(pl.swing * Math.PI) : 0;
     if (pl.hold) { a.tool = 'hand'; }
     A.actor.draw(c, a, t);
     // 콩알: 머리 위
     const breath = Math.sin(t * 2.6) * 0.6;
     const bob = pl.moving ? Math.abs(Math.sin(pl.walk * Math.PI * 2)) * -2.2 : 0;
-    A.kongal(c, pl.x + (pl.dir === 1 ? 2 : pl.dir === 3 ? -2 : 0), pl.y - 53 + bob + breath, kg, t);
+    A.kongal(c, pl.x + (pl.dir === 1 ? 2 : pl.dir === 3 ? -2 : 0), pl.y - 53 + bob + breath - (a.hop || 0), kg, t);
   }
   function drawHeld(t) {
     const k = 1 - pl.holdT / 1.2;
@@ -647,6 +659,7 @@
       G.eco.update(dt, pl);
       G.events.updateMeteors(dt, cam.rect());
       G.events.updateRace(dt);
+      G.ranch.update(dt, t);
       G.ui.updateDialog(dt);
       cam.follow(pl.x, pl.y, dt);
       GM.target = (G.ui.dialogOpen() || G.ui.open) ? null : findTarget();
@@ -822,7 +835,7 @@
     if (G.nest.tick(G.time.day())) setTimeout(() => G.ui.toast(`${G.nest.cur().name} 공사가 끝났어요! 집이 넓어졌어요.`, { icon: '🏡', ms: 4000 }), 1500);
     G.requests.daily(G.time.day());
     G.tide.refresh(G.time.day());
-    G.farm.ensurePlots(); G.farm.tick(G.time.day());
+    G.farm.ensurePlots(); G.farm.tick(G.time.day()); G.ranch.tick(G.time.day());
     GM.drops = (G.world.state.drops || []).map((d) => Object.assign({ vy: 0, h: 0, t: 0 }, d));
     G.npc.init();
     G.eco.clear();

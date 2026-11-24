@@ -439,13 +439,14 @@
       const buy = $('div', 'buyrow');
       for (const e of G.shop.stock()) {
         const own = e.kind === 'tool' ? G.player.hasTool(e.id) : G.shop.soldOut(e);
-        const ico = e.kind === 'tool' ? `<img src="${G.art.iconURL('tool:' + e.id, 64)}" alt="">` : e.kind === 'seed' ? `<img src="${G.art.iconURL('seed:' + e.id, 64)}" alt="">` : `<img src="${G.art.iconURL('furn:' + e.id + '#' + e.c, 64)}" alt="">`;
+        const ico = e.kind === 'tool' ? `<img src="${G.art.iconURL('tool:' + e.id, 64)}" alt="">` : e.kind === 'seed' ? `<img src="${G.art.iconURL('seed:' + e.id, 64)}" alt="">` : e.kind === 'animal' ? `<img src="${G.art.iconURL('animal:' + e.id, 64)}" alt="">` : `<img src="${G.art.iconURL('furn:' + e.id + '#' + e.c, 64)}" alt="">`;
         const b = $('button', 'buycard' + (own ? ' off' : ''), `${ico}<b>${esc(e.name)}</b><small>${own ? (e.kind === 'tool' ? '가지고 있음' : '다 팔림') : G.fmt.money(e.price)}</small>`);
         b.onclick = async () => {
           if (own) return;
           const r = G.shop.buy(e);
           if (!r.ok) { G.audio.sfx('error'); UI.toast(r.why, { icon: '🪙' }); return; }
           G.audio.sfx('coin');
+          if (e.kind === 'animal') { close(); await UI.say(r.first ? [{ who: 'tosil', text: '아기 동물은 오빠 친구 목장에서 데려왔어요. 집 옆에 울타리도 세워 뒀어요.' }, { who: 'todak', text: '전설의 목장이에요! …아직 울타리뿐이지만요!' }, { who: 'sys', text: '하루 한 번 쓰다듬어 주면 다음 날 아침 선물을 줘요. 3일이면 다 자라요.' }] : [{ who: 'tosil', text: `${e.name}가 목장에 도착했어요. 이름은 목장에서 확인해 보세요.` }]); return; }
           if (r.gift) { close(); await UI.say([{ who: 'tosil', text: '씨앗 첫 손님이시네요. 물뿌리개는 덤이에요. 오빠한테는 비밀이에요.' }, { who: 'todak', text: '전설의 물뿌리개예요! 물이 알아서… 아, 이건 진짜로 물이 나와요.' }]); G.ui.toast('물뿌리개를 받았어요! 텃밭은 집 옆에 있어요.', { icon: '🚿', ms: 3500 }); return; }
           if (e.kind === 'tool') {
             close();

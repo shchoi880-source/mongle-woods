@@ -29,8 +29,8 @@
   // 좋아하는 선물: 아이템 id 또는 'cat:<분류>'
   const FAV = {
     ddalang: ['crop:carrot', 'crop:strawberry', 'dish:jam'], sogeum: ['cat:fish', 'dish:radish_soup', 'dish:hwachae'],
-    lime: ['crop:strawberry', 'dish:pumpkin_pie', 'cat:shell'], jjongal: ['fruit_acorn', 'crop:corn', 'dish:grilled_corn'],
-    danchu: ['crop:radish', 'crop:spinach', 'cat:fossil'], hotteok: ['crop:sweet_potato', 'dish:matang', 'crop:potato'],
+    lime: ['crop:strawberry', 'dish:pumpkin_pie', 'cat:shell'], jjongal: ['fruit_acorn', 'crop:corn', 'dish:grilled_corn', 'egg'],
+    danchu: ['crop:radish', 'crop:spinach', 'cat:fossil'], hotteok: ['crop:sweet_potato', 'dish:matang', 'milk', 'dish:pancake'],
     mungchi: ['crop:wheat', 'crop:pumpkin', 'dish:carrot_soup'], mongsil: ['crop:cabbage', 'dish:cabbage_stew', 'star_fragment'],
   };
   const GIFT_SAY = {
@@ -175,7 +175,7 @@
         const info = document.createElement('div'); info.className = 'pane-head'; info.innerHTML = '<span>하루에 한 번. 좋아하는 걸 주면 훨씬 기뻐해요 (힌트: 이웃 탭)</span>';
         const grid = document.createElement('div'); grid.className = 'grid';
         G.inv.slots.forEach((x, i) => {
-          const it = G.items.get(x.id); if (!it || it.nosell || !['crop', 'dish', 'bug', 'fish', 'sea', 'shell', 'fossil', 'furn', 'mat'].includes(it.cat)) return;
+          const it = G.items.get(x.id); if (!it || it.nosell || !['crop', 'dish', 'bug', 'fish', 'sea', 'shell', 'fossil', 'furn', 'mat', 'ranch'].includes(it.cat)) return;
           const b = document.createElement('button'); b.className = 'slot'; b.title = G.items.name(x.id, x.x);
           b.innerHTML = `<img src="${G.art.iconURL(G.items.icon(x.id, x.x), 64)}" alt="">${x.n > 1 ? `<b>${x.n}</b>` : ''}`;
           b.onclick = async () => {
@@ -273,7 +273,7 @@
       if (id === 'hotteok' && G.events.raceDay() && await G.events.raceTalk()) return;
       if (await G.requests.onTalk(n)) { G.save.mark('talk'); return; }
       // 선물 (하루 한 번): 오늘 인사를 이미 했고 가방에 줄 만한 게 있으면 고르게 한다
-      const giftable = G.inv.slots.filter((x) => { const it = G.items.get(x.id); return it && !it.nosell && ['crop', 'dish', 'bug', 'fish', 'sea', 'shell', 'fossil', 'furn', 'mat'].includes(it.cat); });
+      const giftable = G.inv.slots.filter((x) => { const it = G.items.get(x.id); return it && !it.nosell && ['crop', 'dish', 'bug', 'fish', 'sea', 'shell', 'fossil', 'furn', 'mat', 'ranch'].includes(it.cat); });
       if (s.greetDay === day && s.giftDay !== day && giftable.length) {
         const c = await G.ui.choose(say('응? 무슨 일이야?'), ['이야기하기', '선물하기 🎁']);
         if (c === 1) { await N.giftUI(n); return; }

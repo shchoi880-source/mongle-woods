@@ -172,6 +172,7 @@
 
   H.enter = async () => {
     const pl = G.player;
+    if (G.ranch) G.ranch.dismount();
     savedPos = { x: pl.x, y: pl.y };
     H.inside = true;
     syncRoom();
