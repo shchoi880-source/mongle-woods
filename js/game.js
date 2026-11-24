@@ -367,23 +367,69 @@
   GM.sparkle = fxSparkle;
 
   // ---------- 업데이트 ----------
+  // ---------- 자동 이동 (지도에서 장소를 누르면 걸어간다) ----------
+  // 타일 BFS로 길을 찾고, 손으로 움직이면 바로 멈춘다
+  GM.autoGo = (tx, ty, name) => {
+    const W = G.world, m = W.map; if (!m || (G.house && G.house.inside)) return false;
+    const sx = Math.floor(pl.x / TILE), sy = Math.floor(pl.y / TILE), w = m.w, h = m.h;
+    let goals = null;
+    for (let r = 1.6; r <= 6 && !goals; r += 1) {
+      const set = new Set();
+      for (let y = Math.floor(ty - r); y <= Math.ceil(ty + r); y++) for (let x = Math.floor(tx - r); x <= Math.ceil(tx + r); x++) if (Math.hypot(x + 0.5 - tx, y + 0.5 - ty) <= r && W.walkableTile(x, y)) set.add(y * w + x);
+      if (set.size) goals = set;
+    }
+    if (!goals) return false;
+    const prev = new Int32Array(w * h).fill(-1), start = sy * w + sx; prev[start] = start;
+    const q = [start]; let end = -1;
+    for (let qi = 0; qi < q.length; qi++) {
+      const c = q[qi]; if (goals.has(c)) { end = c; break; }
+      const cx = c % w, cy = (c / w) | 0;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = cx + dx, ny = cy + dy; if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+        const ni = ny * w + nx; if (prev[ni] >= 0 || !W.walkableTile(nx, ny)) continue;
+        prev[ni] = c; q.push(ni);
+      }
+    }
+    if (end < 0) return false;
+    const path = []; for (let c = end; c !== start; c = prev[c]) path.push({ x: (c % w) * TILE + 16, y: ((c / w) | 0) * TILE + 18 });
+    path.reverse();
+    GM.auto = { path, i: 0, tx, ty, name: name || '', stuck: 0 };
+    if (G.fishing.state !== 'idle') G.fishing.cancel(true);
+    return true;
+  };
+  GM.autoStop = (why) => { if (!GM.auto) return; const a = GM.auto; GM.auto = null; GM.autoWhy = why; if (why === 'arrive') { pl.dir = G.npc.faceDir(a.tx * TILE - pl.x, a.ty * TILE - pl.y); G.ui.toast(a.name ? `${a.name}에 도착했어요!` : '도착했어요!', { icon: '🚩', ms: 1800 }); } else if (why === 'stuck') G.ui.toast('길이 막혀서 멈췄어요.', { icon: '🚧' }); };
+
   function updatePlayer(dt) {
-    const mv = G.input.move;
+    const mv0 = G.input.move;
+    let mv = mv0, inMode = G.input.mode, stick = G.input.stick;
+    if (GM.auto) {
+      if (mv0.mag > 0) GM.autoStop('manual');
+      else if (!G.ui.dialogOpen() && !G.ui.open && pl.busy <= 0 && !pl.hold) {
+        const a = GM.auto, wp = a.path[a.i];
+        if (!wp) GM.autoStop('arrive');
+        else {
+          const dx = wp.x - pl.x, dy = wp.y - pl.y, d = Math.hypot(dx, dy);
+          if (d < 8) { a.i++; if (a.i >= a.path.length) GM.autoStop('arrive'); }
+          else { mv = { x: dx / d, y: dy / d, mag: 1 }; inMode = 'run'; stick = null; }
+        }
+      }
+    }
     pl.busy = Math.max(0, pl.busy - dt);
     if (pl.holdT > 0) { pl.holdT -= dt; if (pl.holdT <= 0) pl.hold = null; }
     if (pl.swing > 0) { pl.swing += dt * 3.2; if (pl.swing >= 1) pl.swing = 0; }
     pl.squash = Math.max(0, pl.squash - dt * 0.8);
     const canMove = pl.busy <= 0 && !pl.hold;
     if (mv.mag > 0 && canMove) {
-      const speed = (G.input.mode === 'run' ? 6.5 : G.input.mode === 'sneak' ? 1.6 : 4.0) * TILE * (G.house && G.house.inside ? 1 : G.ranch.speedMul());
-      const s = speed * (G.input.stick ? Math.max(0.35, mv.mag) : 1) * dt;
+      const speed = (inMode === 'run' ? 6.5 : inMode === 'sneak' ? 1.6 : 4.0) * TILE * (G.house && G.house.inside ? 1 : G.ranch.speedMul());
+      const s = speed * (stick ? Math.max(0.35, mv.mag) : 1) * dt;
       if (G.fishing.state !== 'idle') G.fishing.cancel(true);
       const ox = pl.x, oy = pl.y;
       (GM.mover || G.world.move)(pl, mv.x * s, mv.y * s);
       pl.dir = Math.abs(mv.x) > Math.abs(mv.y) * 1.1 ? (mv.x < 0 ? 1 : 3) : (mv.y < 0 ? 2 : 0);
       const moved = Math.hypot(pl.x - ox, pl.y - oy);
       pl.moving = moved > 0.05;
-      pl.mode = G.input.mode;
+      pl.mode = inMode;
+      if (GM.auto && mv !== mv0) { GM.auto.stuck = moved < 0.3 ? GM.auto.stuck + dt : 0; if (GM.auto.stuck > 0.8) GM.autoStop('stuck'); }
       // 걷기 사이클 460ms(4.0타일/s 기준 비례)
       pl.walk = (pl.walk + dt * (speed / (4 * TILE)) / 0.46) % 1;
       pl.stepT -= dt * (speed / (4 * TILE));
