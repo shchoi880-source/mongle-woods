@@ -713,28 +713,60 @@
     enter(args) {
       G.ui.hud(false);
       titleEl = document.createElement('div'); titleEl.className = 'title';
-      titleEl.innerHTML = `<div class="logo"><span>몽글숲</span><small>이야기</small></div><div class="tap">${args && args.fresh ? '계정 없이 새로 시작' : '화면을 톡 눌러 주세요'}</div><div class="ver">${G.VERSION}</div>`;
+      titleEl.innerHTML = `<div class="logo"><span>몽글숲</span><small>이야기</small></div><div class="tap"></div><div class="title-account"></div><div class="ver">${G.VERSION}</div>`;
       G.ui.root.append(titleEl);
-      let leaving = false;
-      const go = () => {
-        if (!titleEl || leaving) return; leaving = true;
-        removeEventListener('keydown', keyGo);
+      let leaving = false, canStart = false, startNew = !!(args && args.fresh);
+      const go = (forceNew) => {
+        if (!titleEl || leaving || !canStart) return; leaving = true;
+        removeEventListener('keydown', keyGo); offState();
         G.audio.unlock();
         setTimeout(() => G.audio.sfx('chime'), 60);
         titleEl.classList.add('out');
-        setTimeout(() => { titleEl.remove(); titleEl = null; args && args.fresh ? G.scene.replace('create') : startTown(); }, 500);
+        setTimeout(() => { titleEl.remove(); titleEl = null; (forceNew || startNew) ? G.scene.replace('create') : startTown(); }, 500);
       };
-      const keyGo = (e) => { if (!G.ui.open && !['INPUT', 'BUTTON'].includes(document.activeElement && document.activeElement.tagName)) go(e); };
-      // 화면 아무 곳이나 톡 하면 시작 (계정 버튼은 자기 클릭을 막아 둔다)
-      titleEl.addEventListener('click', (e) => { if (!e.target.closest('.title-account')) go(e); }); addEventListener('keydown', keyGo);
-      if (args && args.fresh && G.cloud.view().configured) {
-        const actions = document.createElement('div'); actions.className = 'title-account';
-        const login = document.createElement('button'); login.className = 'btn ghost'; login.textContent = '기존 계정으로 이어하기';
-        const signup = document.createElement('button'); signup.className = 'btn'; signup.textContent = '회원가입하고 시작';
-        login.onclick = (e) => { e.stopPropagation(); G.audio.unlock(); G.ui.account('login', () => go()); };
-        signup.onclick = (e) => { e.stopPropagation(); G.audio.unlock(); G.ui.account('signup', (mode) => { if (mode === 'signup') go(); }); };
-        actions.append(login, signup); titleEl.insertBefore(actions, titleEl.querySelector('.ver'));
-      }
+      const keyGo = (e) => { if (!G.ui.open && !['INPUT', 'BUTTON'].includes(document.activeElement && document.activeElement.tagName)) go(); };
+      titleEl.addEventListener('click', (e) => { if (!e.target.closest('.title-account')) go(); }); addEventListener('keydown', keyGo);
+      // 계정이 있어야 플레이 (오너 결정 D17: 데이터는 서버가 주인). 상태에 따라 첫 화면을 다시 그린다
+      const tap = titleEl.querySelector('.tap'), box = titleEl.querySelector('.title-account');
+      const btn = (cls, text, fn) => { const b = document.createElement('button'); b.className = cls; b.textContent = text; b.onclick = (e) => { e.stopPropagation(); G.audio.unlock(); fn(); }; return b; };
+      const render = () => {
+        if (!titleEl) return;
+        const s = G.cloud.view(), meta = G.save.sections.get('meta').get() || {};
+        const hasLocal = !!meta.seed; box.innerHTML = ''; canStart = false;
+        const busy = ['loading', 'checking', 'registering', 'signing-in', 'syncing', 'reloading', 'redirecting', 'linking-google', 'ready'].includes(s.phase);
+        if (!s.configured) { canStart = true; startNew = !hasLocal; tap.textContent = '화면을 톡 눌러 주세요'; return; }
+        if (busy) { tap.textContent = '☁️ 서버에서 마을을 확인하는 중…'; return; }
+        if (s.phase === 'offline') {
+          // 인터넷이 없을 때: 이 기기에 저장된 내 계정 마을이 있으면 이어 하고, 연결되면 서버에 올린다
+          const m = (() => { try { return JSON.parse(G.store.getItem(G.cloud.META_KEY) || 'null'); } catch (e) { return null; } })();
+          if (hasLocal && m && m.uid) { canStart = true; startNew = false; tap.textContent = '📴 오프라인 — 톡 눌러 이어 하기 (연결되면 서버에 저장)'; }
+          else tap.textContent = '📴 인터넷에 연결한 뒤 로그인해 주세요.';
+          box.append(btn('btn ghost', '다시 연결하기', () => G.cloud.retry()));
+          return;
+        }
+        if (s.user) {
+          if (s.phase === 'conflict') { tap.textContent = '어느 마을로 할지 골라 주세요.'; box.append(btn('btn', '마을 고르기', () => G.ui.conflictPick())); return; }
+          if (hasLocal) {
+            canStart = true; startNew = false;
+            tap.innerHTML = `「${(meta.town || '').replace(/[<>&]/g, '')}」 ${String(G.player.name || '').replace(/[<>&]/g, '')} · 톡 눌러 시작`;
+          } else {
+            canStart = true; startNew = true;
+            tap.textContent = '서버에 저장된 마을이 없어요 — 톡 눌러 새 캐릭터 만들기';
+          }
+          box.append(btn('btn ghost small', '로그아웃', async () => { if (await G.ui.confirm('로그아웃할까요? 이 기기에서는 마을을 지우고, 계정(서버)에는 그대로 남아요.', '로그아웃', '취소')) { const r = await G.cloud.logoutClear(false); if (!r.ok && await G.ui.confirm('서버 저장을 확인하지 못했어요. 그래도 로그아웃할까요?', '로그아웃', '취소')) G.cloud.logoutClear(true); } }));
+          return;
+        }
+        // 로그인 안 됨: 로그인 또는 회원가입부터
+        tap.textContent = hasLocal ? '이 기기에 계정 없이 하던 마을이 있어요. 회원가입하면 그 마을로 계정을 만들어요.' : '로그인하거나 회원가입하고 시작해요';
+        // 로그인·가입이 끝나면 서버 마을 확인 뒤 바로 게임으로 (새로고침을 거쳐도 이어지게 sessionStorage에 표시)
+        const auto = () => { try { sessionStorage.setItem('mg.autogo', '1'); } catch (e) { /* 무시 */ } render(); };
+        // 서버 마을을 받으면 새로고침되므로 버튼을 누를 때 미리 표시해 둔다
+        const mark = () => { try { sessionStorage.setItem('mg.autogo', '1'); } catch (e) { /* 무시 */ } };
+        box.append(btn('btn', '로그인', () => { mark(); G.ui.account('login', auto); }), btn(hasLocal ? 'btn' : 'btn ghost', hasLocal ? '이 마을로 회원가입' : '회원가입', () => { mark(); G.ui.account('signup', auto); }));
+      };
+      const autoGo = () => { let f = null; try { f = sessionStorage.getItem('mg.autogo'); } catch (e) { /* 무시 */ } if (f && canStart) { try { sessionStorage.removeItem('mg.autogo'); } catch (e) { /* 무시 */ } setTimeout(() => go(), 300); } };
+      const offState = G.on('cloud:state', () => { render(); autoGo(); }) || (() => {});
+      render(); autoGo();
     },
     update(dt) { GM.titleT = (GM.titleT || 0) + dt; },
     draw() { drawTitleBg(GM.t); },

@@ -97,7 +97,8 @@
     if (!remote) return established ? 'upload' : 'wait-local';
     if (remote.fingerprint === localFingerprint) return 'same';
     if (!established) return 'remote';
-    if (!m || m.uid !== uid || !m.baseFingerprint) return 'conflict';
+    // 서버가 주인(오너 결정 D17): 이 기기 마을이 이 계정 것이 아니면(또는 기준이 없으면) 서버 마을을 쓴다. 기기 마을은 복구용 백업으로만 남는다
+    if (!m || m.uid !== uid || !m.baseFingerprint) return 'remote';
     const localChanged = localFingerprint !== m.baseFingerprint;
     const remoteChanged = remote.fingerprint !== m.baseFingerprint;
     if (!localChanged && remoteChanged) return 'remote';

@@ -105,6 +105,7 @@ ok('클라우드 새 기기는 서버 복원', dc('blank', false, { fingerprint:
 ok('클라우드 서버만 변경 시 복원', dc('base', true, { fingerprint: 'server' }, cm, 'u1') === 'remote');
 ok('클라우드 로컬만 변경 시 업로드', dc('local', true, { fingerprint: 'base' }, cm, 'u1') === 'upload');
 ok('클라우드 양쪽 변경 시 충돌', dc('local', true, { fingerprint: 'server' }, cm, 'u1') === 'conflict');
+ok('클라우드: 다른 계정·기준 없는 기기 마을은 서버 마을로', dc('local', true, { fingerprint: 'server' }, {}, 'u1') === 'remote' && dc('local', true, { fingerprint: 'server' }, { uid: 'u2', baseFingerprint: 'b' }, 'u1') === 'remote');
 ok('계정 아이디 소문자 정규화', G.cloud._accountId('  Mongle_12 ') === 'mongle_12');
 ok('계정 아이디 형식 검증', G.cloud._validAccountId('mongle_12') && !G.cloud._validAccountId('몽글12') && !G.cloud._validAccountId('abc'));
 ok('실제 이메일을 만들지 않는 내부 식별자', G.cloud._accountEmail('Mongle_12') === 'mongle_12@accounts.mongle.invalid');
@@ -113,7 +114,7 @@ ok('실제 이메일을 만들지 않는 내부 식별자', G.cloud._accountEmai
   const cloudSource = fs.readFileSync(path.join(ROOT, 'js', 'cloud.js'), 'utf8');
   const inputSource = fs.readFileSync(path.join(ROOT, 'js', 'input.js'), 'utf8');
   const uiSource = fs.readFileSync(path.join(ROOT, 'js', 'ui.js'), 'utf8');
-  ok('폰 첫 화면 로그인 뒤 게임 진행', gameSource.includes("G.ui.account('login', () => go())"));
+  ok('폰 첫 화면 로그인 뒤 게임 진행', gameSource.includes("G.ui.account('login', auto)") && gameSource.includes("sessionStorage.getItem('mg.autogo')"));
   ok('Google 로그인은 모바일 호환 팝업 방식', cloudSource.includes('signInWithPopup') && !cloudSource.includes('signInWithRedirect'));
   ok('PC 행동 단축키는 Space 하나', inputSource.includes("ACTION_KEYS = new Set(['Space'])"));
   ok('PC 도구 단축키는 Q 하나', inputSource.includes("TOOL_KEYS = new Set(['KeyQ'])"));
