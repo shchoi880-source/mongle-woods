@@ -208,10 +208,19 @@
       if (o) { sites.museum2 = o; o.door = doorOf(o); carvePath(o.door.x, o.door.y, plx, ply); }
     }
     // 13) 주민 집 4·5(쫑알·단추) — 맨 끝에 덧붙인다
-    for (const [key, owner, ang] of [['house4', 'jjongal', 3.6], ['house5', 'danchu', 5.2]]) {
+    for (const [key, owner, ang] of [['house4', 'jjongal', 3.6], ['house5', 'danchu', 5.2], ['house6', 'hotteok', 0.3], ['house7', 'mungchi', 2.9], ['house8', 'mongsil', 4.4]]) {
       let o = null;
       for (let k = 0; k < 6 && !o; k++) { const a2 = ang + k * 1.05; o = place('house', 4, 3, plx + Math.cos(a2) * (14 + k), ply + Math.sin(a2) * (10 + k), { solid: true, owner }); }
       if (o) { sites[key] = o; o.door = doorOf(o); carvePath(o.door.x, o.door.y, plx, ply); }
+    }
+    // 14) 등불 기둥 10개 (L3) — 1번은 광장 옆, 나머지는 마을 곳곳. 맨 끝에 덧붙인다
+    for (let n = 1; n <= 10; n++) {
+      let o = null;
+      for (let k = 0; k < 8 && !o; k++) {
+        const a = n === 1 ? -Math.PI / 2 + k * 0.6 : (n - 2) * (Math.PI * 2 / 9) + k * 0.35;
+        const r = n === 1 ? 6 + k : 18 + ((n * 7) % 13) + k * 2;
+        o = place('lantern', 1, 1, plx + Math.cos(a) * r * 1.2, ply + Math.sin(a) * r * 0.8, { solid: true, n });
+      }
     }
     const plots = Object.fromEntries(Object.entries(sites).filter(([, o]) => o).map(([k, o]) => [k, { x: o.tx, y: o.ty, w: o.w, h: o.h, door: o.door }]));
     return { seed, w: W, h: H, terr, objs, plaza: { x: plx, y: ply }, pond, fall, bridges, plots, cliffY, coast };

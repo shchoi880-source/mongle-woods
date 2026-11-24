@@ -54,7 +54,8 @@
       if (y.sold) sub.push(`땅굴상점 어제 매출 중 우편지기 몫: ${G.fmt.money(y.sold)}. 토닥 「전설」, 토실 「정확한 금액입니다」.`);
       const wNow = G.weather.at(d, 12), wTom = G.weather.at(d + 1, 12);
       const weather = `오늘 낮 ${G.weather.LABEL[wNow.type]}, 내일 낮 ${G.weather.LABEL[wTom.type]}${wTom.type === 'rain' ? ' — 우산 챙기세요!' : wTom.type === 'snow' ? ' — 눈사람 각!' : '.'}`;
-      const gossip = GOSSIP[Math.floor(R() * GOSSIP.length)];
+      const fox = G.npc.st.fox;
+      const gossip = fox && fox.seen && fox.seen >= d - 1 && !G.lantern.count() ? '「밤 열 시가 넘으면 나무 다리 위에 여우가 선다」는 제보 입수! 기자가 다가가자 사라져… 정체는 미궁. (본지 단독)' : GOSSIP[Math.floor(R() * GOSSIP.length)];
       const corr = N.issueNo() > 1 ? CORRECTION[Math.floor(R() * CORRECTION.length)] : '';
       return { no: N.issueNo(), head, sub, weather, gossip, corr, trend: G.market.trend().name };
     },

@@ -7,7 +7,7 @@ const ROOT = path.resolve(__dirname, '..');
 const N = +(process.argv[2] || 1000);
 
 // 브라우저 전용 파일(art·actors·input·audio·ui·dev·boot)은 로드하지 않는다. 나머지는 로드 시 DOM에 접근하지 않는다
-for (const f of ['core', 'save', 'time', 'data', 'world', 'sys', 'eco', 'npc', 'house', 'museum', 'mail', 'nest', 'requests', 'news', 'tide', 'game']) require(path.join(ROOT, 'js', f + '.js'));
+for (const f of ['core', 'save', 'time', 'data', 'world', 'sys', 'eco', 'npc', 'house', 'museum', 'mail', 'nest', 'requests', 'news', 'tide', 'lantern', 'game']) require(path.join(ROOT, 'js', f + '.js'));
 const G = globalThis.G;
 let fails = 0;
 const ok = (name, cond, detail) => { console.log(`${cond ? '✔' : '✘'} ${name}${detail ? ' — ' + detail : ''}`); if (!cond) fails++; };

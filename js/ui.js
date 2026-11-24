@@ -3,8 +3,8 @@
   'use strict';
   const $ = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html !== undefined) e.innerHTML = html; return e; };
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const NAMES = { ddalang: '딸랑', bori: '보리 할멈', todak: '토닥', tosil: '토실', kongal: '콩알', sogeum: '소금', lime: '라임', slowpoke: '느림보 박사', jjongal: '쫑알', danchu: '단추', sys: '' };
-  const NAMECOL = { ddalang: '#ff8fb1', bori: '#c98e5a', todak: '#8a7366', tosil: '#b48aa6', kongal: '#8fb4ff', sogeum: '#6fa8c9', lime: '#9bc94a', slowpoke: '#7fae7a', jjongal: '#e09a56', danchu: '#46546a' };
+  const NAMES = { ddalang: '딸랑', bori: '보리 할멈', todak: '토닥', tosil: '토실', kongal: '콩알', sogeum: '소금', lime: '라임', slowpoke: '느림보 박사', jjongal: '쫑알', danchu: '단추', hotteok: '호떡', mungchi: '뭉치', mongsil: '몽실', danpung: '단풍', sys: '' };
+  const NAMECOL = { ddalang: '#ff8fb1', bori: '#c98e5a', todak: '#8a7366', tosil: '#b48aa6', kongal: '#8fb4ff', sogeum: '#6fa8c9', lime: '#9bc94a', slowpoke: '#7fae7a', jjongal: '#e09a56', danchu: '#46546a', hotteok: '#b07a4e', mungchi: '#e8a868', mongsil: '#a68ee0', danpung: '#d0702c' };
 
   const UI = G.ui = { root: null, open: null };
   let hud = {}, toastBox, dialogEl, popEl, modalEl;
@@ -291,6 +291,13 @@
   }
 
   function todoPane(pane) {
+    // 등불 (메타 목표)
+    const lit = G.lantern.count(), next = lit + 1;
+    pane.append($('div', 'pane-head', `<span>🏮 등불 ${lit}/10 — 다음: ${next}번 기둥</span>`));
+    const lb = $('div', 'todo');
+    for (const c of G.lantern.conds(next)) lb.append($('div', 'card' + (c.ok ? ' done' : ''), `<span class="chk">${c.ok ? '✔' : ''}</span>${esc(c.text)} <small class="muted">(${Math.min(c.cur, c.need)}/${c.need})</small>`));
+    pane.append(lb);
+    if (G.lantern.st.pages) { const bb = $('button', 'btn small ghost', '📖 큰솜이 그림책 보기'); bb.onclick = () => { G.ui.open.close(); setTimeout(() => G.lantern.book(), 50); }; pane.append(bb); }
     const rq = G.requests.st;
     if (rq.day === G.time.day() && rq.list.length) {
       pane.append($('div', 'pane-head', `<span>오늘의 부탁 (${rq.list.filter((r) => r.state === 'done').length}/${rq.list.length}) — 머리 위 「!」인 이웃에게 말을 걸어요</span>`));
