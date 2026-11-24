@@ -691,7 +691,7 @@
       if (ev.type === 'tool') { pl.nextTool(); return true; }
       if (ev.type === 'menu') { G.ui.notebook(); return true; }
       if (ev.type === 'map') { G.map.open(); return true; }
-      if (ev.type === 'chat') { G.ui.chat(); return true; }
+      if (ev.type === 'chat') { G.ui.chat(true); return true; }
       if (ev.type === 'tapWorld' && ev.mouse) {
         // 마우스 클릭: 클릭한 쪽을 바라보고 행동
         const w = cam.toWorld(ev.cx, ev.cy);

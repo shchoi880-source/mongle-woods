@@ -19,7 +19,7 @@
     hud.menu.onclick = () => { press(hud.menu); G.input.emit('menu'); };
     hud.map = $('button', 'btn-round btn-map', '🗺️'); hud.map.title = '지도 (M)';
     hud.map.onclick = () => { press(hud.map); G.input.emit('map'); };
-    hud.chat = $('button', 'btn-round btn-chat hidden', '💬'); hud.chat.title = '채팅 (T)';
+    hud.chat = $('button', 'btn-round btn-chat hidden', '💬'); hud.chat.title = '채팅 (Enter)';
     hud.chat.onclick = () => { press(hud.chat); UI.chat(); };
     top.append(hud.map, hud.menu);
     hud.log = $('div', 'chatlog'); hud.log.title = '눌러서 대화 전체 보기'; hud.log.onclick = () => UI.chat(); root.append(hud.log);
@@ -418,19 +418,20 @@
     box.innerHTML = G.net.chat.slice(-30).map((m) => `<div class="chatline${G.cloud._fb() && m.uid === G.cloud._fb().uid ? ' me' : ''}"><b>${esc(m.name)}</b> ${esc(m.text)}</div>`).join('') || '<div class="muted small">아직 대화가 없어요. 인사해 볼까요? 👋</div>';
     box.scrollTop = box.scrollHeight;
   }
-  function closeChat() { if (chatEl) { chatEl.remove(); chatEl = null; G.input.unlock('chat'); } }
-  UI.chat = () => {
+  function closeChat() { if (chatEl) { const i = chatEl.querySelector('input'); if (i) i.blur(); chatEl.remove(); chatEl = null; G.input.unlock('chat'); } }
+  UI.chat = (fromKey) => {
     if (!G.net || !G.net.active) return;
-    if (chatEl) { closeChat(); return; }
+    if (chatEl) { if (fromKey) { const i = chatEl.querySelector('input'); if (i) i.focus(); } else closeChat(); return; }
     chatEl = $('div', 'chatbar');
     const full = $('div', 'chatfull'); chatEl.append(full);
     const row = $('div', 'chatrow');
-    const inp = $('input'); inp.maxLength = 60; inp.placeholder = '말하기 (60자)'; inp.enterKeyHint = 'send';
+    const inp = $('input'); inp.maxLength = 60; inp.placeholder = G.input.isTouch() ? '말하기 (60자)' : '말하기 (60자) · Enter 보내기 · Esc 닫기'; inp.enterKeyHint = 'send';
     const send = $('button', 'btn small', '보내기');
     const x = $('button', 'btn small ghost', '✕');
-    const go = async () => { const v = inp.value; if (!v.trim()) return; if (await G.net.say(v)) { inp.value = ''; } };
-    send.onclick = go; x.onclick = closeChat;
-    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); go(); } else if (e.key === 'Escape') { e.preventDefault(); closeChat(); } e.stopPropagation(); });
+    // PC: Enter로 열고 → 쓰고 → Enter로 보내면 닫혀서 바로 다시 걸을 수 있다. 빈 칸에서 Enter = 닫기
+    const go = async (fromKey) => { const v = inp.value; if (!v.trim()) { if (fromKey) closeChat(); return; } if (await G.net.say(v)) { inp.value = ''; if (fromKey && !G.input.isTouch()) closeChat(); } };
+    send.onclick = () => go(false); x.onclick = closeChat;
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); if (!e.isComposing) go(true); } else if (e.key === 'Escape') { e.preventDefault(); closeChat(); } e.stopPropagation(); });
     row.append(inp, send, x); chatEl.append(row);
     const em = $('div', 'emotes');
     for (const [ico, text] of G.net.EMOTES) { const b = $('button', 'emote', ico); b.title = text; b.onclick = () => G.net.say(ico + ' ' + text); em.append(b); }
