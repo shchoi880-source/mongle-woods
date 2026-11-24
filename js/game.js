@@ -90,7 +90,9 @@
     const it = G.items.get(id);
     gainCount[id] = (gainCount[id] || 0) + 1;
     const short = gainCount[id] >= 10 && !(x && (x.newSp || x.v));
-    pl.hold = { id, x }; pl.holdT = short ? 0.4 : 1.2; pl.busy = Math.max(pl.busy, short ? 0.35 : 0.9);
+    if (!opt.keepTool) {
+      pl.hold = { id, x }; pl.holdT = short ? 0.4 : 1.2; pl.busy = Math.max(pl.busy, short ? 0.35 : 0.9);
+    }
     pl.dir = 0;
     G.ui.itemPop(id, x, opt.msg, short);
     if (opt.sfx !== false) G.audio.sfx(it && it.ref && it.ref.tier >= 3 || (x && x.v) ? 'rare' : opt.sfx || 'pickup');
@@ -220,7 +222,7 @@
             const r = G.collect.record('bug', b.sp.ix, b.v, b.size);
             G.emit('eco:caught', { kind: 'bug', ix: b.sp.ix, v: b.v, size: b.size });
             const x = { size: b.size, v: b.v, newSp: r.newSp }; if (b.v === 5) x.s = A.season;
-            GM.gain('bug:' + b.sp.id, 1, x, { msg: `${G.josa(G.items.name('bug:' + b.sp.id, x), '을/를')} 잡았다!` });
+            GM.gain('bug:' + b.sp.id, 1, x, { msg: `${G.josa(G.items.name('bug:' + b.sp.id, x), '을/를')} 잡았다!`, keepTool: true });
             kongalReact('jump'); kongalSay(u.pick(G.lines('kongal', 'catch'), Math.random()).text);
             if (!G.inv.canFit('bug:' + b.sp.id, x) && !G.inv.has('bug:' + b.sp.id)) { /* gain 실패 시 놓아줌 */ }
           } else { G.audio.sfx('whiff'); }
