@@ -67,7 +67,8 @@
     need();
     let uid = p.uid; if (!uid) uid = (await F.db.get(R('codes/' + p.code))).val();
     if (!uid) throw new Error('친구를 찾지 못했어요.');
-    await F.db.set(R('knock/' + uid + '/' + F.uid), { name: (G.player.name || '?').slice(0, 8), at: F.db.serverTimestamp() });
+    try { await F.db.set(R('knock/' + uid + '/' + F.uid), { name: (G.player.name || '?').slice(0, 8), at: F.db.serverTimestamp() }); }
+    catch (e) { e.knock = true; throw e; }
     rememberFriend(p.code, p.name, p.town, uid); knocked[uid] = Date.now(); watchFriends();
     G.audio.sfx('chime');
     G.ui.toast(`${p.name}에게 「놀러 가도 돼?」를 보냈어요! 마을 문을 열면 바로 알려 줄게요.`, { icon: '📮', ms: 4200 });

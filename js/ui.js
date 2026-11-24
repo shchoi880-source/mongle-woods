@@ -112,8 +112,10 @@
 
   // ---------- 토스트 ----------
   UI.toast = (text, o = {}) => {
+    // 같은 알림이 이미 떠 있으면 또 쌓지 않는다
+    for (const c of toastBox.children) if (c.dataset.text === text && !c.classList.contains('out')) return;
     const t = $('div', 'toast', (o.icon ? `<span class="ti">${o.icon}</span>` : '') + esc(text));
-    toastBox.append(t);
+    t.dataset.text = text; toastBox.append(t);
     while (toastBox.children.length > 3) toastBox.firstChild.remove();
     setTimeout(() => t.classList.add('out'), o.ms || 2200);
     setTimeout(() => t.remove(), (o.ms || 2200) + 400);
@@ -450,7 +452,7 @@
   UI.netErr = (e) => {
     const raw = String((e && (e.code || e.message)) || e || '');
     let msg = e && e.message && !/^[\x00-\x7F]*$/.test(e.message) ? e.message : '';
-    if (/PERMISSION/i.test(raw)) msg = '친구 기능 서버 설정이 아직 안 됐어요. (Firebase 규칙 게시가 필요해요)';
+    if (/PERMISSION/i.test(raw)) msg = e && e.knock ? '「놀러 가도 돼?」는 서버 규칙을 다시 게시해야 쓸 수 있어요. 지금은 친구에게 「내 마을 열기」를 부탁해 주세요!' : '친구 기능 서버 설정이 아직 안 됐어요. (Firebase 규칙 게시가 필요해요)';
     else if (/network|offline|disconnect/i.test(raw)) msg = '인터넷 연결을 확인해 주세요.';
     else if (!msg) msg = '잠시 문제가 생겼어요. 조금 뒤 다시 해 주세요.';
     G.log.err('net', e); UI.toast(msg, { icon: '⚠️', ms: 4000 });
