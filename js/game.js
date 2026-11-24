@@ -42,7 +42,9 @@
     swing: 0, busy: 0, hold: null, holdT: 0, squash: 0, stepT: 0, idleT: 0,
     hasTool(t) { return this.tools.includes(t); },
     giveTool(t) { if (!this.tools.includes(t)) this.tools.push(t); G.save.mark('tool'); G.ui.refreshHud(); },
-    setTool(t) { if (!this.hasTool(t)) return; this.tool = t; G.fishing.cancel(true); G.ui.refreshHud(); G.save.mark('tool'); },
+    setTool(t) { if (!this.hasTool(t)) return; this.tool = t;
+      if (t === 'net') G.events.tip('net', '잠자리채: 곤충 앞에서 노란 버튼. 조이스틱을 살짝만 기울이면 살금살금!', '잠자리채: 곤충 앞에서 Space. C 키를 누르고 걸으면 살금살금!');
+      if (t === 'rod') G.events.tip('rod', '낚싯대: 물 쪽을 보고 노란 버튼으로 던져요. 찌가 「풍덩!」 잠기면 다시 눌러요.', '낚싯대: 물 쪽을 보고 Space로 던져요. 찌가 「풍덩!」 잠기면 다시 Space!'); G.fishing.cancel(true); G.ui.refreshHud(); G.save.mark('tool'); },
     nextTool() { const i = this.tools.indexOf(this.tool); this.setTool(this.tools[(i + 1) % this.tools.length]); G.audio.sfx('tap'); },
   };
   G.player = pl;
@@ -132,6 +134,9 @@
       const dg = G.world.state.digs.find((d) => !G.world.isTaken(d.id) && Math.abs(d.tx * TILE + 16 - f.x) < 26 && Math.abs(d.ty * TILE + 16 - f.y) < 26);
       return { kind: 'dig', ref: dg, icon: '⛏️', label: '파기', name: dg ? '금 간 땅' : '' };
     }
+    // 눈사람 (첫눈 이후 겨울)
+    const sm = G.events.snowmanPos();
+    if (sm && u.dist(sm.x, sm.y, f.x, f.y) < 30) return { kind: 'snowman', icon: '⛄', label: G.events.st.snowman ? '보기' : '눈덩이 올리기', name: '광장 눈사람' };
     // 4) 사물: 나무·표지판·텐트·건물
     const o = objAhead();
     if (o) {
@@ -274,7 +279,9 @@
       case 'stall': await GM.openShop(); break;
       case 'rock': await G.ui.say([{ who: 'sys', text: '동글동글한 바위예요. 밑에서 뭔가 데굴데굴 굴러다니는 소리가 나요.' }]); break;
       case 'poke': o_poke(tg.ref); break;
+      case 'snowman': await G.events.snowmanTalk(); break;
       default:
+        if (await G.events.tryWish()) break; // 별똥별이 지나가는 중이면 소원
         // 대상이 없어도 반응한다(죽은 입력 0): 작은 깡충 + 소리
         pl.squash = 0.12; G.audio.sfx('bump');
         if (Math.random() < 0.3) kongalSay(u.pick(G.lines('kongal', 'idle'), Math.random()).text);
@@ -428,6 +435,8 @@
     G.eco.collect(R, rect, t);
     for (const n of G.npc.list) if (n.vis && n.x > rect.x - 60 && n.x < rect.x + rect.w + 60) R.push({ sy: n.y, draw: (c) => { if (n.alpha !== undefined && n.alpha < 1) { c.globalAlpha = n.alpha; A.actor.draw(c, n, t); c.globalAlpha = 1; } else A.actor.draw(c, n, t); } });
     R.push({ sy: pl.y, draw: (c) => drawPlayer(c, t) });
+    const sm = G.events.snowmanPos();
+    if (sm) R.push({ sy: sm.y, draw: (c) => drawSnowman(c, sm.x, sm.y, G.events.st.snowman) });
     for (const d of GM.drops) R.push({ sy: d.y, draw: (c) => drawDrop(c, d, t) });
     R.sort((a, b) => a.sy - b.sy);
     for (const it of R) it.draw(ctx);
@@ -467,7 +476,17 @@
     if (pl.hold) drawHeld(t);
     if (kg.sayT > 0 && !G.ui.dialogOpen()) bubble(pl.x, pl.y - 74 - kg.jump, kg.say, Math.min(1, kg.sayT * 3));
     G.fishing.drawPost(ctx, pl);
+    G.events.drawMeteors(ctx);
     drawAim(t);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    G.events.drawArrow(ctx, cam, cv, t);
+  }
+  function drawSnowman(c, x, y, done) {
+    const P = A.paint;
+    P.shadow(c, x, y, 26, 0.22);
+    P.blob(c, x, y - 10, 13, 11, '#ffffff', A.C.line, 1.5);
+    if (done) { P.blob(c, x, y - 28, 9.5, 8.5, '#ffffff', A.C.line, 1.5); P.blob(c, x - 3, y - 30, 1.3, 1.6, '#2d2430'); c.strokeStyle = '#2d2430'; c.lineWidth = 1.3; c.beginPath(); c.moveTo(1.5 + x, y - 30); c.lineTo(5 + x, y - 30); c.stroke(); c.fillStyle = '#ff8a3a'; c.beginPath(); c.moveTo(x, y - 27); c.lineTo(x + 7, y - 26); c.lineTo(x, y - 25); c.fill(); P.rrect(c, x - 9, y - 22, 18, 4, 2, '#ff6b6b', A.C.line, 1); }
+    else { P.blob(c, x + 14, y - 4, 6, 5, '#ffffff', A.C.line, 1.2); }
   }
   function collectObjects(rect, t) {
     const W = G.world, m = W.map;
@@ -620,6 +639,8 @@
       updatePlayer(dt); updateKongal(dt, t); updateFx(dt);
       G.npc.update(dt, pl, t);
       G.eco.update(dt, pl);
+      G.events.updateMeteors(dt, cam.rect());
+      G.events.updateRace(dt);
       G.ui.updateDialog(dt);
       cam.follow(pl.x, pl.y, dt);
       GM.target = (G.ui.dialogOpen() || G.ui.open) ? null : findTarget();
@@ -817,6 +838,7 @@
       const k = G.time.st.playDays;
       G.ui.toast(`어서 와요, ${pl.name}! ${G.time.label().date}`, { icon: '🍃' });
       setTimeout(() => G.mail.ritual(), 900);
+      setTimeout(() => G.events.checkFirstSnow(), 4000);
       if (G.npc.get('ddalang')) { /* 아침 의식(꿈·우체통)은 M-b */ }
       void k;
     }

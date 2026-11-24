@@ -228,6 +228,7 @@
         G.emit('quest:letter', {});
         G.save.mark('talk'); return;
       }
+      if (id === 'hotteok' && G.events.raceDay() && await G.events.raceTalk()) return;
       if (await G.requests.onTalk(n)) { G.save.mark('talk'); return; }
       const seq = [];
       if (s.greetDay !== day) {

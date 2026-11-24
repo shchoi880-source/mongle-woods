@@ -78,6 +78,7 @@
     },
     at(day, hour) {
       if (override) return override;
+      if (G.events && G.events.isFirstSnow(day) && hour >= 5 && hour < 16) return { type: 'snow', wind: 0.3, int: 0.8, first: true }; // 첫눈 아침
       const p = G.weather.pattern(day);
       const dd = T.dayDate(day); const winter = dd.m === 12 || dd.m <= 2;
       const wet = winter ? 'snow' : 'rain';

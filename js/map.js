@@ -15,6 +15,9 @@
     const at = (x, y) => ({ x, y });
     const npcAt = (id) => { const n = G.npc.get(id); return n && n.vis ? at(n.x, n.y) : null; };
     const plotAt = (k) => { const p = m.plots[k]; return p ? at((p.door.x + 0.5) * TILE, (p.door.y + 0.5) * TILE) : null; };
+    // 0) 달리기 중
+    const rc = G.events && G.events.race;
+    if (rc && rc.on) { if (!rc.touched) return { text: `🏃 ${rc.cp.nm} 앞을 찍고 오기!`, pos: at(rc.cp.x, rc.cp.y) }; return { text: '🏃 호떡에게 돌아가기!', pos: npcAt('hotteok') }; }
     // 1) 이웃과 첫 만남 (도구가 걸려 있음)
     if (G.inv.has('letter_ddalang')) return { text: '딸랑(토끼)에게 편지 전해 주기', pos: npcAt('ddalang') || plotAt('house1') };
     for (const id of ['sogeum', 'lime']) if (!G.npc.st[id].met && G.npc.isResident(id)) { const v = G.npc.VILLAGERS[id]; return { text: `${v.name}(${id === 'sogeum' ? '수달' : '고양이'})에게 인사하고 ${id === 'sogeum' ? '낚싯대' : '잠자리채'} 받기`, pos: npcAt(id) || plotAt(v.plot) }; }
