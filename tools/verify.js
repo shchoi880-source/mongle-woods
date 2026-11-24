@@ -105,6 +105,23 @@ ok('계정 아이디 소문자 정규화', G.cloud._accountId('  Mongle_12 ') ==
 ok('계정 아이디 형식 검증', G.cloud._validAccountId('mongle_12') && !G.cloud._validAccountId('몽글12') && !G.cloud._validAccountId('abc'));
 ok('실제 이메일을 만들지 않는 내부 식별자', G.cloud._accountEmail('Mongle_12') === 'mongle_12@accounts.mongle.invalid');
 
+// 마을 시계: 실제 1초 = 마을 1분, 농사·목장은 몇 분 안에
+{
+  const T = G.time, F = G.farm, t0 = T.now();
+  T.advance(0.25); ok('시계: 실제 0.25초 = 마을 15초', T.now() - t0 === 15000);
+  const step = (realSec) => { for (let i = 0; i < realSec * 4; i++) { T.advance(0.25); if (i % 4 === 3) { F.tick(); G.ranch.tick(); } } };
+  F.st.plots = [{ tx: 1, ty: 1, crop: 'spinach', prog: 0, gp: 0, wet: 0, water: -1, giant: false }]; F.st.lastMin = -1; F.tick();
+  const p = F.st.plots[0]; G.weather.override({ type: 'clear', wind: 0 });
+  step(60); ok('농사: 물 안 주면 안 자람', p.prog === 0);
+  p.wet = T.gmin() + F.WET_MIN; step(8 * 60 + 2);
+  ok('농사: 물 주고 8분이면 시금치(2) 수확', F.stage(p) === 3, `prog=${p.prog}`);
+  F.st.plots = [];
+  const a = { id: 1, kind: 'chicken', born: T.day() - 2, petAt: T.gmin(), ready: false, love: 0 };
+  G.ranch.st.animals = [a]; step(2 * 60 + 2);
+  ok('목장: 닭 쓰다듬고 2분이면 달걀', a.ready === true && G.ranch.canPet(a) === false);
+  G.ranch.st.animals = []; G.weather.override(null);
+}
+
 // 가방: 쌓기·가득 참
 G.inv.slots.length = 0;
 ok('가방 쌓기', G.inv.add('branch', 45) === 0 && G.inv.slots.length === 2 && G.inv.count('branch') === 45);

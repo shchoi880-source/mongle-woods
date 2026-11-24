@@ -30,7 +30,7 @@
     check() {
       const nx = NS.next(); if (!nx) return { ok: false, why: '지금은 여기가 가장 큰 집이에요.' };
       if (st.debt > 0) return { ok: false, why: `먼저 ${NS.cur().name} 약정 ${G.fmt.money(st.debt)}을 다 갚아야 한단다.` };
-      if (st.building >= 0) return { ok: false, why: '공사가 이미 시작됐단다. 내일 아침을 기다리렴.' };
+      if (st.building >= 0) return { ok: false, why: `공사가 이미 시작됐단다. 다음 아침(약 ${G.time.minsToMorning()}분 뒤)을 기다리렴.` };
       const created = (G.save.sections.get('meta').get() || {}).created || 0;
       const days = G.time.day() - created, active = G.time.st.playDays;
       const miss = [];
@@ -61,7 +61,7 @@
       const say = (text) => ({ who: 'bori', text });
       const c = NS.cur(), nx = NS.next();
       const lines = [];
-      if (st.building >= 0) { await G.ui.say([say(`${nx.name} 공사는 오늘 밤에 끝난단다. 내일 아침에 보러 가렴. 콕!`)]); return; }
+      if (st.building >= 0) { await G.ui.say([say(`${nx.name} 공사는 오늘 밤에 끝난단다. 다음 아침(약 ${G.time.minsToMorning()}분 뒤)에 보러 가렴. 콕!`)]); return; }
       if (st.debt > 0) {
         const opts = [`전부 갚기 (${G.fmt.money(Math.min(st.debt, G.wallet.get()))})`, '1,000몽 갚기', '다음에요'];
         const i = await G.ui.choose(say(`${c.name} 약정이 ${G.fmt.money(st.debt)} 남았구나. 이자도 기한도 없단다. 갚고 싶은 만큼만 갚으렴.`), opts);

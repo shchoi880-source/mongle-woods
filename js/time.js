@@ -1,4 +1,5 @@
-// 시간: 실제 시계, 05:00 하루 경계, 계절, 날씨(결정적) — r2-기술 T15·T16
+// 시간: 마을 시계(놀고 있을 때만 흐름, 실제 1초 = 마을 1분 → 하루 24분), 05:00 하루 경계, 계절, 날씨(결정적)
+// 오너 결정(2026-11): 실제 시간처럼 며칠씩 기다리는 건 재미없다 → 마을 시간이 빨리 흐르고, 오래 놀수록 더 많이 한다
 (function (G) {
   'use strict';
   const u = G.u;
@@ -9,11 +10,19 @@
 
   let offset = 0;           // 개발용 시간 이동(ms)
   let lastMin = -1, lastHour = -1, lastDay = null;
-  const st = { lastMs: 0, maxDay: 0, playDays: 0, lastPlayDay: -1, tt: 0 };
+  const st = { lastMs: 0, maxDay: 0, playDays: 0, lastPlayDay: -1, tt: 0, vms: 0 };
+  const SPEED = 60; // 실제 1초 = 마을 1분
 
   const T = G.time = {
     st,
-    now: () => Date.now() + offset,
+    SPEED,
+    // 마을 시각(ms). 처음엔 오늘 실제 날짜·시각에서 출발하고, 그다음은 놀고 있는 동안만 흐른다
+    now: () => (st.vms || (st.vms = Date.now())) + offset,
+    // 놀고 있는 동안 흐르게 한다 (탭 숨김·타이틀에선 안 부름). dt는 실제 초
+    advance(dt) { if (!(dt > 0)) return; T.now(); st.vms += Math.min(dt, 0.25) * 1000 * SPEED; },
+    // 다음 아침(05시)까지 실제 몇 분
+    minsToMorning() { const d = T.date(); const m = (G.C.DAY_H * 60 - (d.getHours() * 60 + d.getMinutes()) + 1440) % 1440 || 1440; return Math.max(1, Math.ceil(m / SPEED)); },
+    gmin: () => Math.floor(T.now() / 60000),  // 마을 시각(분) — 농사·목장 타이머용
     date() { return new Date(T.now()); },
     // 게임 일 번호: 로컬 05:00 기준 (1970-01-01 05:00 = 0일)
     dayOf(ms) { const d = new Date(ms - G.C.DAY_H * 3600000); return Math.floor((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())) / DAY_MS); },
@@ -61,8 +70,8 @@
   };
 
   G.save.section('time', {
-    v: 1, def: () => ({ lastMs: 0, maxDay: 0, playDays: 0, lastPlayDay: -1, tt: 0 }),
-    get: () => Object.assign({}, st), set: (d) => Object.assign(st, d),
+    v: 1, def: () => ({ lastMs: 0, maxDay: 0, playDays: 0, lastPlayDay: -1, tt: 0, vms: 0 }),
+    get: () => Object.assign({}, st), set: (d) => { Object.assign(st, d); lastDay = null; lastMin = -1; lastHour = -1; },
   });
 
   // ---------- 날씨 ----------

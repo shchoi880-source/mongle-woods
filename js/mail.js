@@ -91,7 +91,11 @@
       if (G.ui.dialogOpen() || G.ui.open || (G.house && G.house.editing) || G.player.hold) { setTimeout(() => ML.ritual(), 2000); return; }
       ML.daily(day);
       st.lastRitual = day; G.save.mark('ritual');
-      await G.ui.say([{ who: 'kongal', text: '꼬물… 꼬물. (콩알이 어젯밤 꿈 얘기를 해요)' }, { who: 'sys', text: `「${st.dream}」` + (st.dreamSp ? '\n…오늘 어딘가에서 이루어질지도 몰라요.' : '') }]);
+      // 마을 하루가 24분이라 아침마다 대화창으로 멈추면 방해된다 → 그날 첫 아침(접속)만 대화, 나머지는 알림
+      if (!st.talkedReal || st.talkedReal !== new Date().toDateString()) {
+        st.talkedReal = new Date().toDateString();
+        await G.ui.say([{ who: 'kongal', text: '꼬물… 꼬물. (콩알이 어젯밤 꿈 얘기를 해요)' }, { who: 'sys', text: `「${st.dream}」` + (st.dreamSp ? '\n…오늘 어딘가에서 이루어질지도 몰라요.' : '') }]);
+      } else G.ui.toast(`콩알의 꿈: 「${st.dream}」`, { icon: '💤', ms: 3500 });
       const n = ML.unread();
       if (n) G.ui.toast(`우체통에 편지 ${n}통이 와 있어요!`, { icon: '📮', ms: 3500 });
       if (G.news) G.news.moveInNote();

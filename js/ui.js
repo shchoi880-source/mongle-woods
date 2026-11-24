@@ -81,6 +81,7 @@
     const l = G.time.label(), w = G.weather.now();
     const ico = w.type === 'clear' && G.time.isNight() ? '🌙' : G.weather.ICON[w.type];
     hud.time.innerHTML = `<b>${l.date}</b><span>${ico} ${l.clock}</span>`;
+    hud.time.title = `마을 하루 = 실제 24분 · 다음 아침까지 약 ${G.time.minsToMorning()}분`;
     hud.money.innerHTML = `<i class="coin"></i>${G.fmt.num(G.wallet.get())}`;
     const tool = G.player ? G.player.tool : 'hand';
     if (G.house && G.house.inside) hud.tool.innerHTML = '<span>🛋️</span><small>꾸미기</small>';
@@ -599,7 +600,7 @@
           const r = G.shop.buy(e);
           if (!r.ok) { G.audio.sfx('error'); UI.toast(r.why, { icon: '🪙' }); return; }
           G.audio.sfx('coin');
-          if (e.kind === 'animal') { close(); await UI.say(r.first ? [{ who: 'tosil', text: '아기 동물은 오빠 친구 목장에서 데려왔어요. 집 옆에 울타리도 세워 뒀어요.' }, { who: 'todak', text: '전설의 목장이에요! …아직 울타리뿐이지만요!' }, { who: 'sys', text: '하루 한 번 쓰다듬어 주면 다음 날 아침 선물을 줘요. 3일이면 다 자라요.' }] : [{ who: 'tosil', text: `${e.name}가 목장에 도착했어요. 이름은 목장에서 확인해 보세요.` }]); return; }
+          if (e.kind === 'animal') { close(); await UI.say(r.first ? [{ who: 'tosil', text: '아기 동물은 오빠 친구 목장에서 데려왔어요. 집 옆에 울타리도 세워 뒀어요.' }, { who: 'todak', text: '전설의 목장이에요! …아직 울타리뿐이지만요!' }, { who: 'sys', text: '쓰다듬어 주면 몇 분 뒤 선물을 줘요. 거두고 또 쓰다듬으면 또 줘요! 아기는 마을 하루(24분)면 다 자라요.' }] : [{ who: 'tosil', text: `${e.name}가 목장에 도착했어요. 이름은 목장에서 확인해 보세요.` }]); return; }
           if (r.gift) { close(); await UI.say([{ who: 'tosil', text: '씨앗 첫 손님이시네요. 물뿌리개는 덤이에요. 오빠한테는 비밀이에요.' }, { who: 'todak', text: '전설의 물뿌리개예요! 물이 알아서… 아, 이건 진짜로 물이 나와요.' }]); G.ui.toast('물뿌리개를 받았어요! 텃밭은 집 옆에 있어요.', { icon: '🚿', ms: 3500 }); return; }
           if (e.kind === 'tool') {
             close();
