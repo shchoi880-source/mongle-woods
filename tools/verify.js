@@ -144,7 +144,7 @@ ok('곤충: 가장 예민한 종도 채 들고 걸어서 포획 거리 진입', 
 // 마을 시계: 실제 1초 = 마을 1분, 농사·목장은 몇 분 안에
 {
   const T = G.time, F = G.farm, t0 = T.now();
-  T.advance(0.25); ok('시계: 실제 0.25초 = 마을 15초', T.now() - t0 === 15000);
+  { const h = T.hour(); T.advance(0.25); ok('시계: 실제 0.25초 = 마을 15초(깊은 밤엔 2.5배)', T.now() - t0 === ((h >= 21 || h < 4) ? 37500 : 15000)); }
   const step = (realSec) => { for (let i = 0; i < realSec * 4; i++) { T.advance(0.25); if (i % 4 === 3) { F.tick(); G.ranch.tick(); } } };
   F.st.plots = [{ tx: 1, ty: 1, crop: 'spinach', prog: 0, gp: 0, wet: 0, water: -1, giant: false }]; F.st.lastMin = -1; F.tick();
   const p = F.st.plots[0]; G.weather.override({ type: 'clear', wind: 0 });
