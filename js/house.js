@@ -230,6 +230,7 @@
     if (ed.sel !== null || H.editing) endEdit();
     const pl = G.player; H.inside = false; G.game.mover = null;
     if (savedPos) { pl.x = savedPos.x; pl.y = savedPos.y + 6; } pl.dir = 0;
+    if (G.game.unstick) G.game.unstick(); // 문 앞이 다른 건물과 겹치는 지도에서 갇히지 않게
     G.scene.pop(); G.audio.sfx('close'); G.ui.refreshHud(); G.save.mark('area');
   };
 

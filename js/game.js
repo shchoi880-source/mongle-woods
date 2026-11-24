@@ -374,7 +374,8 @@
   // 타일 BFS로 길을 찾고, 손으로 움직이면 바로 멈춘다
   GM.autoGo = (tx, ty, name) => {
     const W = G.world, m = W.map; if (!m || (G.house && G.house.inside)) return false;
-    const sx = Math.floor(pl.x / TILE), sy = Math.floor(pl.y / TILE), w = m.w, h = m.h;
+    GM.unstick(); // 서 있을 수 없는 자리면 가장 가까운 빈 칸으로
+    let sx = Math.floor(pl.x / TILE), sy = Math.floor(pl.y / TILE); const w = m.w, h = m.h;
     let goals = null;
     for (let r = 1.6; r <= 6 && !goals; r += 1) {
       const set = new Set();
@@ -400,6 +401,17 @@
     if (G.fishing.state !== 'idle') G.fishing.cancel(true);
     return true;
   };
+  // 서 있을 수 없는 자리(건물과 겹침 등)에 있으면 가장 가까운 설 수 있는 칸으로 옮긴다
+  GM.unstick = () => {
+    const W = G.world; if (!W.map || (G.house && G.house.inside) || W.canStand(pl.x, pl.y, pl.r)) return false;
+    const tx = Math.floor(pl.x / TILE), ty = Math.floor(pl.y / TILE);
+    for (let r = 1; r < 8; r++) for (let y = ty - r; y <= ty + r; y++) for (let x = tx - r; x <= tx + r; x++) {
+      if (Math.max(Math.abs(x - tx), Math.abs(y - ty)) !== r) continue;
+      const px = x * TILE + 16, py = y * TILE + 18;
+      if (W.canStand(px, py, pl.r)) { pl.x = px; pl.y = py; return true; }
+    }
+    return false;
+  };
   GM.autoStop = (why) => { if (!GM.auto) return; const a = GM.auto; GM.auto = null; GM.autoWhy = why; if (why === 'arrive') { pl.dir = G.npc.faceDir(a.tx * TILE - pl.x, a.ty * TILE - pl.y); G.ui.toast(a.name ? `${a.name}에 도착했어요!` : '도착했어요!', { icon: '🚩', ms: 1800 }); } else if (why === 'stuck') G.ui.toast('길이 막혀서 멈췄어요.', { icon: '🚧' }); };
 
   function updatePlayer(dt) {
@@ -412,8 +424,18 @@
         if (!wp) GM.autoStop('arrive');
         else {
           const dx = wp.x - pl.x, dy = wp.y - pl.y, d = Math.hypot(dx, dy);
-          if (d < 8) { a.i++; if (a.i >= a.path.length) GM.autoStop('arrive'); }
-          else { mv = { x: dx / d, y: dy / d, mag: 1 }; inMode = 'run'; stick = null; }
+          a.noProg = (a.noProg || 0) + dt; // 다음 칸까지 너무 오래 걸리면(왔다 갔다) 막힌 것으로 본다
+          if (a.noProg > 2) { a.noProg = 0; a.force = true; }
+          if (d < 6) { a.i++; a.noProg = 0; if (a.i >= a.path.length) GM.autoStop('arrive'); }
+          else {
+            // 칸 가운데 선을 따라 한 축씩 움직인다(비스듬히 질러가다 건물 모서리에 걸리지 않게): 작은 쪽을 먼저 맞추고 큰 쪽으로
+            const ax = Math.abs(dx), ay = Math.abs(dy);
+            const along = Math.min(ax, ay) > 1 ? (ax < ay ? 'x' : 'y') : (ax >= ay ? 'x' : 'y');
+            // 한 프레임에 갈 거리보다 남은 거리가 짧으면 그만큼만 (넘어갔다 돌아오기를 반복하며 제자리걸음하던 문제)
+            const step = 9.5 * TILE * G.ranch.speedMul() * dt || 1, k = (v) => Math.max(-1, Math.min(1, v / step));
+            mv = along === 'x' ? { x: k(dx), y: 0, mag: 1 } : { x: 0, y: k(dy), mag: 1 };
+            inMode = 'run'; stick = null;
+          }
         }
       }
     }
@@ -434,7 +456,11 @@
       const moved = Math.hypot(pl.x - ox, pl.y - oy);
       pl.moving = moved > 0.05;
       pl.mode = inMode;
-      if (GM.auto && mv !== mv0) { GM.auto.stuck = moved < 0.3 ? GM.auto.stuck + dt : 0; if (GM.auto.stuck > 0.8) GM.autoStop('stuck'); }
+      if (GM.auto && mv !== mv0) {
+        GM.auto.stuck = moved < 0.3 ? GM.auto.stuck + dt : 0;
+        // 막히면 한 번은 지금 자리에서 길을 다시 찾아 본다
+        if (GM.auto.stuck > 0.6 || GM.auto.force) { const a = GM.auto; if (!a.retried) { const r = GM.autoGo(a.tx, a.ty, a.name); if (r && GM.auto) GM.auto.retried = true; else GM.autoStop('stuck'); } else GM.autoStop('stuck'); }
+      }
       // 걷기 사이클 460ms(4.0타일/s 기준 비례)
       pl.walk = (pl.walk + dt * (speed / (4 * TILE)) / 0.46) % 1;
       pl.stepT -= dt * (speed / (4 * TILE));
@@ -917,6 +943,7 @@
     G.rng.setSeed(meta.seed);
     G.world.build(meta.seed);
     if (!pl.x || !G.world.canStand(pl.x, pl.y, pl.r)) { const tent = G.world.map.plots.tent; pl.x = tent.door.x * TILE + 16; pl.y = (tent.door.y + 1) * TILE + 10; }
+    GM.unstick();
     G.scene.replace('town');
     afterWorld(false);
   }
