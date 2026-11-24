@@ -87,7 +87,7 @@
   GM.gain = (id, n, x, opt = {}) => {
     if (!G.inv.canFit(id, x)) {
       G.audio.sfx('error');
-      G.ui.toast('가방이 꽉 찼어요! 가판대에서 팔고 올까요?', { icon: '🎒' });
+      G.ui.toast('가방이 꽉 찼어요! 가판대에서 팔거나, 집 앞에서 📦 보관함에 넣어요.', { icon: '🎒', ms: 3200 });
       return false;
     }
     G.inv.add(id, n, x);
