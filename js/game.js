@@ -287,13 +287,8 @@
     ]);
     if (G.inv.add('letter_ddalang', 1) === 0) { q.letterGiven = true; G.ui.itemPop('letter_ddalang', null, '딸랑에게 갈 편지를 받았다!'); G.audio.sfx('pickup'); }
     await G.ui.say([
-      { who: 'bori', text: '그리고 이것도 가져가렴. 잠자리채와 낚싯대다. 우편지기는 마을 구석구석을 알아야 하니까.' },
-    ]);
-    pl.giveTool('net'); pl.giveTool('rod');
-    G.ui.toast(G.input.isTouch() ? '잠자리채·낚싯대를 받았다! 오른쪽 아래 도구 버튼으로 바꿔요.' : '잠자리채·낚싯대를 받았다! Q 키나 도구 버튼으로 바꿔요.', { icon: '🎣', ms: 3500 });
-    await G.ui.say([
-      { who: 'bori', text: '할 일은 잎첩(🍃)에 적어 두었단다. 순서는 상관없어. 다 못 해도 괜찮다. 편지는 내일도 오니까.' },
-      { who: 'bori', text: '살금살금 다가가면 벌레가 덜 놀란단다. ' + (G.input.isTouch() ? '조이스틱을 살짝만 기울여서' : 'C 키를 누른 채로') + ' 걸어 보렴. 콕!' },
+      { who: 'bori', text: '아, 그리고 이웃들에게 인사하렴. 물가에는 수달 소금이, 꽃밭에는 고양이 라임이 있단다. 우편지기한테 줄 선물이 있다더구나.' },
+      { who: 'bori', text: '할 일은 잎첩(🍃)에 적어 두었단다. 순서는 상관없어. 다 못 해도 괜찮다. 편지는 내일도 오니까. 콕!' },
     ]);
     q.intro = true; G.save.now('intro');
   };

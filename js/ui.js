@@ -3,8 +3,8 @@
   'use strict';
   const $ = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html !== undefined) e.innerHTML = html; return e; };
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const NAMES = { ddalang: '딸랑', bori: '보리 할멈', todak: '토닥', tosil: '토실', kongal: '콩알', sys: '' };
-  const NAMECOL = { ddalang: '#ff8fb1', bori: '#c98e5a', todak: '#8a7366', tosil: '#b48aa6', kongal: '#8fb4ff' };
+  const NAMES = { ddalang: '딸랑', bori: '보리 할멈', todak: '토닥', tosil: '토실', kongal: '콩알', sogeum: '소금', lime: '라임', sys: '' };
+  const NAMECOL = { ddalang: '#ff8fb1', bori: '#c98e5a', todak: '#8a7366', tosil: '#b48aa6', kongal: '#8fb4ff', sogeum: '#6fa8c9', lime: '#9bc94a' };
 
   const UI = G.ui = { root: null, open: null };
   let hud = {}, toastBox, dialogEl, popEl, modalEl;
@@ -201,12 +201,12 @@
   // 잎첩: 탭 4개
   UI.notebook = (tab = 'bag') => UI.modal('잎첩', (body, close, card) => {
     const tabs = $('div', 'tabs');
-    const TABS = [['bag', '🎒 가방'], ['dex', '📖 도감'], ['todo', '✅ 할 일'], ['set', '⚙️ 설정']];
+    const TABS = [['bag', '🎒 가방'], ['dex', '📖 도감'], ['folk', '🐾 이웃'], ['todo', '✅ 할 일'], ['set', '⚙️ 설정']];
     const pane = $('div', 'pane');
     const show = (id) => {
       tab = id; tabs.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.t === id));
       pane.innerHTML = '';
-      ({ bag: bagPane, dex: dexPane, todo: todoPane, set: setPane })[id](pane, close);
+      ({ bag: bagPane, dex: dexPane, folk: folkPane, todo: todoPane, set: setPane })[id](pane, close);
     };
     for (const [id, nm] of TABS) { const b = $('button', 'tab', nm); b.dataset.t = id; b.onclick = () => { G.audio.sfx('tap'); show(id); }; tabs.append(b); }
     body.append(tabs, pane); show(tab);
@@ -266,6 +266,24 @@
   }
   function monthsText(ms) { if (ms.length === 12) return '일 년 내내'; return ms.join('·') + '월'; }
   function hoursText(hs) { if (hs.length === 1 && hs[0][0] === 0 && hs[0][1] === 24) return '하루 종일'; return hs.map(([a, b]) => `${a}~${b}시`).join(', ').replace('24~', '').replace(/, 0~/, '~'); }
+
+  function folkPane(pane) {
+    pane.append($('div', 'pane-head', '<span>몽글숲 이웃들 — 매일 말을 걸면 조금씩 친해져요</span>'));
+    const list = $('div', 'folk');
+    for (const [id, v] of Object.entries(G.npc.VILLAGERS)) {
+      const s = G.npc.st[id] || {}, met = !!s.met, lv = G.npc.level(id);
+      const card = $('div', 'folkcard' + (met ? '' : ' unknown'));
+      const pic = document.createElement('canvas'); pic.width = pic.height = 120; pic.className = 'folkpic';
+      const g = pic.getContext('2d'); g.setTransform(2.2, 0, 0, 2.2, 60, 112);
+      G.art.actor.draw(g, { species: v.species, look: v.look, x: 0, y: 0, dir: 0, seed: 1, blinkAt: 1e9 }, 1);
+      const hearts = met ? '<span class="hearts">' + '♥'.repeat(lv) + '<i>' + '♥'.repeat(4 - lv) + '</i></span>' : '';
+      const info = $('div', 'folkinfo', met
+        ? `<b>${esc(v.name)}</b> ${hearts}<br><span class="muted small">${v.pers} · 입버릇 「${v.catch}」 · 생일 ${+v.bday.slice(0, 2)}월 ${+v.bday.slice(3)}일</span><br><span class="muted small">지금: ${({ home: '집 근처', plaza: '광장', oak: '할아버지 참나무', pond: '연못가', river: '강가', beach: '바닷가', garden: '꽃밭', sleep: '쿨쿨 자는 중' })[(G.npc.get(id) && G.npc.activity(G.npc.get(id)) || {}).act] || '?'}</span>`
+        : `<b>???</b><br><span class="muted small">아직 인사하지 못한 이웃이에요.</span>`);
+      card.append(pic, info); list.append(card);
+    }
+    pane.append(list);
+  }
 
   function todoPane(pane) {
     pane.append($('div', 'pane-head', `<span>첫날 할 일 — 순서는 자유! (${G.quest.doneCount()}/${G.quest.CARDS.length})</span>`));

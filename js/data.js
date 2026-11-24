@@ -152,7 +152,7 @@
   add('kongal', 'dig', ['킁킁! 킁킁킁!']);
   add('kongal', 'goodjob', ['꼬물꼬물! (오늘 멋졌어!)']);
   D.add('lines', L);
-  G.lines = (who, sit) => L.filter((l) => l.who === who && l.sit === sit);
+  G.lines = (who, sit) => G.data.all('lines').filter((l) => l.who === who && l.sit === sit);
 
   G.modules.add('data');
 })(globalThis.G);

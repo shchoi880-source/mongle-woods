@@ -172,6 +172,7 @@
     { id: 'bug', text: '곤충 한 마리 잡기', ev: 'eco:caught', test: (p) => p.kind === 'bug' },
     { id: 'fish', text: '물고기 한 마리 낚기', ev: 'eco:caught', test: (p) => p.kind === 'fish' },
     { id: 'shake', text: '나무 흔들어 보기', ev: 'world:shake' },
+    { id: 'meet', text: '이웃 셋(딸랑·소금·라임)과 인사하기', ev: 'npc:met', test: () => ['ddalang', 'sogeum', 'lime'].every((id) => G.npc.st[id] && G.npc.st[id].met) },
     { id: 'letter', text: '딸랑에게 편지 전해 주기', ev: 'quest:letter' },
     { id: 'shells', text: '해변에서 조개 3개 줍기', ev: 'item:gain', test: (p) => p.id.startsWith('shell:'), count: 3 },
     { id: 'dig', text: '삽을 사서 화석 파내기', ev: 'dig:found' },

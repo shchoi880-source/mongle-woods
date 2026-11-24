@@ -15,6 +15,8 @@
     rabbit: { fur: '#fff6f2', furD: '#f1dcd6', inner: '#ffc2d1' },
     hedgehog: { fur: '#f3dcc0', furD: '#e2c4a0', spine: '#9a6b4b', spineD: '#7a5034' },
     mole: { fur: '#8a7366', furD: '#6f5a4e', nose: '#ff9fb4' },
+    otter: { fur: '#b08462', furD: '#8a6448', belly: '#f3dcc0' },
+    cat: { fur: '#ffd9a8', furD: '#e9b47a', inner: '#ffb3c2' },
   };
 
   // a: {x,y,dir,species,look,walk,moving,run,t0,blinkT,emote,emoteT,hop,sleep,tool,swing}
@@ -48,6 +50,8 @@
       const bodyC = a.species === 'human' ? SHIRT[L.shirt | 0] : (L.body || sp.fur);
       P.blob(ctx, 0, -11, 9, 9.5, bodyC, LINE, 1.5);
       if (a.species === 'hedgehog') P.rrect(ctx, -6, -14, 12, 11, 3, '#fff7e8', LINE, 1); // 앞치마
+      if (a.species === 'otter' && !back) P.blob(ctx, side ? -2 : 0, -10, 5.5, 6.5, sp.belly);
+      if (L.scarf) P.rrect(ctx, -8, -19.5, 16, 4.5, 2, L.scarf, LINE, 1);
       if (a.species === 'mole' && L.apron) P.rrect(ctx, -6, -15, 12, 11, 3, L.apron, LINE, 1);
       // 팔
       const armSw = a.moving ? step * 2.5 : 0;
@@ -93,6 +97,16 @@
         // 가시에 꽂힌 편지
         P.rrect(ctx, 6, -18, 9, 6, 1, '#ffffff', LINE, 1);
       }
+      if (a.species === 'cat') {
+        for (const s of side ? [1] : [-1, 1]) {
+          ctx.save(); ctx.translate(s * 7 + (side ? 2 : 0), -9); ctx.rotate(s * 0.25 + Math.sin(t * 2.3 + (a.seed || 0)) * 0.04);
+          ctx.fillStyle = sp.fur; ctx.strokeStyle = LINE; ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.moveTo(-5, 2); ctx.lineTo(0, -8); ctx.lineTo(5, 2); ctx.closePath(); ctx.fill(); ctx.stroke();
+          if (!back) { ctx.fillStyle = sp.inner; ctx.beginPath(); ctx.moveTo(-2.5, 1); ctx.lineTo(0, -4.5); ctx.lineTo(2.5, 1); ctx.fill(); }
+          ctx.restore();
+        }
+      }
+      if (a.species === 'otter') for (const s of side ? [1] : [-1, 1]) P.blob(ctx, s * 10, -8, 3, 3, sp.furD, LINE, 1.2);
       if (a.species === 'mole') {
         for (const s of side ? [1] : [-1, 1]) P.blob(ctx, s * 10, -8, 3.2, 3.2, sp.furD, LINE, 1.2);
       }
@@ -100,6 +114,8 @@
       P.blob(ctx, 0, 0, 13, 12, sk, LINE, 1.6);
       if (a.species === 'hedgehog') P.blob(ctx, side ? -3 : 0, 3, 9, 8, '#fff3e0');
       if (a.species === 'rabbit') P.blob(ctx, side ? -3 : 0, 4, 8, 6, '#ffffff');
+      if (a.species === 'otter') P.blob(ctx, side ? -4 : 0, 5, 8, 5.5, sp.belly);
+      if (a.species === 'cat' && !back) { ctx.fillStyle = sp.furD; ctx.beginPath(); ctx.moveTo(-3, -11); ctx.lineTo(0, -6); ctx.lineTo(3, -11); ctx.fill(); }
       // 사람 머리카락
       if (a.species === 'human') this.hair(ctx, L, side, back);
       if (back) { if (a.species === 'mole' && L.band) P.rrect(ctx, -12, -8, 24, 4, 2, L.band); return; }
@@ -122,6 +138,12 @@
       if (a.species === 'mole') P.blob(ctx, side ? -10 : 0, 4, 3.6, 2.8, SPECIES.mole.nose, LINE, 1.1);
       else if (a.species === 'hedgehog') P.blob(ctx, side ? -12 : 0, 4, 1.8, 1.4, '#3a2a2a');
       else if (a.species === 'rabbit') P.blob(ctx, side ? -10 : 0, 3.6, 1.4, 1, '#ff8fa8');
+      else if (a.species === 'otter' || a.species === 'cat') {
+        P.blob(ctx, side ? -10 : 0, 3.6, 1.7, 1.2, a.species === 'cat' ? '#ff8fa8' : '#4a3a35');
+        ctx.strokeStyle = 'rgba(91,70,54,0.6)'; ctx.lineWidth = 0.8; ctx.beginPath();
+        for (const s of side ? [-1] : [-1, 1]) for (const k of [-1, 1]) { ctx.moveTo(s * 6 + (side ? -4 : 0), 5 + k); ctx.lineTo(s * 12 + (side ? -4 : 0), 4 + k * 2); }
+        ctx.stroke();
+      }
       ctx.strokeStyle = LINE; ctx.lineWidth = 1.2; ctx.beginPath();
       const mx = side ? -8 : 0;
       if (a.mouth === 'o') { ctx.ellipse(mx, 7, 1.4, 1.6, 0, 0, Math.PI * 2); }

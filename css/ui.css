@@ -164,3 +164,11 @@ input, select, textarea { font: inherit; color: var(--ink); }
 .edit-btn { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; padding: 6px 2px; border-radius: 16px; background: #fff; border: 2px solid var(--line); }
 .edit-btn span { font-size: 22px; line-height: 1.1; } .edit-btn small { font-size: 11px; font-weight: 800; white-space: nowrap; }
 .edit-btn.done { background: var(--mint); border-color: var(--mint); color: #fff; }
+
+/* ---- 이웃 ---- */
+.folk { display: flex; flex-direction: column; gap: 8px; }
+.folkcard { display: flex; gap: 10px; align-items: center; background: #fff; border: 2px solid var(--line); border-radius: 18px; padding: 6px 12px 6px 6px; }
+.folkpic { width: 64px; height: 64px; background: var(--paper2); border-radius: 14px; flex: none; }
+.folkcard.unknown .folkpic { filter: brightness(0) opacity(.2); }
+.folkinfo { font-size: 14px; line-height: 1.5; }
+.hearts { color: #ff6b8b; letter-spacing: 1px; } .hearts i { font-style: normal; color: #f1dcd6; }

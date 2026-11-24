@@ -197,6 +197,11 @@
     // 연못가·폭포 장식
     objs.push({ kind: 'falls', tx: fall.x, ty: fall.y, w: 1, h: 1, solid: true, deco: true });
 
+    // 11) 추가 주민 집(소금·라임) — 기존 맵을 바꾸지 않도록 맨 마지막에 빈 자리에만 덧붙인다
+    for (const [key, owner, ang] of [['house2', 'sogeum', 0.9], ['house3', 'lime', 2.3]]) {
+      const o = place('house', 4, 3, plx + Math.cos(ang) * 13 * plSide, ply + Math.sin(ang) * 9, { solid: true, owner });
+      if (o) { sites[key] = o; o.door = doorOf(o); carvePath(o.door.x, o.door.y, plx, ply); }
+    }
     const plots = Object.fromEntries(Object.entries(sites).filter(([, o]) => o).map(([k, o]) => [k, { x: o.tx, y: o.ty, w: o.w, h: o.h, door: o.door }]));
     return { seed, w: W, h: H, terr, objs, plaza: { x: plx, y: ply }, pond, fall, bridges, plots, cliffY, coast };
   }
