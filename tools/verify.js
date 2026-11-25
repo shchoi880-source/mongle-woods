@@ -144,7 +144,18 @@ ok('곤충: 가장 예민한 종도 채 들고 걸어서 포획 거리 진입', 
 // 마을 시계: 실제 1초 = 마을 1분, 농사·목장은 몇 분 안에
 {
   const T = G.time, F = G.farm, t0 = T.now();
-  { const h = T.hour(); T.advance(0.25); ok('시계: 낮 0.7배·밤 2.5배', T.now() - t0 === ((h >= 19 || h < 5) ? 37500 : 10500)); }
+  void t0;
+  { // 공통 시간(D21): 마을 시계는 실제 시각에서 계산 — 실제 1초 = 낮 42초·밤 150초, 기준 시각 = 마을 2027-03-01 05:00
+    const dn = Date.now, base = Date.UTC(2026, 10, 25, 0, 0);
+    Date.now = () => base; const d0 = T.date(), day0 = T.dayDate(T.day());
+    Date.now = () => base + 1000; const dDay = T.now() - d0.getTime();
+    Date.now = () => base + 21 * 60000; const t1 = T.now(); Date.now = () => base + 21 * 60000 + 1000; const dNight = T.now() - t1;
+    Date.now = () => base + 24 * 60000; const d1 = T.date();
+    Date.now = dn;
+    ok('공통 시계: 기준 시각 = 마을 3월 1일 05시', d0.getHours() === 5 && day0.m === 3 && day0.d === 1);
+    ok('공통 시계: 낮 0.7배·밤 2.5배', Math.abs(dDay - 42000) < 2 && Math.abs(dNight - 150000) < 2, `${dDay} ${dNight}`);
+    ok('공통 시계: 실제 24분 = 하루', d1.getHours() === 5 && d1.getMinutes() === 0 && d1.getDate() === 2);
+  }
   const step = (realSec) => { for (let i = 0; i < realSec * 4; i++) { T.advance(0.25); if (i % 4 === 3) { F.tick(); G.ranch.tick(); } } };
   F.st.plots = [{ tx: 1, ty: 1, crop: 'spinach', prog: 0, gp: 0, wet: 0, water: -1, giant: false }]; F.st.lastMin = -1; F.tick();
   const p = F.st.plots[0]; G.weather.override({ type: 'clear', wind: 0 });

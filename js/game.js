@@ -326,10 +326,23 @@
     let i = await G.ui.choose({ who: 'sys', text: late ? '포근한 침대예요. 밤이 깊었어요.' : '포근한 침대예요. 저녁 6시부터는 아침까지 잘 수 있어요.' }, opts);
     if (late) {
       if (i === 0) {
-        kg.sleep = true; G.audio.sfx('close');
-        const real = G.time.sleep();
-        await G.ui.say([{ who: 'kongal', text: '새근… 새근….' }, { who: 'sys', text: `푹 잤어요! 상쾌한 아침이에요. (밤 ${real}분을 건너뛰고, 텃밭·목장은 그만큼 자랐어요)` }]);
-        kg.sleep = false; G.audio.sfx('chime'); G.save.now('sleep'); return;
+        // 공통 시간(D21)이라 밤을 건너뛸 수는 없다 → 포근하게 자면서 아침을 기다린다 (언제든 깰 수 있음, 그동안 텃밭·목장은 자란다)
+        kg.sleep = true; G.audio.sfx('close'); G.save.now('sleep');
+        let woke = false;
+        await G.ui.modal('새근새근…', (body, close) => {
+          const el = document.createElement('div'); el.className = 'sleepbox';
+          const b = document.createElement('button'); b.className = 'btn'; b.textContent = '일어나기';
+          b.onclick = () => close(); body.append(el, b);
+          const upd = () => {
+            if (!G.ui.open || G.ui.open.body !== body) return clearInterval(iv);
+            const h2 = G.time.hour(); if (h2 >= 5 && h2 < 18) { woke = true; close(); return; }
+            el.innerHTML = `<div class="zz">💤</div><div>콩알이랑 포근하게 자는 중… 아침까지 약 <b>${G.time.minsToMorning()}분</b></div><div class="muted small">자는 동안에도 텃밭·목장은 자라요. 앱을 닫아도 마을 시간은 흘러요.</div>`;
+          };
+          const iv = setInterval(upd, 1000); upd();
+        });
+        kg.sleep = false;
+        if (woke) { G.audio.sfx('chime'); G.ui.toast('좋은 아침이에요! 푹 잤어요.', { icon: '🌅', ms: 3000 }); }
+        return;
       }
       i -= 1;
     }

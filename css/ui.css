@@ -369,3 +369,6 @@ input, select, textarea { font: inherit; color: var(--ink); }
 .goalrow.done .gbar i { background: linear-gradient(90deg, #9fdc7c, #5bbf6a); }
 .goalrow.ready { box-shadow: 0 0 0 2px #ffd36b; }
 .goalrow .btn { align-self: flex-end; }
+.sleepbox { text-align: center; line-height: 1.6; padding: 6px 0 12px; }
+.sleepbox .zz { font-size: 44px; animation: zzfloat 2.4s ease-in-out infinite; }
+@keyframes zzfloat { 50% { transform: translateY(-8px); opacity: .7; } }

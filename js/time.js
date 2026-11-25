@@ -1,4 +1,4 @@
-// 시간: 마을 시계(놀고 있을 때만 흐름, 실제 1초 = 마을 1분 → 하루 24분), 05:00 하루 경계, 계절, 날씨(결정적)
+// 시간: 공통 마을 시계(서버 시각 기준, 접속 안 해도 흐름, 실제 24분 = 하루), 05:00 하루 경계, 계절, 날씨(결정적)
 // 오너 결정(2026-11): 실제 시간처럼 며칠씩 기다리는 건 재미없다 → 마을 시간이 빨리 흐르고, 오래 놀수록 더 많이 한다
 (function (G) {
   'use strict';
@@ -15,19 +15,32 @@
   // 오너 결정(D20 수정): 하루 24분 = 낮 20분 + 밤 4분. 낮(05~19시, 14시간)은 0.7배, 밤(19~05시, 10시간)은 2.5배
   // 하루 평균은 그대로 실제 1분 = 마을 60분이라 농사·목장 속도는 하루 단위로 같다
   const DAY_RATE = 0.7, NIGHT_RATE = 2.5, rateAt = (h) => (h >= 19 || h < 5 ? NIGHT_RATE : DAY_RATE);
+  // 공통 시간 (오너 결정 D21, 2026-11): 마을 시계는 '서버 시각'에서 계산한다 → 모든 사람이 같은 날짜·시각·날씨,
+  // 접속하지 않아도 시간이 흐른다. 실제 24분 = 마을 하루 (05시부터 실제 20분 = 낮 14시간, 다음 4분 = 밤 10시간)
+  const CYCLE = 24 * 60000, DAYPART = 20 * 60000;
+  const EPOCH = Date.UTC(2026, 10, 25, 0, 0);             // 실제 2026-11-25 09:00 (한국) = 마을 0번째 날 05:00
+  const DAY0 = Math.floor(Date.UTC(2027, 2, 1) / DAY_MS);  // 그날이 마을 달력 2027-03-01 (봄). 옛 세이브의 날짜보다 앞이라 시간이 거꾸로 가지 않는다
+  let srvOff = 0;                                          // 서버 시각 - 이 기기 시각 (Firebase .info/serverTimeOffset)
+  const villageMs = (real) => {
+    const e = real - EPOCH, k = Math.floor(e / CYCLE), r = e - k * CYCLE;
+    const vm = r < DAYPART ? r / DAYPART * 14 * 3600000 : 14 * 3600000 + (r - DAYPART) / (CYCLE - DAYPART) * 10 * 3600000;
+    const d = new Date((DAY0 + k) * DAY_MS);
+    return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), G.C.DAY_H).getTime() + vm;
+  };
 
   const T = G.time = {
     st,
     SPEED,
     // 마을 시각(ms). 처음엔 오늘 실제 날짜·시각에서 출발하고, 그다음은 놀고 있는 동안만 흐른다
-    now: () => (st.vms || (st.vms = Date.now())) + offset,
-    // 놀고 있는 동안 흐르게 한다 (탭 숨김·타이틀에선 안 부름). dt는 실제 초
-    advance(dt) { if (!(dt > 0)) return; T.now(); st.vms += Math.min(dt, 0.25) * 1000 * SPEED * rateAt(T.hour()); T.pmin(); st.pms += Math.min(dt, 0.25); },
+    now: () => villageMs(Date.now() + srvOff) + offset,
+    real: () => Date.now() + srvOff,
+    setServerOffset(ms) { if (Number.isFinite(ms) && Math.abs(ms) < 30 * DAY_MS) srvOff = ms; },
+    // 놀이 시계(농사·목장)를 흐르게 한다 (탭 숨김·타이틀에선 안 부름). dt는 실제 초. 마을 시계는 저절로 흐른다
+    advance(dt) { if (!(dt > 0)) return; T.pmin(); st.pms += Math.min(dt, 0.25); st.vms = T.now(); },
     // 놀이 시계: 실제 1초 = 1 (농사·목장 타이머용). 낮·밤 빠르기와 상관없이 실제 시간대로 자란다. 처음엔 마을 분에서 이어 받는다(옛 세이브 호환)
     pmin: () => { if (!st.pms) st.pms = Math.floor(T.now() / 60000); return Math.floor(st.pms); },
     rate: () => rateAt(T.hour()),
     // 침대에서 아침(05:00)까지 자기: 마을 시계를 아침으로 넘기고, 그동안 작물·동물도 실제로 기다린 만큼 자란다(밤 길이 = 실제 몇 분)
-    sleep() { const real = T.minsToMorning(); const d = T.date(); let left = (G.C.DAY_H * 60 - (d.getHours() * 60 + d.getMinutes()) + 1440) % 1440 || 1440; st.vms += left * 60000 - d.getSeconds() * 1000 + 1000; T.pmin(); st.pms += real * 60; T.tick(); return real; },
     // 다음 아침(05시)까지 실제 몇 분
     minsToMorning() {
       const d = T.date(); let left = (G.C.DAY_H * 60 - (d.getHours() * 60 + d.getMinutes()) + 1440) % 1440 || 1440, h = d.getHours(), mm = d.getMinutes(), real = 0;
@@ -79,10 +92,10 @@
     },
     init() { lastDay = T.day(); T.markPlay(lastDay); },
     // 자리를 비운 동안(앱을 닫거나 내린 동안): 마을 시계는 멈추지만, 작물·동물은 그만큼 자란다(오너 피드백: 물 주고 나갔다 오면 그대로라 답답)
-    // 실제 1초 = 마을 1분 몫. 최대 마을 하루(실제 24분)까지만
+    // 공통 시간(D21)부터는 제한 없이 실제로 지난 만큼 (최대 30일)
     offlineCredit() {
       const now = Date.now(), at = st.realAt || now; st.realAt = now;
-      const mins = Math.min(1440, Math.floor(Math.max(0, now - at) / 1000));
+      const mins = Math.min(30 * 86400, Math.floor(Math.max(0, now - at) / 1000));
       if (mins >= 2) G.emit('time:away', { mins });
       return mins;
     },
