@@ -31,7 +31,7 @@
     if (rc && rc.on) { if (!rc.touched) return { text: `🏃 ${rc.cp.nm} 앞을 찍고 오기!`, pos: at(rc.cp.x, rc.cp.y) }; return { text: '🏃 호떡에게 돌아가기!', pos: npcAt('hotteok') }; }
     // 1) 이웃과 첫 만남 (도구가 걸려 있음)
     if (G.inv.has('letter_ddalang')) return { text: '딸랑(토끼)에게 편지 전해 주기', pos: npcAt('ddalang') || plotAt('house1') };
-    for (const id of ['sogeum', 'lime']) if (!G.npc.st[id].met && G.npc.isResident(id)) { const v = G.npc.VILLAGERS[id]; return { text: `${v.name}(${id === 'sogeum' ? '수달' : '고양이'})에게 인사하고 ${id === 'sogeum' ? '낚싯대' : '잠자리채'} 받기`, pos: npcAt(id) || plotAt(v.plot) }; }
+    for (const id of ['sogeum', 'lime']) if (!G.npc.st[id].met && G.npc.isResident(id)) { const v = G.npc.VILLAGERS[id]; return { text: `${v.name}(${id === 'sogeum' ? '수달' : '고양이'})에게 인사하기`, pos: npcAt(id) || plotAt(v.plot) }; }
     // 2) 소포 배달 중
     const parcel = G.inv.slots.find((s) => s.id === 'parcel' && s.x);
     if (parcel) { const v = G.npc.VILLAGERS[parcel.x.to]; return { text: `${v.name}에게 소포 배달하기`, pos: npcAt(parcel.x.to) || plotAt(v.plot) }; }
@@ -50,7 +50,7 @@
         furn: ['내 텐트에 들어가 「꾸미기」로 가구 3개 놓기', plotAt('tent')],
       };
       const [text, pos] = map[card.id] || [card.text, null];
-      return { text, pos };
+      return { text: `${text} · 첫날 ${q.doneCount()}/${q.CARDS.length} 🎁`, pos };
     }
     // 3.2) 계절 축제 (6차 회의 C)
     if (G.fest) {
