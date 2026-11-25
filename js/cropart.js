@@ -211,3 +211,33 @@
   if (A.iconReset) A.iconReset();
   G.modules.add('cropart');
 })(globalThis.G);
+
+// ---------- 요리 아이콘 (오너: 누가 봐도 뭔지) — 그릇·접시·병·파이 등 모양 + 주재료 장식 ----------
+(function (G) {
+  'use strict';
+  const A = G.art, F = G.farm; if (!A || !F) return;
+  const INK = '#4a3428';
+  const blob = (g, x, y, rx, ry, fill, line = INK, lw = 1.2) => { g.beginPath(); g.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); if (fill) { g.fillStyle = fill; g.fill(); } if (line) { g.strokeStyle = line; g.lineWidth = lw; g.stroke(); } };
+  const mini = (g, id, x, y, s) => { g.save(); g.translate(x, y); g.scale(s, s); g.translate(-16, -16); A.drawProduce(g, id); g.restore(); };
+  const steam = (g) => { g.strokeStyle = 'rgba(210,210,230,0.85)'; g.lineWidth = 1.2; g.lineCap = 'round'; for (const k of [-4, 1, 6]) { g.beginPath(); g.moveTo(15 + k, 9); g.quadraticCurveTo(18 + k, 6, 15 + k, 2); g.stroke(); } };
+  const bowl = (g, fill) => { g.beginPath(); g.moveTo(4, 15); g.quadraticCurveTo(16, 33, 28, 15); g.closePath(); g.fillStyle = '#ffffff'; g.fill(); g.strokeStyle = INK; g.lineWidth = 1.3; g.stroke(); g.fillStyle = '#8fc6e8'; g.fillRect(9, 25, 14, 1.5); blob(g, 16, 15, 12, 3.6, fill, INK, 1.1); };
+  const plate = (g) => { blob(g, 16, 22, 14, 6, '#ffffff', INK, 1.3); blob(g, 16, 21.5, 10, 4, '#f4f4f8', null); };
+  const LOOK = {
+    soup: (g, d) => { bowl(g, d.col); const main = d.need[0][0].split(':')[1]; for (const [x, y] of [[11, 15], [19, 14.5], [15, 16]]) blob(g, x, y, 1.6, 1, 'rgba(255,255,255,0.55)', null); mini(g, main, 23, 9, 0.38); steam(g); },
+    stew: (g, d) => { bowl(g, '#e8d8a8'); for (const [x, y] of [[11, 14], [19, 13]]) blob(g, x, y, 3.5, 2.2, d.col, '#5a8a3a', 0.8); steam(g); },
+    jar: (g, d) => { g.fillStyle = 'rgba(220,240,255,0.7)'; g.strokeStyle = INK; g.lineWidth = 1.3; g.beginPath(); g.roundRect(8, 9, 16, 20, 4); g.fill(); g.stroke(); g.fillStyle = d.col; g.beginPath(); g.roundRect(9.5, 13, 13, 14.5, 3); g.fill(); g.fillStyle = '#e8c45a'; g.strokeStyle = INK; g.beginPath(); g.roundRect(7, 5, 18, 5, 2); g.fill(); g.stroke(); g.fillStyle = '#fff8e6'; g.beginPath(); g.roundRect(11, 16, 10, 7, 1.5); g.fill(); mini(g, d.need[0][0].split(':')[1], 16, 19.5, 0.26); blob(g, 11, 15, 1, 2.2, 'rgba(255,255,255,0.6)', null); },
+    hwachae: (g, d) => { bowl(g, d.col); for (const [x, y, c] of [[11, 14, '#ff4a5a'], [17, 13, '#ff6a7a'], [21, 15, '#3f9a4a']]) blob(g, x, y, 2.6, 2.2, c, null); },
+    plate: (g, d) => { plate(g); const main = d.need[0][0].split(':')[1]; if (d.id === 'grilled_corn') { g.save(); g.translate(16, 19); g.rotate(-0.3); blob(g, 0, 0, 11, 4.5, '#ffc23a', '#8a6a1a', 1.1); g.strokeStyle = '#7a4a1a'; g.lineWidth = 1.4; g.beginPath(); for (const x of [-6, -2, 2, 6]) { g.moveTo(x, -4); g.lineTo(x + 1.5, 4); } g.stroke(); g.restore(); } else if (d.id === 'matang') { for (const [x, y] of [[11, 19], [17, 17], [21, 20], [15, 21]]) { blob(g, x, y, 3.8, 3, '#d08a3a', '#7a4a1a', 1); blob(g, x - 1, y - 1, 1, 0.6, 'rgba(255,255,255,0.7)', null); } } else if (d.id === 'cucumber_kimchi') { for (const x of [10, 16, 22]) { g.fillStyle = '#4e9e4a'; g.strokeStyle = '#24481f'; g.lineWidth = 1; g.beginPath(); g.roundRect(x - 2.5, 13, 5, 10, 2.5); g.fill(); g.stroke(); g.fillStyle = '#e8402c'; g.fillRect(x - 1.2, 15, 2.4, 5); } } else { mini(g, main, 16, 17, 0.62); g.strokeStyle = 'rgba(122,74,26,0.8)'; g.lineWidth = 1.2; g.beginPath(); for (const x of [11, 16, 21]) { g.moveTo(x, 13); g.lineTo(x + 2, 21); } g.stroke(); } },
+    pie: (g, d) => { plate(g); blob(g, 16, 18.5, 12, 6, '#e8b46a', '#8a5a2a', 1.2); blob(g, 16, 17.5, 9, 4, d.col, null); g.strokeStyle = '#c8904a'; g.lineWidth = 1.4; g.beginPath(); for (const x of [10, 16, 22]) { g.moveTo(x - 3, 15); g.lineTo(x + 3, 20); } g.stroke(); },
+    salad: (g, d) => { bowl(g, '#9ad66e'); for (const [x, y] of [[10, 13], [16, 12], [22, 13], [13, 15], [19, 15]]) blob(g, x, y, 3, 2.2, '#b8e68a', '#5aa548', 0.7); for (const [x, y] of [[14, 12], [20, 14]]) blob(g, x, y, 2.2, 2, '#ff5a4a', '#8a2a1a', 0.7); },
+    rings: (g) => { plate(g); for (const [x, y] of [[11, 18], [20, 18], [15.5, 15]]) { blob(g, x, y, 6, 4, '#e8b46a', '#8a5a2a', 1.2); blob(g, x, y, 3, 1.8, '#f4f4f8', '#c8904a', 0.8); } },
+    snack: (g) => { g.fillStyle = '#f6ead0'; g.strokeStyle = INK; g.lineWidth = 1.2; g.beginPath(); g.moveTo(7, 9); g.lineTo(25, 9); g.lineTo(16, 30); g.closePath(); g.fill(); g.stroke(); for (const [x, y] of [[11, 8], [15, 6.5], [19, 8], [13, 9.5], [21, 9.5], [17, 9]]) { g.save(); g.translate(x, y); g.rotate(x * 0.4); blob(g, 0, 0, 1.4, 2.4, '#5a4a3a', '#2a2018', 0.6); g.strokeStyle = 'rgba(255,255,255,0.7)'; g.lineWidth = 0.5; g.beginPath(); g.moveTo(0, -2); g.lineTo(0, 2); g.stroke(); g.restore(); } g.fillStyle = '#ffd23a'; g.beginPath(); g.arc(16, 18, 3, 0, 6.3); g.fill(); },
+    bread: (g) => { plate(g); for (const [x, r] of [[11, -0.3], [16, 0], [21, 0.3]]) { g.save(); g.translate(x, 18); g.rotate(r); blob(g, 0, 0, 3.8, 5.5, '#f6e0a8', '#8a5a2a', 1.1); g.strokeStyle = '#c8904a'; g.lineWidth = 1.6; g.beginPath(); g.ellipse(0, 0, 3.8, 5.5, 0, 0, 6.3); g.stroke(); blob(g, 0, -1, 1.5, 1, '#7cc35a', null); g.restore(); } },
+    pancake: (g, d) => { plate(g); blob(g, 16, 19, 11, 5.2, d.col, '#a8783a', 1.2); for (const [x, y] of [[10, 18], [14, 20], [19, 18], [22, 20]]) blob(g, x, y, 1.5, 0.8, '#c8904a', null); if (d.id === 'pajeon') { g.strokeStyle = '#4e9e4a'; g.lineWidth = 1.6; g.beginPath(); for (const x of [9, 13, 17, 21]) { g.moveTo(x, 17); g.lineTo(x + 3, 21); } g.stroke(); } },
+    bibimbap: (g) => { bowl(g, '#f6efe4'); const segs = [['#ff9a3a', -2.6], ['#4e9e4a', -1.6], ['#9ad66e', 2.2], ['#e8402c', 3.2]]; for (const [c, a] of segs) blob(g, 16 + Math.cos(a) * 7, 15 + Math.sin(a) * 2.2, 3.2, 1.6, c, null); blob(g, 16, 14.5, 3.6, 2, '#ffffff', '#c8c8b8', 0.7); blob(g, 16, 14.3, 1.6, 1, '#ffc23a', null); },
+  };
+  A.drawDish = (g, id) => { const d = F.DISHES.find((x) => x.id === id); if (!d || !LOOK[d.look]) return false; g.save(); LOOK[d.look](g, d); g.restore(); return true; };
+  const base = A.drawIcon;
+  A.drawIcon = (g, id, t) => { const [cat, rest] = id.split(':'); if (cat === 'dish' && A.drawDish(g, rest && rest.split('#')[0])) return; return base(g, id, t); };
+  if (A.iconReset) A.iconReset();
+})(globalThis.G);
