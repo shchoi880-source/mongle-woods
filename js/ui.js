@@ -436,7 +436,9 @@
     function drawBuilder() {
       builder.innerHTML = '';
       const g = gender(), mine = (it) => !(it[2] && it[2].only && it[2].only !== g);
-      builder.append(row('머리 모양', PK.heads.filter((h) => h[0].startsWith(g + '-')), 'head'), row('머리 색', PK.hair, 'hc', true), row('옷', PK.bodies.filter(mine), 'body'));
+      builder.append(row('머리 모양', PK.heads.filter((h) => h[0].startsWith(g + '-')), 'head'));
+      if (!A.pkInfo('head', look.pk.head).fixed) builder.append(row('머리 색', PK.hair, 'hc', true));
+      builder.append(row('옷', PK.bodies.filter(mine), 'body'));
       if (A.pkColorable(look.pk.body || 'overalls')) builder.append(row('옷 색', PK.cloth, 'bc', true));
       // 부위마다 하나씩 (모자 + 안경 같이 쓰기). 아직 부품이 없는 부위는 감춘다
       for (const s of PK.slots.slice().reverse()) {
@@ -986,7 +988,7 @@
       for (const e of G.shop.stock()) {
         if (e.kind === 'furn' && G.house) G.house.see(e.id);
         const own = e.kind === 'tool' ? G.player.hasTool(e.id) : e.kind === 'look' || e.kind === 'pk' ? !!(G.player.unlocks || {})[e.key] : G.shop.soldOut(e);
-        const ico = e.kind === 'pk' ? `<span class="lookico">${e.part === 'hat' ? '🎩' : '👕'}</span>` : e.kind === 'look' ? `<span class="lookico">${e.part === 'hat' ? '👒' : '👕'}</span>` : e.kind === 'plot' ? `<img src="${G.art.iconURL('seed:carrot', 64)}" alt=""><i class="upmark">＋</i>` : e.kind === 'bag' ? '<span class="lookico">🎒</span><i class="upmark">＋</i>' : e.kind === 'tool' || e.kind === 'up' ? `<img src="${G.art.iconURL('tool:' + e.id, 64)}" alt="">${e.kind === 'up' ? '<i class="upmark">⬆</i>' : ''}` : e.kind === 'seed' ? `<img src="${G.art.iconURL('seed:' + e.id, 64)}" alt="">` : e.kind === 'animal' ? `<img src="${G.art.iconURL('animal:' + e.id, 64)}" alt="">` : `<img src="${G.art.iconURL('furn:' + e.id + '#' + e.c, 64)}" alt="">`;
+        const ico = e.kind === 'pk' ? `<span class="lookico">${e.part === 'hat' ? '🎩' : e.part === 'head' ? '💇' : '👕'}</span>` : e.kind === 'look' ? `<span class="lookico">${e.part === 'hat' ? '👒' : '👕'}</span>` : e.kind === 'plot' ? `<img src="${G.art.iconURL('seed:carrot', 64)}" alt=""><i class="upmark">＋</i>` : e.kind === 'bag' ? '<span class="lookico">🎒</span><i class="upmark">＋</i>' : e.kind === 'tool' || e.kind === 'up' ? `<img src="${G.art.iconURL('tool:' + e.id, 64)}" alt="">${e.kind === 'up' ? '<i class="upmark">⬆</i>' : ''}` : e.kind === 'seed' ? `<img src="${G.art.iconURL('seed:' + e.id, 64)}" alt="">` : e.kind === 'animal' ? `<img src="${G.art.iconURL('animal:' + e.id, 64)}" alt="">` : `<img src="${G.art.iconURL('furn:' + e.id + '#' + e.c, 64)}" alt="">`;
         const b = $('button', 'buycard' + (own ? ' off' : ''), `${ico}<b>${esc(e.name)}</b><small>${own ? (e.kind === 'tool' ? '가지고 있음' : '다 팔림') : G.fmt.money(e.price)}</small>`);
         b.onclick = async () => {
           if (own) return;

@@ -56,7 +56,12 @@
   // ---------- 우편지기 꾸미기 (GPT가 만든 겹쳐 입는 부품, 걷기 시트와 같은 3×3) ----------
   // look.pk = { head, body, acc, hc, bc, ac } — 머리·옷·소품을 겹쳐 그리고, 색은 부품 그림의 해당 색만 골라 바꾼다
   const PK = A.PK = {
-    heads: [['female-wavy', '웨이브'], ['female-bob', '단발'], ['female-bun', '똥머리'], ['male-curly', '곱슬'], ['male-side-part', '옆가르마'], ['male-tousled', '부스스']],
+    // 유료 머리 8종(오너, 2026-11): 색이 정해진 그림이라 머리 색 칸은 숨김(fixed). 땅굴상점 옷 코너에서 산다
+    heads: [['female-wavy', '웨이브'], ['female-bob', '단발'], ['female-bun', '똥머리'], ['male-curly', '곱슬'], ['male-side-part', '옆가르마'], ['male-tousled', '부스스'],
+      ['female-high-ponytail', '하이 포니테일', { fixed: 1, lock: 'shop', price: 9000 }], ['female-space-buns', '양 똥머리', { fixed: 1, lock: 'shop', price: 9000 }],
+      ['female-straight-long', '긴 생머리', { fixed: 1, lock: 'shop', price: 8000 }], ['female-twin-braids', '양갈래 땋은 머리', { fixed: 1, lock: 'shop', price: 10000 }],
+      ['male-buzz-cut', '까까머리', { fixed: 1, lock: 'shop', price: 6000 }], ['male-mullet', '울프컷', { fixed: 1, lock: 'shop', price: 9000 }],
+      ['male-pompadour', '올백', { fixed: 1, lock: 'shop', price: 10000 }], ['male-topknot', '꽁지머리', { fixed: 1, lock: 'shop', price: 8000 }]],
     // [이름, 표시, 열기 조건] — g: 여·남 머리에 맞춘 그림이 따로 있음, f: 그림 파일 이름, lock: 'shop'(땅굴상점 옷 코너) 또는 'hatNN'(축제)
     bodies: [['overalls', '멜빵바지'], ['cardigan', '가디건'], ['dress', '꽃 원피스', { f: 'female-dress', only: 'female', lock: 'shop', price: 6000 }], ['onepiece', '멜빵 반바지', { f: 'male-onepiece', only: 'male', lock: 'shop', price: 5000 }], ['raincoat', '노란 우비', { g: 1, lock: 'shop', price: 7000 }], ['pajamas', '별 잠옷', { g: 1, lock: 'shop', price: 4500 }]],
     accs: [['', '없음'], ['postal-cap', '우편 모자'], ['round-glasses', '동그란 안경'], ['hair-bow', '머리 리본']],
@@ -92,7 +97,7 @@
   A.pkPart = (kind, name, ci) => {
     if (!name) return null;
     const im = characterImage(`assets/chars/parts/${kind}-${name}.webp`); if (!im) return null;
-    const pal = kind === 'head' ? PK.hair : PK.cloth, c = pal[ci | 0];
+    const pal = kind === 'head' ? PK.hair : PK.cloth, c = kind === 'head' && A.pkInfo('head', name).fixed ? null : pal[ci | 0];
     if (!c || c[1] === null || typeof document === 'undefined') return im;
     const key = kind + name + ci; let cv = partCache.get(key); if (cv) return cv;
     cv = document.createElement('canvas'); cv.width = im.naturalWidth; cv.height = im.naturalHeight;
@@ -113,7 +118,7 @@
   A.pkGender = (pk) => (pk && String(pk.head || '').startsWith('male') ? 'male' : 'female');
   A.pkDefault = (g) => ({ head: g === 'male' ? 'male-curly' : 'female-wavy', body: 'overalls', hat: 'postal-cap', face: '', hc: 0, bc: 0, hatC: 0, faceC: 0 });
   // 부품 정보·잠금
-  A.pkInfo = (kind, name) => { const list = kind === 'body' ? PK.bodies : PK.slots.flatMap((s) => s.items); const it = list.find((x) => x[0] === name); return it ? it[2] || {} : {}; };
+  A.pkInfo = (kind, name) => { const list = kind === 'body' ? PK.bodies : kind === 'head' ? PK.heads : PK.slots.flatMap((s) => s.items); const it = list.find((x) => x[0] === name); return it ? it[2] || {} : {}; };
   A.pkLocked = (opt) => !!(opt && opt.lock && !((G.player && G.player.unlocks) || {})[opt.lock === 'shop' ? 'pk_' + opt.name : opt.lock]);
   const fileOf = (kind, name, gender) => { const o = A.pkInfo(kind, name); return o.f || (o.g ? `${gender}-${name}` : name); };
   // 옛 저장(소품 한 칸 acc)을 부위로 옮긴다
