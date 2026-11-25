@@ -58,7 +58,7 @@
   const PK = A.PK = {
     heads: [['female-wavy', '웨이브'], ['female-bob', '단발'], ['female-bun', '똥머리'], ['male-curly', '곱슬'], ['male-side-part', '옆가르마'], ['male-tousled', '부스스']],
     // [이름, 표시, 열기 조건] — g: 여·남 머리에 맞춘 그림이 따로 있음, f: 그림 파일 이름, lock: 'shop'(땅굴상점 옷 코너) 또는 'hatNN'(축제)
-    bodies: [['overalls', '멜빵바지'], ['cardigan', '가디건'], ['dress', '꽃 원피스', { f: 'female-dress', lock: 'shop', price: 6000 }], ['onepiece', '멜빵 반바지', { f: 'male-onepiece', lock: 'shop', price: 5000 }], ['raincoat', '노란 우비', { g: 1, lock: 'shop', price: 7000 }], ['pajamas', '별 잠옷', { g: 1, lock: 'shop', price: 4500 }]],
+    bodies: [['overalls', '멜빵바지'], ['cardigan', '가디건'], ['dress', '꽃 원피스', { f: 'female-dress', only: 'female', lock: 'shop', price: 6000 }], ['onepiece', '멜빵 반바지', { f: 'male-onepiece', only: 'male', lock: 'shop', price: 5000 }], ['raincoat', '노란 우비', { g: 1, lock: 'shop', price: 7000 }], ['pajamas', '별 잠옷', { g: 1, lock: 'shop', price: 4500 }]],
     accs: [['', '없음'], ['postal-cap', '우편 모자'], ['round-glasses', '동그란 안경'], ['hair-bow', '머리 리본']],
     // 부위(슬롯) — 부위마다 하나씩 동시에 쓴다 (오너: 모자+안경 같이). 그리는 순서: 옷 → 머리 → 목 → 입 → 얼굴 → 머리 위
     // 새 부품은 assets/chars/parts/accessory-<이름>.webp 를 올리고 여기 목록에 한 줄 넣으면 된다
@@ -109,6 +109,9 @@
     } catch (e) { return im; }
     cv.naturalWidth = cv.width; partCache.set(key, cv); return cv;
   };
+  // 여·남 우편지기 (오너: 섞여 있어 이상하다 → 먼저 고르고, 그쪽 머리·옷만)
+  A.pkGender = (pk) => (pk && String(pk.head || '').startsWith('male') ? 'male' : 'female');
+  A.pkDefault = (g) => ({ head: g === 'male' ? 'male-curly' : 'female-wavy', body: 'overalls', hat: 'postal-cap', face: '', hc: 0, bc: 0, hatC: 0, faceC: 0 });
   // 부품 정보·잠금
   A.pkInfo = (kind, name) => { const list = kind === 'body' ? PK.bodies : PK.slots.flatMap((s) => s.items); const it = list.find((x) => x[0] === name); return it ? it[2] || {} : {}; };
   A.pkLocked = (opt) => !!(opt && opt.lock && !((G.player && G.player.unlocks) || {})[opt.lock === 'shop' ? 'pk_' + opt.name : opt.lock]);
