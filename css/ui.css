@@ -372,3 +372,13 @@ input, select, textarea { font: inherit; color: var(--ink); }
 .sleepbox { text-align: center; line-height: 1.6; padding: 6px 0 12px; }
 .sleepbox .zz { font-size: 44px; animation: zzfloat 2.4s ease-in-out infinite; }
 @keyframes zzfloat { 50% { transform: translateY(-8px); opacity: .7; } }
+
+/* 이웃 일러스트 (대화창 위로 빼꼼) */
+.dlg-pic { position: absolute; right: 14px; bottom: calc(100% - 22px); height: 150px; width: auto; pointer-events: none; filter: drop-shadow(0 4px 6px rgba(91,70,54,.25)); transform-origin: 50% 100%; }
+.dlg-pic.pop { animation: picpop .32s cubic-bezier(.3,1.6,.5,1); }
+@keyframes picpop { 0% { transform: translateY(24px) scale(.85); opacity: 0; } 100% { transform: none; opacity: 1; } }
+.dialog.haspic .dlg-text { padding-right: 4px; }
+@media (max-width: 720px) { .dlg-pic { height: 118px; right: 8px; } }
+.folkpic.illu { width: 120px; height: 120px; object-fit: contain; }
+.illu-on .looked, .illu-on .mestick > .subtabs:not(.illumode) { display: none; }
+.illu-on .illumode::after { content: '그림 캐릭터예요. 머리·옷을 직접 고르려면 「직접 꾸미기」를 눌러요.'; display: block; width: 100%; font-size: 12px; color: #9a8a7a; margin-top: 4px; }

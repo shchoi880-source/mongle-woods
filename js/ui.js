@@ -48,7 +48,7 @@
     hud.hint = $('div', 'hud-hint'); root.append(hud.hint);
     toastBox = $('div', 'toasts'); root.append(toastBox);
     popEl = $('div', 'itempop hidden'); root.append(popEl);
-    dialogEl = $('div', 'dialog hidden', '<div class="dlg-name"></div><div class="dlg-text"></div><div class="dlg-next">▼</div><div class="dlg-choices"></div>');
+    dialogEl = $('div', 'dialog hidden', '<img class="dlg-pic" alt=""><div class="dlg-name"></div><div class="dlg-text"></div><div class="dlg-next">▼</div><div class="dlg-choices"></div>');
     root.append(dialogEl); bindDialogTap();
     modalEl = $('div', 'modal hidden'); root.append(modalEl);
     UI.hud(false);
@@ -190,6 +190,16 @@
     const ne = dialogEl.querySelector('.dlg-name');
     ne.textContent = nm; ne.style.background = NAMECOL[who] || '#9aa'; ne.style.display = nm ? '' : 'none';
     dlg.text = l.text; dlg.shown = 0; dlg.full = false; dlg.who = who;
+    // 이웃 일러스트 (말하는 사람이 바뀌면 통 튀어나온다). 놀람·기쁨 그림이 있으면 대사에 맞춰
+    const pic = dialogEl.querySelector('.dlg-pic'), A = G.art;
+    if (A.ILLU && A.ILLU.includes(who) && !(G.settings.get('illu') === false)) {
+      const tx = String(l.text || '');
+      const alt = who === 'ddalang' && /\?!|!\?|헉|어\?|깜짝|에엣|뭐야/.test(tx) ? 'ddalang-surprised' : who === 'sogeum' && /고맙|감동|좋|기쁘|최고|적중|퐁당!/.test(tx) ? 'sogeum-happy' : who;
+      const src = A.illuURL(alt, true);
+      if (pic.dataset.src !== src) { pic.dataset.src = src; pic.src = src; pic.classList.remove('pop'); void pic.offsetWidth; pic.classList.add('pop'); }
+      pic.style.display = '';
+      dialogEl.classList.add('haspic');
+    } else { pic.style.display = 'none'; pic.dataset.src = ''; dialogEl.classList.remove('haspic'); }
     dialogEl.querySelector('.dlg-text').textContent = '';
     dialogEl.querySelector('.dlg-choices').innerHTML = '';
     dialogEl.querySelector('.dlg-next').style.visibility = 'hidden';
@@ -421,6 +431,21 @@
     return wrap;
   };
   // 잎첩 '나' 탭: 이름·마을 이름·모습을 언제든 무료로 바꾼다
+  // 그림 캐릭터 (오너가 준비한 우편지기 일러스트) 또는 직접 꾸민 모습
+  UI.illuMode = (look, onChange) => {
+    const mode = $('div', 'subtabs illumode');
+    const draw = () => {
+      mode.innerHTML = '';
+      for (const [v, nm] of [['postkeeper', '🧢 우편지기 그림'], ['postkeeper-male', '🧢 우편지기 그림 (남)'], [0, '🎨 직접 꾸미기']]) {
+        const b = $('button', 'tab' + ((look.illu || 0) === v ? ' on' : ''), nm);
+        b.onclick = () => { if (v) { look.illu = v; G.art.charImg(v); } else delete look.illu; G.audio.sfx('tap'); draw(); onChange(); sync(); };
+        mode.append(b);
+      }
+    };
+    // 그림 캐릭터일 땐 머리·옷 고르기 칸을 접는다 (바꿔도 안 보이니까)
+    const sync = () => { const root = mode.closest('.create, .pane'); if (root) root.classList.toggle('illu-on', !!look.illu); };
+    draw(); setTimeout(sync, 0); return mode;
+  };
   function mePane(pane) {
     const pl = G.player, look = Object.assign(G.art.LOOK.def(), pl.look || {});
     const pv = UI.lookPreview(look, 150); UI._previewStop = pv.stop;
@@ -430,6 +455,7 @@
     const spin = $('button', 'btn ghost', '🔄'); spin.onclick = () => pv.spin(); spin.title = '돌려 보기';
     info.append($('label', 'muted small', '내 이름'), nameIn, $('label', 'muted small', '마을 이름'), townIn);
     top.append(pv.el, info);
+    info.append(UI.illuMode(look, () => { pv.poke(); setTimeout(() => pv.poke(), 300); }));
     const ed = UI.lookEditor(look, () => pv.poke());
     const save = $('button', 'btn', '저장 ✨');
     save.onclick = () => {
@@ -692,9 +718,13 @@
     for (const [id, v] of Object.entries(G.npc.VILLAGERS)) {
       const s = G.npc.st[id] || {}, met = !!s.met, lv = G.npc.level(id);
       const card = $('div', 'folkcard' + (met ? '' : ' unknown'));
-      const pic = document.createElement('canvas'); pic.width = pic.height = 120; pic.className = 'folkpic';
-      const g = pic.getContext('2d'); g.setTransform(2.2, 0, 0, 2.2, 60, 112);
-      G.art.actor.draw(g, { species: v.species, look: v.look, x: 0, y: 0, dir: 0, seed: 1, blinkAt: 1e9 }, 1);
+      let pic;
+      if (G.art.ILLU.includes(id) && G.settings.get('illu') !== false) { pic = document.createElement('img'); pic.className = 'folkpic illu'; pic.src = G.art.illuURL(id, true); pic.alt = v.name; }
+      else {
+        pic = document.createElement('canvas'); pic.width = pic.height = 120; pic.className = 'folkpic';
+        const g = pic.getContext('2d'); g.setTransform(2.2, 0, 0, 2.2, 60, 112);
+        G.art.actor.draw(g, { species: v.species, look: v.look, x: 0, y: 0, dir: 0, seed: 1, blinkAt: 1e9, id: 'none' }, 1);
+      }
       const hearts = met ? '<span class="hearts">' + '♥'.repeat(lv) + '<i>' + '♥'.repeat(4 - lv) + '</i></span>' : '';
       const info = $('div', 'folkinfo', met
         ? `<b>${esc(v.name)}</b> ${hearts}<br><span class="muted small">${v.pers} · 입버릇 「${v.catch}」 · 생일 ${+v.bday.slice(0, 2)}월 ${+v.bday.slice(3)}일${G.story ? ` · 이야기 ${G.story.progress(id)}/4` : ''}</span><br><span class="muted small">좋아하는 것: ${(s.favKnown || []).length ? s.favKnown.map((f) => esc(G.items.name(f))).join(', ') : (lv >= 2 ? esc(G.npc.FAV[id].filter((f) => !f.startsWith('cat:')).map((f) => G.items.name(f))[0] || '?') + '…?' : '선물해 보면 알 수 있어요')}</span><br><span class="muted small">지금: ${({ home: '집 근처', plaza: '광장', oak: '할아버지 참나무', pond: '연못가', river: '강가', beach: '바닷가', garden: '꽃밭', sleep: '쿨쿨 자는 중' })[(G.npc.get(id) && G.npc.activity(G.npc.get(id)) || {}).act] || '?'}</span>`

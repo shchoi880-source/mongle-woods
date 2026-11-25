@@ -34,6 +34,33 @@
     def: () => ({ skin: 0, hair: 0, hairC: 0, shirt: 0, eyes: 0, mouth: 0, cheek: 0, outfit: 0, shirt2: 5, shoes: 0, hat: 0, hatC: 8, glasses: 0 }),
   };
 
+  // 캐릭터 일러스트 (오너가 준비한 그림, assets/chars/s). 마을 이웃은 이 그림으로 그린다
+  const ILLU = ['bori', 'danchu', 'ddalang', 'hotteok', 'jjongal', 'lime', 'mongsil', 'mungchi', 'sogeum'];
+  const illu = new Map();
+  A.ILLU = ILLU;
+  A.illuURL = (id, big) => `assets/chars/s/${id}${big ? '' : '-w'}.webp`;
+  A.charImg = (id) => {
+    if (!(ILLU.includes(id) || id === 'postkeeper' || id === 'postkeeper-male') || typeof Image === 'undefined' || (G.settings && G.settings.get && G.settings.get('illu') === false)) return null;
+    let im = illu.get(id);
+    if (!im) { im = new Image(); im.decoding = 'async'; im.src = A.illuURL(id); illu.set(id, im); }
+    return im.complete && im.naturalWidth ? im : null;
+  };
+  // 일러스트로 그리기: 정면 그림 하나를 통통 튀기고, 왼쪽을 보면 뒤집는다
+  A.drawIllu = (ctx, a, im, t) => {
+    const H = a.species === 'human' ? 66 : a.species === 'rabbit' ? 70 : a.species === 'hedgehog' ? 62 : 60, W = H * im.naturalWidth / im.naturalHeight;
+    const ph = a.walk || 0, mv = a.moving;
+    const bob = mv ? Math.abs(Math.sin(ph * Math.PI * 2)) * 3 : 0, tilt = mv ? Math.sin(ph * Math.PI * 2) * 0.07 : 0;
+    const br = Math.sin(t * 2.4 + (a.seed || 0)) * 0.018, sq = a.squash || 0, hop = a.hop || 0;
+    ctx.save(); ctx.translate(a.x, a.y);
+    P.shadow(ctx, 0, 0, Math.max(20, W * 0.55) - Math.min(hop, 10) * 0.6, 0.26);
+    ctx.translate(0, -bob - hop); ctx.rotate(tilt);
+    ctx.scale((a.dir === 1 ? -1 : 1) * (1 + sq * 0.5 - br * 0.5), 1 + br - sq);
+    if (a.sleep) ctx.globalAlpha *= 0.92;
+    ctx.drawImage(im, -W / 2, -H, W, H);
+    // 도구는 그림 위 손 자리에
+    if (a.tool && a.tool !== 'hand') { ctx.save(); ctx.translate(2, -16); ctx.scale(1.15, 1.15); A.actor.tool(ctx, a, t, a.dir === 1 || a.dir === 3, a.dir === 2); ctx.restore(); }
+    ctx.restore();
+  };
   // 종별 프리셋
   const SPECIES = {
     human: {},
@@ -54,6 +81,8 @@
   // a: {x,y,dir,species,look,walk,moving,run,t0,blinkT,emote,emoteT,hop,sleep,tool,swing}
   A.actor = {
     draw(ctx, a, t) {
+      const key = (a.look && a.look.illu) || a.id, im = key && A.charImg(key);
+      if (im) { A.drawIllu(ctx, a, im, t); return; }
       const sp = SPECIES[a.species] || {};
       const L = a.look || {};
       const dir = a.dir | 0;
