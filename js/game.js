@@ -340,26 +340,18 @@
   };
 
   // ---------- 첫날 흐름 ----------
+  // 10차 회의: 첫 5분을 짧고 바로 놀 수 있게 — 대사 줄이고, 잠자리채·낚싯대를 바로 준다
   GM.introScript = async () => {
     const q = G.quest.st, name = pl.name;
     await G.ui.say([
-      { who: 'bori', text: '어서 오너라, 새 우편지기. 나는 몽글숲 우체국장 보리란다. 콕!' },
-      { who: 'bori', text: `이름이… ${name}? 감자?` },
+      { who: 'bori', text: `어서 오너라, 새 우편지기 ${name}! 나는 몽글숲 우체국장 보리란다. 콕!` },
+      { who: 'bori', text: '여기는 구름양 「큰솜이」 등 위의 마을이란다. 벌레도 잡고, 물고기도 낚고, 마음껏 놀려무나.' },
     ]);
-    const c = await G.ui.choose({ who: 'bori', text: '감자 맞지?' }, [`아니요, ${name}예요`, '…네, 감자예요']);
-    if (c === 1) await G.ui.say([{ who: 'bori', text: '농담이란다. 귀는 아직 멀쩡해. 콕콕!' }]);
-    else await G.ui.say([{ who: 'bori', text: `${name}. 좋은 이름이구나. 편지 봉투에 쓰기도 좋고.` }]);
-    await G.ui.say([
-      { who: 'bori', text: '그 모자 위 솜뭉치는 누구냐? …콩알? 허허, 주민이 1.5명 늘었구나.' },
-      { who: 'kongal', text: '꼬물.' },
-      { who: 'bori', text: '여기는 큰솜이라는 구름양의 등 위에 생긴 마을이란다. 큰솜이가 숨 쉴 때마다 몽글바람이 불어서 매일 새 물건을 실어 오지.' },
-      { who: 'bori', text: '자, 우편지기의 첫 일이다. 이 편지를 딸랑에게 전해 주렴. 귀에 방울 단 토끼란다. 방울 소리가 나는 쪽을 찾아보거라.' },
-    ]);
-    if (G.inv.add('letter_ddalang', 1) === 0) { q.letterGiven = true; G.ui.itemPop('letter_ddalang', null, '딸랑에게 갈 편지를 받았다!'); G.audio.sfx('pickup'); }
-    await G.ui.say([
-      { who: 'bori', text: '아, 그리고 이웃들에게 인사하렴. 물가에는 수달 소금이, 꽃밭에는 고양이 라임이 있단다. 우편지기한테 줄 선물이 있다더구나.' },
-      { who: 'bori', text: '할 일은 잎첩(🍃)에 적어 두었단다. 순서는 상관없어. 다 못 해도 괜찮다. 편지는 내일도 오니까. 콕!' },
-    ]);
+    for (const t of ['net', 'rod']) pl.giveTool(t);
+    pl.setTool('net');
+    G.ui.itemPop('tool:net', null, '잠자리채와 낚싯대를 받았다!'); G.audio.sfx('catch');
+    await G.ui.say([{ who: 'bori', text: '우체국 비품이란다. 오른쪽 아래 도구 버튼으로 바꿔 들 수 있지. 그리고 이 편지를 귀에 방울 단 토끼 딸랑에게 전해 주렴. 콕!' }]);
+    if (G.inv.add('letter_ddalang', 1) === 0) { q.letterGiven = true; G.audio.sfx('pickup'); }
     q.intro = true; G.save.now('intro');
   };
 
@@ -1004,9 +996,15 @@
     G.ui.toast('새 아침! 몽글바람이 새 물건을 실어 왔어요. 나무·바위·상점·부탁이 다시 채워졌어요.', { icon: '🌤️', ms: 3600 });
     G.save.mark('day');
   });
-  G.on('quest:done', (p) => { G.ui.toast(`할 일 완료: ${p.text}`, { icon: '✅' }); G.audio.sfx('chime'); fxSparkle(pl.x, pl.y - 50, 8); });
+  G.on('quest:done', (p) => { G.wallet.add(300, 'quest'); G.ui.toast(`할 일 완료: ${p.text} (+300몽 · 첫날 ${G.quest.doneCount()}/${G.quest.CARDS.length})`, { icon: '✅', ms: 3000 }); G.audio.sfx('chime'); fxSparkle(pl.x, pl.y - 50, 8); });
   G.on('stamp:earn', (p) => { setTimeout(async () => { G.audio.sfx('stamp'); kongalReact('jump'); await G.ui.say([{ who: 'kongal', text: '꼬물꼬물! (오늘 멋졌어!)' }, { who: 'sys', text: p.id === 'daily' ? '오늘의 부탁을 모두 들어줬어요! 반짝 도장을 하나 받았어요.' : '반짝 도장을 하나 받았어요! 내일은 박물관이 문을 열고, 새 이웃도 온대요.' }]); }, 1400); });
-  G.on('dex:new', (p) => { if (p.newSp) fxSparkle(pl.x, pl.y - 60, 10, '#ffe066'); });
+  G.on('dex:new', (p) => {
+    if (!p.newSp) return;
+    fxSparkle(pl.x, pl.y - 60, 10, '#ffe066');
+    // 도감 5종마다 작은 축하 선물 (10차 회의: 모으는 재미를 자주 느끼게)
+    const n = G.collect.total();
+    if (n > 0 && n % 5 === 0) setTimeout(() => { const money = n * 100; G.wallet.add(money, 'dex'); G.audio.sfx('rare'); G.ui.toast(`📖 도감 ${n}종 달성! 보리 할멈이 ${G.fmt.money(money)}을 보냈어요.`, { icon: '🎉', ms: 3500 }); }, 1800);
+  });
   G.on('eco:miss', () => { kongalSay(u.pick(G.lines('kongal', 'miss'), Math.random()).text); G.audio.sfx('miss'); });
   G.on('weather:change', () => G.audio && G.audio.ambient && G.audio.ambient(G.weather.now().type));
   G.on('time:hour', () => G.audio.ambient && G.audio.ambient(G.weather.now().type));
