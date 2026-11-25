@@ -46,7 +46,7 @@
   // ---------- 상태 ----------
   // 방: 텐트 9×7 타일(오너 피드백: 텐트가 너무 작다 → 7×6에서 넓힘), 위 2줄은 벽, 문은 아래 가운데
   const ROOM = { w: 9, h: 7, wall: 2, door: 4 };
-  const st = { items: [], starter: false, rated: 0, wall: 0, floor: 0 }; // items: {f, x, y, r, c} · wall/floor: 0 = 집 기본, 1~ = 고른 무늬
+  const st = { items: [], starter: false, rated: 0, wall: 0, floor: 0, seen: [] }; // items: {f, x, y, r, c} · wall/floor: 0 = 집 기본, 1~ = 고른 무늬
   // 벽지·바닥 (8차 회의: 꾸미기 강화). 번호는 끝에만 추가
   const WALLS = [null,
     { name: '크림 줄무늬', c1: '#fff3e0', c2: '#ffe0c2', pat: 'stripe' }, { name: '분홍 물방울', c1: '#ffe6ee', c2: '#ffc2d6', pat: 'dots' },
@@ -86,6 +86,13 @@
   H.syncRoom = syncRoom;
 
   const form = (id) => G.data.get('furn', id);
+  // 가구 카탈로그 (가구 얻기 쉽게): 상점에서 봤거나 가져 본 가구는 언제든 원하는 색으로 주문
+  H.see = (id) => { const f = form(id); if (!f || f.hidden || st.seen.includes(id)) return false; st.seen.push(id); G.save.mark('seen'); return true; };
+  H.catalog = () => {
+    const own = [...G.inv.slots, ...((G.storage && G.storage.slots) || [])].filter((s) => s.id.startsWith('furn:')).map((s) => s.id.slice(5));
+    for (const id of own.concat(st.items.map((o) => o.f), ((G.yard && G.yard.st.items) || []).map((o) => o.f))) H.see(id);
+    return st.seen.map(form).filter((f) => f && !f.hidden);
+  };
   function fp(it) { const f = form(it.f); const sw = it.r % 2 && f.rot ? 1 : 0; return { w: sw ? f.h : f.w, h: sw ? f.w : f.h }; }
   H.fp = fp;
   // 놓을 수 있나 (ignore = 옮기는 중인 자기 자신)
@@ -127,8 +134,8 @@
 
   G.save.section('house', {
     v: 1, def: () => ({ items: [], starter: false, rated: 0, wall: 0, floor: 0 }),
-    get: () => ({ items: st.items.map((o) => [o.f, o.x, o.y, o.r, o.c]), starter: st.starter, rated: st.rated, wall: st.wall || 0, floor: st.floor || 0 }),
-    set: (d) => { st.items = (d.items || []).filter((a) => form(a[0])).map((a) => ({ f: a[0], x: a[1], y: a[2], r: a[3] || 0, c: a[4] || 0 })); st.starter = !!d.starter; st.rated = d.rated || 0; st.wall = d.wall || 0; st.floor = d.floor || 0; },
+    get: () => ({ items: st.items.map((o) => [o.f, o.x, o.y, o.r, o.c]), starter: st.starter, rated: st.rated, wall: st.wall || 0, floor: st.floor || 0, seen: st.seen.slice() }),
+    set: (d) => { st.items = (d.items || []).filter((a) => form(a[0])).map((a) => ({ f: a[0], x: a[1], y: a[2], r: a[3] || 0, c: a[4] || 0 })); st.starter = !!d.starter; st.rated = d.rated || 0; st.wall = d.wall || 0; st.floor = d.floor || 0; st.seen = (d.seen || []).filter((id) => form(id)); },
   });
 
   // ---------- 가구 그림 (발자국 좌상단 기준, 위로 솟음) ----------

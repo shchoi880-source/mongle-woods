@@ -905,7 +905,7 @@
       const tabs = $('div', 'subtabs shoptabs');
       const sellable = G.inv.slots.filter((x) => G.items.sellPrice(x.id, x.x)).length;
       const tab = UI._shopTab || (sellable ? 'sell' : 'buy');
-      for (const [id, nm] of [['sell', `💰 팔기 (${sellable})`], ['buy', '🛒 사기']]) {
+      for (const [id, nm] of [['sell', `💰 팔기 (${sellable})`], ['buy', '🛒 사기'], ['cat', '📖 카탈로그']]) {
         const b = $('button', 'tab' + (tab === id ? ' on' : ''), nm); b.onclick = () => { UI._shopTab = id; G.audio.sfx('tap'); render(); }; tabs.append(b);
       }
       body.append(tabs);
@@ -934,6 +934,7 @@
       // 구매
       const buy = $('div', 'buyrow');
       for (const e of G.shop.stock()) {
+        if (e.kind === 'furn' && G.house) G.house.see(e.id);
         const own = e.kind === 'tool' ? G.player.hasTool(e.id) : e.kind === 'look' ? !!(G.player.unlocks || {})[e.id] : G.shop.soldOut(e);
         const ico = e.kind === 'look' ? `<span class="lookico">${e.part === 'hat' ? '👒' : '👕'}</span>` : e.kind === 'plot' ? `<img src="${G.art.iconURL('seed:carrot', 64)}" alt=""><i class="upmark">＋</i>` : e.kind === 'bag' ? '<span class="lookico">🎒</span><i class="upmark">＋</i>' : e.kind === 'tool' || e.kind === 'up' ? `<img src="${G.art.iconURL('tool:' + e.id, 64)}" alt="">${e.kind === 'up' ? '<i class="upmark">⬆</i>' : ''}` : e.kind === 'seed' ? `<img src="${G.art.iconURL('seed:' + e.id, 64)}" alt="">` : e.kind === 'animal' ? `<img src="${G.art.iconURL('animal:' + e.id, 64)}" alt="">` : `<img src="${G.art.iconURL('furn:' + e.id + '#' + e.c, 64)}" alt="">`;
         const b = $('button', 'buycard' + (own ? ' off' : ''), `${ico}<b>${esc(e.name)}</b><small>${own ? (e.kind === 'tool' ? '가지고 있음' : '다 팔림') : G.fmt.money(e.price)}</small>`);
@@ -958,6 +959,28 @@
         buy.append(b);
       }
       if (tab === 'sell') { body.append(foot); }
+      else if (tab === 'cat') {
+        for (const el of [head, body.querySelector('.grid')]) if (el) el.remove();
+        const list = G.house.catalog();
+        body.append($('div', 'pane-head', `<span>본 적 있는 가구 ${list.length}/${G.house.SHOP_FORMS.length}종 · 언제든 원하는 색으로 주문 · 내 돈 ${G.fmt.money(G.wallet.get())}</span>`));
+        if (!list.length) body.append($('div', 'muted small', '아직 본 가구가 없어요. 「사기」 칸의 오늘의 가구를 보면 여기에 쌓여요.'));
+        const row = $('div', 'buyrow');
+        UI._catCol = UI._catCol || {};
+        for (const f of list) {
+          const c = UI._catCol[f.id] || 0, price = Math.round(f.val * 1.2);
+          const card = $('div', 'buycard', `<img src="${G.art.iconURL('furn:' + f.id + '#' + c, 64)}" alt=""><b>${esc(G.items.name('furn:' + f.id, { c }))}</b><small>${G.fmt.money(price)}</small>`);
+          if (f.col) { const sw = $('button', 'swatch'); sw.style.background = G.house.COLS[c]; sw.title = '색 바꾸기'; sw.onclick = () => { UI._catCol[f.id] = (c + 1) % G.house.COLS.length; G.audio.sfx('tap'); render(); }; card.append(sw); }
+          const b = $('button', 'btn small', '주문');
+          b.onclick = () => {
+            if (!G.inv.canFit('furn:' + f.id, { c })) { UI.toast('가방이 꽉 찼어요.', { icon: '🎒' }); G.audio.sfx('error'); return; }
+            if (!G.wallet.spend(price, 'buy')) { UI.toast('몽이 조금 모자라요.', { icon: '🪙' }); G.audio.sfx('error'); return; }
+            G.inv.add('furn:' + f.id, 1, { c }); G.emit('shop:buy', { id: f.id, price }); G.audio.sfx('coin');
+            UI.toast(`${G.items.name('furn:' + f.id, { c })}을(를) 주문했어요! 가방에 넣었어요.`, { icon: '📦', ms: 2600 }); render();
+          };
+          card.append(b); row.append(card);
+        }
+        body.append(row);
+      }
       else {
         // 사기 탭: 팔기 칸은 감춘다
         for (const el of [head, body.querySelector('.grid')]) if (el) el.remove();

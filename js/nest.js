@@ -120,6 +120,16 @@
     { id: 'clock', out: 'furn:clock', need: [['wood', 3], ['iron', 2]] },
     { id: 'radio', out: 'furn:radio', need: [['wood', 2], ['iron', 3]] },
     { id: 'bed', out: 'furn:bed', need: [['wood', 10], ['branch', 6]] },
+    // 가구 얻기 쉽게 (텐트 피드백): 재료로 만드는 가구 추가
+    { id: 'cushion', out: 'furn:cushion', need: [['branch', 3]] },
+    { id: 'bench', out: 'furn:bench', need: [['wood', 6], ['branch', 2]] },
+    { id: 'tree_pot', out: 'furn:tree_pot', need: [['clay', 3], ['branch', 4]] },
+    { id: 'floorlamp', out: 'furn:floorlamp', need: [['wood', 3], ['iron', 2]] },
+    { id: 'desk', out: 'furn:desk', need: [['wood', 10], ['iron', 1]] },
+    { id: 'sofa', out: 'furn:sofa', need: [['wood', 8], ['branch', 8], ['clay', 2]] },
+    { id: 'wardrobe', out: 'furn:wardrobe', need: [['wood', 14], ['iron', 2]] },
+    { id: 'stove', out: 'furn:stove', need: [['stone', 8], ['iron', 3], ['clay', 3]] },
+    { id: 'fridge', out: 'furn:fridge', need: [['iron', 6], ['stone', 2]] },
   ];
   G.craft = {
     RECIPES,
