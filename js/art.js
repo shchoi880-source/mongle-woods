@@ -44,19 +44,53 @@
   }
   A.mkCanvas = mkCanvas;
 
+  // 색 선 (그래픽 개선: 모든 물체에 같은 진갈색 선 → 채운 색을 어둡게 한 '색 외곽선'. 요즘 귀여운 그림체)
+  const lineCache = new Map();
+  A.inkOf = (fill) => {
+    if (typeof fill !== 'string' || fill[0] !== '#' || (fill.length !== 7 && fill.length !== 4)) return C.line;
+    let v = lineCache.get(fill); if (v) return v;
+    const h = fill.length === 4 ? fill.slice(1).split('').map((c) => c + c).join('') : fill.slice(1), n = parseInt(h, 16);
+    const r = n >> 16, gg = (n >> 8) & 255, b = n & 255;
+    // 어둡게 + 살짝 보랏빛 갈색 쪽으로
+    const mix = (c, t) => Math.round(c * 0.32 + t * 0.22);
+    v = `rgb(${mix(r, 90)},${mix(gg, 60)},${mix(b, 80)})`; lineCache.set(fill, v); return v;
+  };
+  const ink = (line, fill) => (line === C.line ? A.inkOf(fill) : line);
   // 공통 도형
   const P = A.paint = {
     blob(g, x, y, rx, ry, fill, line, lw = 1.5) {
       g.beginPath(); g.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
       if (fill) { g.fillStyle = fill; g.fill(); }
-      if (line) { g.lineWidth = lw; g.strokeStyle = line; g.stroke(); }
+      if (line) { g.lineWidth = lw; g.strokeStyle = ink(line, fill); g.stroke(); }
     },
     rrect(g, x, y, w, h, r, fill, line, lw = 1.5) {
       g.beginPath(); g.roundRect(x, y, w, h, r);
       if (fill) { g.fillStyle = fill; g.fill(); }
-      if (line) { g.lineWidth = lw; g.strokeStyle = line; g.stroke(); }
+      if (line) { g.lineWidth = lw; g.strokeStyle = ink(line, fill); g.stroke(); }
     },
-    shadow(g, x, y, w, a = 0.22) { g.fillStyle = `rgba(60,50,90,${a})`; g.beginPath(); g.ellipse(x, y, w / 2, w / 5, 0, 0, Math.PI * 2); g.fill(); },
+    // 둥근 볼륨: 타원 안쪽에 왼쪽 위 햇빛·오른쪽 아래 그늘 (캐릭터 머리·몸)
+    vol(g, x, y, rx, ry, k = 1) {
+      g.save(); g.beginPath(); g.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); g.clip();
+      const gr = g.createRadialGradient(x - rx * 0.35, y - ry * 0.45, 0, x - rx * 0.1, y - ry * 0.1, Math.max(rx, ry) * 1.35);
+      gr.addColorStop(0, `rgba(255,255,245,${0.32 * k})`); gr.addColorStop(0.35, 'rgba(255,255,245,0)'); gr.addColorStop(0.75, 'rgba(90,60,120,0)'); gr.addColorStop(1, `rgba(90,60,120,${0.28 * k})`);
+      g.fillStyle = gr; g.fillRect(x - rx, y - ry, rx * 2, ry * 2); g.restore();
+    },
+    // 부드러운 그림자 (그래픽 개선: 납작한 타원 → 가장자리가 번지는 그림자)
+    shadow(g, x, y, w, a = 0.22) {
+      g.save(); g.translate(x, y); g.scale(1, 0.4);
+      const r = w / 2 * 1.15, gr = g.createRadialGradient(0, 0, r * 0.2, 0, 0, r);
+      gr.addColorStop(0, `rgba(50,40,80,${a * 1.35})`); gr.addColorStop(0.6, `rgba(50,40,80,${a * 0.9})`); gr.addColorStop(1, 'rgba(50,40,80,0)');
+      g.fillStyle = gr; g.beginPath(); g.arc(0, 0, r, 0, Math.PI * 2); g.fill(); g.restore();
+    },
+    // 입체 명암: 이미 그린 그림 위에만(source-atop) 위쪽 햇빛·아래쪽 그늘을 얹는다
+    shade(g, x, y, w, h, o = {}) {
+      g.save(); g.globalCompositeOperation = 'source-atop';
+      const lin = g.createLinearGradient(x, y, x + w * 0.35, y + h);
+      lin.addColorStop(0, `rgba(255,250,225,${o.hi ?? 0.22})`); lin.addColorStop(0.45, 'rgba(255,250,225,0)');
+      lin.addColorStop(0.7, 'rgba(70,50,110,0)'); lin.addColorStop(1, `rgba(70,50,110,${o.lo ?? 0.22})`);
+      g.fillStyle = lin; g.fillRect(x, y, w, h);
+      g.restore();
+    },
   };
 
   // ---------- 지형 청크 굽기 ----------
@@ -89,7 +123,10 @@
     const isPlaza = (v) => v === TT.PLAZA;
 
     function union(test, color, dy = 0, r = 11) {
-      g.fillStyle = color; g.beginPath();
+      region(test, dy, r); g.fillStyle = color; g.fill();
+    }
+    function region(test, dy = 0, r = 11) {
+      g.beginPath();
       for (let y = ty0; y <= ty1; y++) for (let x = tx0; x <= tx1; x++) {
         if (!test(t(x, y))) continue;
         const px = x * TILE, py = y * TILE + dy;
@@ -97,8 +134,16 @@
         if (test(t(x + 1, y))) g.rect(px + TILE / 2, py, TILE, TILE);
         if (test(t(x, y + 1))) g.rect(px, py + TILE / 2, TILE, TILE);
       }
-      g.fill();
     }
+    // 부드러운 값 노이즈 (4칸 격자, 결정적) — 풀밭 얼룩용
+    const nz = (x, y, k, s = 4) => {
+      const gx = Math.floor(x / s), gy = Math.floor(y / s), fx = x / s - gx, fy = y / s - gy;
+      const v = (a, b) => (u.hash32(seed, a, b, k) & 1023) / 1023, sm = (q) => q * q * (3 - 2 * q);
+      const a = v(gx, gy), b = v(gx + 1, gy), c = v(gx, gy + 1), d = v(gx + 1, gy + 1), ux = sm(fx), uy = sm(fy);
+      return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy;
+    };
+    const soft = (x, y, r, col, a) => { const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, col.replace('A', a)); gr.addColorStop(1, col.replace('A', 0)); g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2); };
+    const rgbA = (hex) => { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},A)`; };
     // 1) 바다
     g.fillStyle = C.sea; g.fillRect(tx0 * TILE, ty0 * TILE, (tx1 - tx0 + 1) * TILE, (ty1 - ty0 + 1) * TILE);
     // 깊은 바다 줄무늬
@@ -119,9 +164,35 @@
     union(isGrassy, pal.grass, 0);
     // 고지대(살짝 다른 톤)
     union((v) => v === TT.HIGH, pal.high, 0, 8);
+    // 그래픽 개선: 풀밭 얼룩(밝은 곳·짙은 곳) + 잔결 — 단색 바닥이 '옛날 게임'처럼 보이던 문제
+    g.save(); region(isGrassy, 0, 11); g.clip();
+    const cL = rgbA(pal.grassL), cD = rgbA(pal.grassD), cT = rgbA(pal.tuft);
+    for (let y = ty0; y <= ty1; y++) for (let x = tx0; x <= tx1; x++) {
+      if (!isGrassy(t(x, y))) continue;
+      const px = x * TILE + 16, py = y * TILE + 16, n = nz(x, y, 31), n2 = nz(x + 50, y + 50, 37, 2.5);
+      if (n > 0.55) soft(px, py, 30, cL, Math.min(0.55, (n - 0.55) * 1.6));
+      if (n < 0.4) soft(px, py, 30, cD, Math.min(0.45, (0.4 - n) * 1.3));
+      if (n2 > 0.7) soft(px + 6, py - 4, 20, cT, (n2 - 0.7) * 0.7);
+      // 잔결: 짧은 풀잎 여러 개 (밝은·짙은 두 톤, 옅게)
+      const h = u.hash32(seed, x, y, 41);
+      g.lineCap = 'round'; g.lineWidth = 1.2;
+      for (let k = 0; k < 6; k++) {
+        const hh = u.hash32(h, k), bx = x * TILE + (hh & 31), by = y * TILE + ((hh >> 5) & 31), ln = 2.5 + ((hh >> 10) & 3);
+        g.strokeStyle = (k & 1 ? cD : cL).replace('A', 0.55); g.beginPath(); g.moveTo(bx, by); g.lineTo(bx + ((hh >> 12) & 3) - 1.5, by - ln); g.stroke();
+      }
+    }
+    g.restore();
     // 5) 길·광장
     union(isPath, C.pathD, 3, 12);
     union(isPath, C.path, 0, 12);
+    g.save(); region(isPath, 0, 12); g.clip();
+    for (let y = ty0; y <= ty1; y++) for (let x = tx0; x <= tx1; x++) {
+      if (!isPath(t(x, y))) continue;
+      const n = nz(x, y, 43, 3); if (n > 0.5) soft(x * TILE + 16, y * TILE + 16, 26, 'rgba(255,240,210,A)', (n - 0.5) * 0.8); else soft(x * TILE + 16, y * TILE + 16, 26, 'rgba(170,135,95,A)', (0.5 - n) * 0.5);
+      // 풀 가장자리 그늘 (위쪽이 풀이면 길에 살짝 그늘)
+      if (isGrassy(t(x, y - 1)) && !isPath(t(x, y - 1)) && !isPlaza(t(x, y - 1))) { const lg = g.createLinearGradient(0, y * TILE, 0, y * TILE + 9); lg.addColorStop(0, 'rgba(90,70,50,0.22)'); lg.addColorStop(1, 'rgba(90,70,50,0)'); g.fillStyle = lg; g.fillRect(x * TILE, y * TILE, TILE, 9); }
+    }
+    g.restore();
     union(isPlaza, C.plazaD, 3, 14);
     union(isPlaza, C.plaza, 0, 14);
     // 광장 돌 무늬
@@ -242,7 +313,7 @@
     P.shadow(g, 32, 74, 40, 0.25);
     // 줄기
     P.rrect(g, 27, 46, 10, 28, 4, '#a7724a', C.line, 1.5);
-    g.fillStyle = '#8b5c3a'; g.fillRect(31, 52, 2, 18);
+    g.fillStyle = '#8b5c3a'; g.fillRect(31, 52, 2, 18); g.fillStyle = 'rgba(255,230,200,0.35)'; g.fillRect(28.5, 50, 2, 20);
     if (kind === 'pine') {
       const cols = season === 'winter' ? ['#5f9a78', '#4b7f62', '#77b48e'] : ['#5aa86a', '#43875a', '#79c486'];
       for (let k = 0; k < 3; k++) {
@@ -263,19 +334,26 @@
       return;
     }
     const leaf = kind === 'fruit' ? ['#7cc35a', '#5aa548', '#a2db7c'] : pal.leaf;
-    const cl = [[32, 26, 24, 20], [18, 34, 14, 12], [46, 34, 14, 12], [32, 40, 20, 10]];
-    g.lineWidth = 1.5; g.strokeStyle = C.line;
+    // 그래픽 개선: 몽글몽글한 잎 덩어리 여러 개 + 안쪽 그늘·햇빛 + 잎 결
+    const cl = [[32, 22, 17, 14], [19, 30, 13, 11], [45, 30, 13, 11], [24, 40, 13, 9], [40, 40, 13, 9], [32, 32, 18, 12], [22, 18, 9, 8], [42, 17, 10, 8]];
+    g.lineWidth = 1.4; g.strokeStyle = C.line;
     g.beginPath(); for (const [x, y, rx, ry] of cl) { g.moveTo(x + rx, y); g.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); }
     g.stroke(); g.fillStyle = leaf[1]; g.fill();
+    g.save(); g.clip();
     g.fillStyle = leaf[0];
-    g.beginPath(); g.ellipse(32, 24, 21, 16, 0, 0, Math.PI * 2); g.ellipse(19, 31, 11, 9, 0, 0, Math.PI * 2); g.ellipse(45, 31, 11, 9, 0, 0, Math.PI * 2); g.fill();
+    g.beginPath(); for (const [x, y, rx, ry] of cl) { g.moveTo(x + rx * 0.82, y - ry * 0.18); g.ellipse(x - rx * 0.06, y - ry * 0.18, rx * 0.82, ry * 0.74, 0, 0, Math.PI * 2); } g.fill();
     g.fillStyle = leaf[2];
-    g.beginPath(); g.ellipse(26, 17, 9, 5, -0.4, 0, Math.PI * 2); g.ellipse(14, 28, 4, 3, -0.4, 0, Math.PI * 2); g.fill();
+    g.beginPath(); for (const [x, y, rx, ry] of cl.slice(0, 3).concat(cl.slice(6))) { g.moveTo(x - rx * 0.1 + rx * 0.42, y - ry * 0.45); g.ellipse(x - rx * 0.1, y - ry * 0.45, rx * 0.42, ry * 0.3, -0.3, 0, Math.PI * 2); } g.fill();
+    // 잎 결: 작은 반달 무늬
+    g.strokeStyle = 'rgba(40,70,30,0.22)'; g.lineWidth = 1;
+    for (let k = 0; k < 14; k++) { const x = 14 + (k * 29) % 38, y = 14 + (k * 17) % 30; g.beginPath(); g.arc(x, y, 2.4, 0.2, Math.PI - 0.2); g.stroke(); }
+    g.restore();
+    P.shade(g, 0, 4, 64, 50, { hi: 0.16, lo: 0.2 });
     if (kind === 'fruit') for (const [x, y] of [[22, 30], [38, 22], [44, 36], [30, 38]]) { P.blob(g, x, y, 3.6, 3.6, '#c97b3a', C.line, 1.2); P.blob(g, x, y - 3, 3.6, 1.6, '#7a5230'); }
     if (pal.blossom) for (let k = 0; k < 9; k++) P.blob(g, 14 + (k * 37) % 36, 14 + (k * 23) % 28, 2.4, 2.4, pal.blossom);
     if (season === 'winter') for (const [x, y] of [[26, 12], [40, 14], [18, 24]]) P.blob(g, x, y, 7, 3, '#ffffff');
   }
-  A.tree = (kind, season) => A.sprite('tree:' + kind + ':' + season, 64, 80, (g) => drawTree(g, kind, season));
+  A.tree = (kind, season) => A.sprite('tree2:' + kind + ':' + season, 64, 80, (g) => drawTree(g, kind, season));
 
   A.bigOak = (season) => A.sprite('oak:' + season, 112, 128, (g) => {
     const pal = PAL[season];
@@ -295,6 +373,7 @@
     g.fillStyle = leaf[2]; g.beginPath(); g.ellipse(42, 22, 16, 8, -0.3, 0, Math.PI * 2); g.ellipse(80, 34, 8, 5, 0.3, 0, Math.PI * 2); g.fill();
     if (season === 'winter') { g.fillStyle = '#fff'; g.beginPath(); g.ellipse(56, 16, 30, 8, 0, 0, Math.PI * 2); g.ellipse(22, 44, 12, 4, 0, 0, Math.PI * 2); g.ellipse(90, 44, 12, 4, 0, 0, Math.PI * 2); g.fill(); }
     if (pal.blossom) for (let k = 0; k < 18; k++) P.blob(g, 18 + (k * 41) % 78, 16 + (k * 29) % 50, 3, 3, pal.blossom);
+    P.shade(g, 0, 4, 112, 80, { hi: 0.16, lo: 0.2 });
   });
 
   const FLOWER_COL = [['#ff8fb1', '#ffd1e0'], ['#ffd24d', '#fff1a8'], ['#ffffff', '#e7ecff'], ['#9db7ff', '#d6e2ff']];
@@ -314,10 +393,19 @@
     P.blob(g, 16, 20, 13, 9, '#a7b0ba', C.line);
     P.blob(g, 14, 17, 9, 5, '#c5cdd6');
     P.blob(g, 11, 15, 3, 1.6, '#e3e8ee');
+    P.shade(g, 0, 8, 32, 22, { hi: 0.2, lo: 0.25 });
   });
 
   // ---------- 건물 ----------
-  A.building = (kind, season, night) => A.sprite('b:' + kind + ':' + season + ':' + (night ? 1 : 0), 160, 140, (g) => drawBuilding(g, kind, season, night));
+  A.building = (kind, season, night) => A.sprite('b2:' + kind + ':' + season + ':' + (night ? 1 : 0), 160, 140, (g) => { drawBuilding(g, kind, season, night); P.shade(g, 0, 0, 160, 132, { hi: 0.2, lo: 0.16 }); });
+  // 밤에 불 켜지는 창 (그림판 좌표 x, y, w, h, r) — 그레이딩 뒤에 다시 밝게 그린다
+  A.WINDOWS = {
+    post: [[34, 94, 24, 20, 6], [102, 94, 24, 20, 6]], house: [[40, 98, 22, 20, 10], [100, 98, 22, 20, 10]],
+    cabin: [[26, 72, 18, 16, 4], [84, 72, 18, 16, 4]], smallhouse: [[24, 68, 22, 18, 9], [82, 68, 22, 18, 9]],
+    bighouse: [[38, 26, 18, 16, 8], [72, 26, 18, 16, 8], [22, 68, 24, 20, 6], [82, 68, 24, 20, 6]],
+    dreamhouse: [[90, 40, 14, 16, 7], [90, 64, 14, 16, 7], [16, 66, 20, 20, 10], [68, 70, 12, 14, 6]],
+    tent: [[52, 82, 24, 22, 8]], museum: [[66, 100, 28, 36, 14]],
+  };
   function roofSnow(g, x, y, w) { if (A.season !== 'winter') return; P.rrect(g, x, y, w, 7, 4, '#ffffff', '#cbd8ea', 1); }
   function drawBuilding(g, kind, season, night) {
     // 기준: 스프라이트 좌상단 = 부지 좌상단에서 (-16, -44)u. 즉 부지 (0,0) → (16,44)
@@ -481,7 +569,7 @@
     }
   }
   // 소품
-  A.prop = (kind, season, night) => A.sprite('p2:' + kind + ':' + season + ':' + (night ? 1 : 0), 96, 80, (g) => {
+  A.prop = (kind, season, night) => A.sprite('p3:' + kind + ':' + season + ':' + (night ? 1 : 0), 96, 80, (g) => {
     const ox = 16, oy = 48; // 부지 (0,0) → (16,48)
     if (kind === 'lamp') {
       P.shadow(g, ox + 16, oy + 28, 18);
@@ -523,6 +611,7 @@
       P.rrect(g, ox, oy - 14, 32, 18, 4, C.woodL, C.line, 1.5);
       g.fillStyle = C.line; g.fillRect(ox + 6, oy - 8, 20, 2); g.fillRect(ox + 6, oy - 3, 14, 2);
     }
+    P.shade(g, 0, 0, 96, 78, { hi: 0.18, lo: 0.16 });
   });
 
   // ---------- 시간대 그레이딩 (곱하기 1패스) ----------
@@ -555,6 +644,16 @@
     ctx.fillRect(0, 0, w, h);
     ctx.restore();
     return a;
+  };
+  // 화면 가장자리 음영 (그래픽 개선) — 크기별로 한 장 구워 둔다
+  let vig = null;
+  A.vignette = (ctx, w, h, a) => {
+    if (!vig || vig.width !== w || vig.height !== h) {
+      vig = mkCanvas(w, h); const g = vig.getContext('2d');
+      const r = Math.hypot(w, h) / 2, gr = g.createRadialGradient(w / 2, h / 2, r * 0.45, w / 2, h / 2, r);
+      gr.addColorStop(0, 'rgba(40,30,70,0)'); gr.addColorStop(1, 'rgba(40,30,70,1)'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+    }
+    ctx.save(); ctx.globalAlpha = a; ctx.drawImage(vig, 0, 0); ctx.restore();
   };
   // 빛 스프라이트 (lighter)
   A.light = (r, color) => A.sprite('light:' + r + ':' + color, r * 2, r * 2, (g) => {

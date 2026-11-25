@@ -599,6 +599,7 @@
     const cloudy = wx.type === 'clear' ? 0 : wx.type === 'cloudy' ? 0.5 : 1;
     const dark = A.grade(ctx, cv.width, cv.height, hour, cloudy);
     if (dark > 0.25) drawLights(rect, camX, camY, dark, t);
+    A.vignette(ctx, cv.width, cv.height, 0.16 + dark * 0.35);
     // 레이어 8: 감정 팝·말풍선·들어 올린 아이템
     ctx.setTransform(cam.PX, 0, 0, cam.PX, -camX * cam.PX, -camY * cam.PX);
     for (const n of G.npc.list) {
@@ -639,7 +640,7 @@
       const k = o.kind;
       if (k === 'tree' || k === 'pine' || k === 'fruit') {
         const sp = A.tree(k, A.season);
-        R.push({ sy: foot - 6, draw: (c) => drawShaky(c, sp, bx + 16, foot - 6, -32, -74, o) });
+        R.push({ sy: foot - 6, draw: (c) => drawShaky(c, sp, bx + 16, foot - 6, -32, -74, o, 0, 0, 0.08, Math.sin(t * 1.4 + o.tx * 0.8 + o.ty * 0.5) * 0.018) });
       } else if (k === 'bigoak') {
         const sp = A.bigOak(A.season);
         R.push({ sy: foot - 4, draw: (c) => drawShaky(c, sp, bx + 32, foot - 4, -56, -118, o) });
@@ -670,8 +671,9 @@
       }
     }
   }
-  function drawShaky(c, sp, fx, fy, ox, oy, o, w, h, amp = 0.08) {
+  function drawShaky(c, sp, fx, fy, ox, oy, o, w, h, amp = 0.08, sway = 0) {
     w = w || sp.uw; h = h || sp.uh;
+    if (sway && !(o.shakeT > 0)) { c.save(); c.translate(fx, fy); c.transform(1, 0, sway, 1, 0, 0); c.drawImage(sp, ox, oy, w, h); c.restore(); return; }
     if (o.shakeT > 0) {
       c.save(); c.translate(fx, fy); c.rotate(Math.sin(o.shakeT * 40) * amp * o.shakeT); c.drawImage(sp, ox, oy, w, h); c.restore();
     } else c.drawImage(sp, fx + ox, fy + oy, w, h);
@@ -764,9 +766,16 @@
     for (const o of m.objs) {
       if (o.kind === 'lamp') put(o.tx * TILE + 16, o.ty * TILE - 22, 70, 'rgba(255,214,140,0.55)', a * (0.92 + Math.sin(t * 3 + o.i) * 0.04));
       else if (o.kind === 'lantern' && o.n <= G.lantern.count()) put(o.tx * TILE + 16, o.ty * TILE - 26, 90, 'rgba(255,226,140,0.6)', a * (0.9 + Math.sin(t * 2 + o.n) * 0.08));
-      else if (o.kind === 'house' || o.kind === 'post') { put(o.tx * TILE + 30, o.ty * TILE + 24, 34, 'rgba(255,220,150,0.5)', a); put(o.tx * TILE + 98, o.ty * TILE + 24, 34, 'rgba(255,220,150,0.5)', a); }
-      else if (o.kind === 'tent') put(o.tx * TILE + 48, o.ty * TILE + 40, 40, 'rgba(255,210,140,0.4)', a);
     }
+    // 창문 불빛: 건물 창 자리에 따뜻한 빛 번짐 (예전엔 엉뚱한 높이에 작게 떠 있었다)
+    const wins = [];
+    for (const o of m.objs) {
+      const kind = o.kind === 'tent' ? ['tent', 'cabin', 'smallhouse', 'bighouse', 'dreamhouse'][G.nest.st.stage] || 'tent' : o.kind === 'museum' ? (G.museum.isOpen() ? 'museum' : '') : o.kind;
+      const W2 = A.WINDOWS[kind]; if (!W2) continue;
+      const bx = o.tx * TILE - 16, by = o.ty * TILE - 44;
+      for (const [x, y, w, h] of W2) { put(bx + x + w / 2, by + y + h / 2, 30, 'rgba(255,225,150,0.85)', a); put(bx + x + w / 2, by + y + h / 2, 56, 'rgba(255,190,110,0.35)', a); wins.push(1); }
+    }
+    void wins;
     // 반딧불이·별빛나방
     for (const b of G.eco.bugs) if (b.sp.tpl === 'firefly' || b.sp.tpl === 'moth') put(b.x, b.y - (b.alt || 0), 16, 'rgba(220,255,140,0.6)', a * (0.6 + 0.4 * Math.sin(t * 3 + b.seed)));
     // 플레이어 주변 은은한 빛
