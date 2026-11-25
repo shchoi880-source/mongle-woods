@@ -48,7 +48,7 @@
     const W = G.world, m = W.map, door = m.plots.tent.door;
     const farm = new Set((G.farm ? G.farm.st.plots : []).map((p) => p.tx + ',' + p.ty));
     // 안쪽 6×4는 풀·길이고 막는 물체(나무·바위·건물)가 없어야 한다. 꽃은 괜찮다. 바깥 1칸은 물·절벽만 아니면 된다
-    const inner = (x, y) => { const t = W.tile(x, y), o = W.objAtTile(x, y); return (t === G.TERR.GRASS || t === G.TERR.PATH) && !(o && o.solid) && !farm.has(x + ',' + y); };
+    const inner = (x, y) => { const t = W.tile(x, y), o = W.objAtTile(x, y); return (t === G.TERR.GRASS || t === G.TERR.PATH) && !(o && o.solid) && !farm.has(x + ',' + y) && !(G.farm && [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => G.farm.inField(x + a, y + b))); };
     const ok = (x0, y0) => {
       if (Math.abs(x0 + PEN_W / 2 - door.x) < 3 && Math.abs(y0 + PEN_H / 2 - door.y) < 3) return false; // 집 문 바로 앞은 피함
       for (let y = y0; y < y0 + PEN_H; y++) for (let x = x0; x < x0 + PEN_W; x++) if (!inner(x, y)) return false;

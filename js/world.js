@@ -284,7 +284,7 @@
     index() {
       const m = W.map;
       W.objGrid = new Int32Array(m.w * m.h).fill(-1);
-      m.objs.forEach((o, i) => { o.i = i; for (let y = o.ty; y < o.ty + o.h; y++) for (let x = o.tx; x < o.tx + o.w; x++) W.objGrid[y * m.w + x] = i; });
+      m.objs.forEach((o, i) => { o.i = i; if (o.gone) return; for (let y = o.ty; y < o.ty + o.h; y++) for (let x = o.tx; x < o.tx + o.w; x++) W.objGrid[y * m.w + x] = i; });
     },
     tile(tx, ty) { const m = W.map; if (tx < 0 || ty < 0 || tx >= m.w || ty >= m.h) return T.SEA; return m.terr[ty * m.w + tx]; },
     tileAt(x, y) { return W.tile(Math.floor(x / TILE), Math.floor(y / TILE)); },
@@ -294,6 +294,16 @@
       const t = W.tile(tx, ty); if (!WALK.has(t)) return false;
       const o = W.objAtTile(tx, ty); if (o && o.solid) return false;
       return !(G.yard && G.yard.blocked(tx, ty)); // 마당에 놓은 가구
+    },
+    // 자연물(나무·꽃·바위) 치우기 — 밭 구역 등. 지도는 그대로 두고 그 물체만 없는 것으로 (매번 같은 자리라 결정적)
+    clearNatural(x0, y0, w, h) {
+      const m = W.map; if (!m) return 0; let n = 0;
+      for (const o of m.objs) {
+        if (o.gone || !['tree', 'pine', 'fruit', 'flower', 'rock'].includes(o.kind)) continue;
+        if (o.tx < x0 + w && o.tx + o.w > x0 && o.ty < y0 + h && o.ty + o.h > y0) { o.gone = true; n++; }
+      }
+      if (n) W.index();
+      return n;
     },
     // 길 찾기 (타일 BFS, 4방향): 픽셀 (x,y) → 목표 (tx,ty) 근처 설 수 있는 칸까지. 타일 가운데 점 목록 또는 null
     findPath(x, y, tx, ty, max = 9000) {
