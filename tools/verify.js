@@ -4,6 +4,7 @@
 'use strict';
 const path = require('path');
 const fs = require('fs');
+const vm = require('node:vm');
 const ROOT = path.resolve(__dirname, '..');
 const N = +(process.argv[2] || 1000);
 
@@ -12,6 +13,38 @@ for (const f of ['core', 'save', 'firebase-config', 'cloud', 'net', 'time', 'dat
 const G = globalThis.G;
 let fails = 0;
 const ok = (name, cond, detail) => { console.log(`${cond ? '✔' : '✘'} ${name}${detail ? ' — ' + detail : ''}`); if (!cond) fails++; };
+
+// 우편지기 렌더러: 실제 게임이 선택하는 이미지, 방향 행, 보행 열을 확인한다.
+{
+  class PreviewImage {
+    complete = true;
+    naturalWidth = 432;
+  }
+  const art = { C: {}, paint: { shadow() {} } };
+  const moduleG = { art, modules: new Set(), settings: { get() {} } };
+  vm.runInNewContext(fs.readFileSync(path.join(ROOT, 'js', 'actors.js'), 'utf8'), { G: moduleG, Image: PreviewImage });
+  let sample, flip;
+  const ctx = {
+    save() {}, restore() {}, translate() {},
+    scale(x) { flip = x; },
+    drawImage(im, x, y) { sample = [path.basename(im.src), x, y, flip < 0]; },
+  };
+  const render = (look, dir, moving = false, walk = 0) => {
+    art.actor.draw(ctx, { species: 'human', look, x: 0, y: 0, dir, moving, walk }, 0);
+    return sample.join('/');
+  };
+  const male = { illu: 'postkeeper-male' };
+  ok('우편지기: 이전 외형 저장도 새 여자 기본형으로 표시', render({ hair: 4 }, 0) === 'postkeeper-walk.png/0/0/false');
+  ok('우편지기: 옆·뒤 방향과 좌우 반전', render(male, 3) === 'postkeeper-male-walk.png/0/144/false' &&
+    render(male, 1) === 'postkeeper-male-walk.png/0/144/true' && render(male, 2) === 'postkeeper-male-walk.png/0/288/false');
+  ok('우편지기: 걸음마다 두 자세를 교대로 사용', render(male, 2, true, 0.1) === 'postkeeper-male-walk.png/144/288/false' &&
+    render(male, 2, true, 0.6) === 'postkeeper-male-walk.png/288/288/false');
+  for (const name of ['postkeeper-walk.png', 'postkeeper-male-walk.png']) {
+    const data = fs.readFileSync(path.join(ROOT, 'assets', 'chars', 's', name));
+    ok('우편지기: 투명 3×3 그림 파일 ' + name, data.toString('ascii', 12, 16) === 'IHDR' &&
+      data.readUInt32BE(16) === 432 && data.readUInt32BE(20) === 432 && data[25] === 6);
+  }
+}
 
 // V1 데이터 무결성: 필수 필드·ix 중복은 G.data.add가 이미 검사. 여기선 수량과 참조.
 ok('V1 곤충 40종 이상', G.data.all('bugs').length >= 40, String(G.data.all('bugs').length));
