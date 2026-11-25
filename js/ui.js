@@ -26,8 +26,11 @@
     G.on('net:change', () => UI.refreshNet());
     G.on('net:chat', () => showLog());
     // 지금 할 일 (누르면 지도)
+    const gl = $('div', 'hud-goals'); root.append(gl);
     hud.goal = $('button', 'hud-goal'); hud.goal.onclick = () => { press(hud.goal); G.input.emit('map'); };
-    root.append(hud.goal);
+    // 큰 목표 막대 (10차 회의 B) — 누르면 전체 목표
+    hud.big = $('button', 'hud-big'); hud.big.title = '큰 목표'; hud.big.onclick = () => { press(hud.big); G.goals && G.goals.open(); };
+    gl.append(hud.goal, hud.big);
     setInterval(() => UI.refreshGoal(), 1000);
     root.append(top);
     // 오른쪽 아래: 액션·도구
@@ -93,10 +96,26 @@
     if (!hud.goal) return;
     const o = G.map && G.map.objective && G.map.objective();
     const txt = o ? o.text : '';
+    refreshBig();
     if (txt === lastGoal) return; lastGoal = txt;
     hud.goal.innerHTML = txt ? `<span>📌</span>${esc(txt)}` : '';
     hud.goal.classList.toggle('on', !!txt);
   };
+  let lastBig = '';
+  function refreshBig() {
+    if (!hud.big || !G.goals || !G.game || !G.game.started || (G.net && G.net.guest)) { if (hud.big) hud.big.classList.remove('on'); lastBig = ''; return; }
+    const list = G.goals.list(); G.goals.check(list);
+    const g = G.goals.featured(list);
+    const key = g ? `${g.icon}|${g.name}|${(g.pct * 100).toFixed(1)}|${g.ready ? 1 : 0}` : '';
+    if (key === lastBig) return;
+    const grew = g && lastBig.startsWith(`${g.icon}|${g.name}|`) && parseFloat(lastBig.split('|')[2]) < g.pct * 100;
+    lastBig = key;
+    hud.big.classList.toggle('on', !!g); if (!g) return;
+    hud.big.classList.toggle('ready', !!g.ready);
+    hud.big.innerHTML = `<span class="hb-ico">${g.icon}</span><span class="hb-main"><span class="hb-name"></span><span class="gbar"><i style="width:${(g.pct * 100).toFixed(1)}%"></i></span></span><span class="hb-pct">${g.ready ? '✨' : Math.floor(g.pct * 100) + '%'}</span>`;
+    hud.big.querySelector('.hb-name').textContent = g.name;
+    if (grew) bump(hud.big);
+  }
   UI.refreshHud = () => {
     if (!G.time || !hud.time) return;
     const l = G.time.label(), w = G.weather.now();
@@ -685,6 +704,7 @@
   }
 
   function todoPane(pane) {
+    if (G.goals) { const gb = $('button', 'btn small', '🎯 큰 목표 한눈에 보기'); gb.onclick = () => { G.ui.open.close(); setTimeout(() => G.goals.open(), 50); }; pane.append(gb); }
     // 등불 (메타 목표)
     const lit = G.lantern.count(), next = lit + 1;
     pane.append($('div', 'pane-head', lit >= 10 ? '<span>🏮 등불 10/10 — 큰솜이가 깨어났어요!</span>' : `<span>🏮 등불 ${lit}/10 — 다음: ${next}번 기둥</span>`));
