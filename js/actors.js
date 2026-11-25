@@ -58,10 +58,10 @@
   const PK = A.PK = {
     // 유료 머리 8종(오너, 2026-11): 색이 정해진 그림이라 머리 색 칸은 숨김(fixed). 땅굴상점 옷 코너에서 산다
     heads: [['female-wavy', '웨이브'], ['female-bob', '단발'], ['female-bun', '똥머리'], ['male-curly', '곱슬'], ['male-side-part', '옆가르마'], ['male-tousled', '부스스'],
-      ['female-high-ponytail', '하이 포니테일', { fixed: 1, lock: 'shop', price: 9000 }], ['female-space-buns', '양 똥머리', { fixed: 1, lock: 'shop', price: 9000 }],
-      ['female-straight-long', '긴 생머리', { fixed: 1, lock: 'shop', price: 8000 }], ['female-twin-braids', '양갈래 땋은 머리', { fixed: 1, lock: 'shop', price: 10000 }],
-      ['male-buzz-cut', '까까머리', { fixed: 1, lock: 'shop', price: 6000 }], ['male-mullet', '울프컷', { fixed: 1, lock: 'shop', price: 9000 }],
-      ['male-pompadour', '올백', { fixed: 1, lock: 'shop', price: 10000 }], ['male-topknot', '꽁지머리', { fixed: 1, lock: 'shop', price: 8000 }]],
+      ['female-high-ponytail', '하이 포니테일', { fixed: 1, lock: 'shop', price: 5000 }], ['female-space-buns', '양 똥머리', { fixed: 1, lock: 'shop', price: 5000 }],
+      ['female-straight-long', '긴 생머리', { fixed: 1, lock: 'shop', price: 4500 }], ['female-twin-braids', '양갈래 땋은 머리', { fixed: 1, lock: 'shop', price: 6000 }],
+      ['male-buzz-cut', '까까머리', { fixed: 1, lock: 'shop', price: 3000 }], ['male-mullet', '울프컷', { fixed: 1, lock: 'shop', price: 5000 }],
+      ['male-pompadour', '올백', { fixed: 1, lock: 'shop', price: 6000 }], ['male-topknot', '꽁지머리', { fixed: 1, lock: 'shop', price: 4500 }]],
     // [이름, 표시, 열기 조건] — g: 여·남 머리에 맞춘 그림이 따로 있음, f: 그림 파일 이름, lock: 'shop'(땅굴상점 옷 코너) 또는 'hatNN'(축제)
     bodies: [['overalls', '멜빵바지'], ['cardigan', '가디건'], ['dress', '꽃 원피스', { f: 'female-dress', only: 'female', lock: 'shop', price: 6000 }], ['onepiece', '멜빵 반바지', { f: 'male-onepiece', only: 'male', lock: 'shop', price: 5000 }], ['raincoat', '노란 우비', { g: 1, lock: 'shop', price: 7000 }], ['pajamas', '별 잠옷', { g: 1, lock: 'shop', price: 4500 }]],
     accs: [['', '없음'], ['postal-cap', '우편 모자'], ['round-glasses', '동그란 안경'], ['hair-bow', '머리 리본']],
