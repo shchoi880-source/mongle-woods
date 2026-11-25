@@ -34,13 +34,6 @@
     def: () => ({ skin: 0, hair: 0, hairC: 0, shirt: 0, eyes: 0, mouth: 0, cheek: 0, outfit: 0, shirt2: 5, shoes: 0, hat: 0, hatC: 8, glasses: 0 }),
   };
 
-  // 머리카락 윤기 (그래픽 개선): 앞머리 위에 흰 반달 빛
-  P.hairShine = (ctx, L, side, back) => {
-    if ((L.hair | 0) === 7) return;
-    ctx.save(); ctx.globalAlpha = back ? 0.22 : 0.32; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.6; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.arc(side ? 1 : -2, back ? -1 : -4, 9, Math.PI * 1.15, Math.PI * 1.45); ctx.stroke(); ctx.restore();
-  };
-  const HEAD = 1.3;
   // 종별 프리셋
   const SPECIES = {
     human: {},
@@ -107,7 +100,6 @@
       if (a.species === 'human' && (L.outfit | 0) === 2) { ctx.fillStyle = bodyC; ctx.strokeStyle = LINE; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-7, -12); ctx.lineTo(-12, -2); ctx.quadraticCurveTo(0, 1.5, 12, -2); ctx.lineTo(7, -12); ctx.closePath(); ctx.fill(); ctx.stroke(); } // 원피스 치마
       P.blob(ctx, 0, -11, 9, 9.5, bodyC, LINE, 1.5);
       if (a.species === 'human') this.outfit(ctx, L, side, back, bodyC);
-      P.vol(ctx, 0, -11, 9, 9.5, 0.35);
       if (a.species === 'hedgehog') P.rrect(ctx, -6, -14, 12, 11, 3, '#fff7e8', LINE, 1); // 앞치마
       if ((a.species === 'otter' || a.species === 'squirrel' || a.species === 'penguin' || a.species === 'bear' || a.species === 'hamster') && !back) P.blob(ctx, side ? -2 : 0, -10, a.species === 'penguin' ? 7 : 5.5, a.species === 'penguin' ? 8 : 6.5, sp.belly);
       if (L.scarf) P.rrect(ctx, -8, -19.5, 16, 4.5, 2, L.scarf, LINE, 1);
@@ -125,9 +117,8 @@
       if (a.tool && a.tool !== 'hand') this.tool(ctx, a, t, side, back);
       // 머리
       ctx.save();
-      ctx.translate(0, -31);
+      ctx.translate(0, -29);
       const tilt = a.tilt || 0; ctx.rotate(tilt);
-      ctx.scale(HEAD, HEAD); // 그래픽 개선: 머리를 크게 (귀여운 2등신)
       this.head(ctx, a, sp, L, side, back, t);
       ctx.restore();
       ctx.restore();
@@ -192,31 +183,25 @@
       if (a.species === 'sheep') { P.blob(ctx, side ? -3 : 0, 3, 9, 8, sp.face); for (let k = 0; k < 7; k++) P.blob(ctx, -10 + k * 3.3, -9 - Math.sin(k * 0.9) * 2, 4, 4, sp.fur, LINE, 1); }
       if (a.species === 'tortoise' && !back) { ctx.strokeStyle = '#6b5a4a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(-5, 0.5, 3.6, 0, Math.PI * 2); if (!side) ctx.arc(5, 0.5, 3.6, 0, Math.PI * 2); ctx.stroke(); P.rrect(ctx, -9, 9, 18, 3, 1.5, '#ffffff'); }
       if (a.species === 'cat' && !back) { ctx.fillStyle = sp.furD; ctx.beginPath(); ctx.moveTo(-3, -11); ctx.lineTo(0, -6); ctx.lineTo(3, -11); ctx.fill(); }
-      P.vol(ctx, 0, 0, 13, 12, 0.3);
       // 사람 머리카락
-      if (a.species === 'human') { this.hair(ctx, L, side, back); P.hairShine(ctx, L, side, back); this.hat(ctx, L, side, back); }
+      if (a.species === 'human') { this.hair(ctx, L, side, back); this.hat(ctx, L, side, back); }
       if (back) { if (a.species === 'mole' && L.band) P.rrect(ctx, -12, -8, 24, 4, 2, L.band); return; }
       // 얼굴
-      const ex = side ? [-6.6] : [-6, 6];
+      const ex = side ? [-6] : [-5, 5];
       const blink = this.blink(a, t);
-      ctx.save(); ctx.translate(0, 1.4); // 눈은 얼굴 조금 아래로
       const es = a.species === 'human' ? L.eyes | 0 : 0;
       for (const x of ex) {
         const eh = a.species === 'mole' ? 1.4 : 3.1;
         if (es && !a.sleep && this.eye(ctx, es, x, blink)) continue;
         if (a.sleep || blink < 0.2) { ctx.strokeStyle = LINE; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(x - 2, 1); ctx.quadraticCurveTo(x, 2.4, x + 2, 1); ctx.stroke(); }
         else {
-          // 그래픽 개선: 반짝이는 눈 (아래쪽이 밝은 눈동자 + 큰·작은 빛)
-          // 이모티콘풍(오너 참고 그림): 작고 동그란 점 눈 + 작은 빛 하나
-          if (a.species !== 'mole') { P.blob(ctx, x, 1, 1.9, 2.2 * blink, '#2a2226'); if (blink > 0.6) P.blob(ctx, x - 0.6, 0.2, 0.6, 0.6, '#ffffff'); }
-          else P.blob(ctx, x, 0.5, 2.3, eh * blink, '#2d2430');
+          P.blob(ctx, x, 0.5, 2.3, eh * blink, '#2d2430');
+          if (a.species !== 'mole') { P.blob(ctx, x - 0.7, -0.8, 0.9, 0.9, '#ffffff'); P.blob(ctx, x + 0.8, 1.6, 0.45, 0.45, '#ffffff'); }
         }
       }
-      if (a.species === 'human' && L.glasses) { this.glasses(ctx, L.glasses | 0, side); L._gl = 1; } else L._gl = 0;
-      ctx.restore();
       // 볼
       const ck = a.species === 'human' ? L.cheek | 0 : 0;
-      if (ck === 0 || ck === 3 || ck === 4) { for (const x of side ? [-8.4] : [-8.6, 8.6]) { const r = ck === 3 ? 4 : 3.2, gr = ctx.createRadialGradient(x, 5.6, 0, x, 5.6, r); gr.addColorStop(0, `rgba(255,140,170,${ck === 3 ? 0.85 : 0.7})`); gr.addColorStop(1, 'rgba(255,140,170,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.ellipse(x, 5.6, r, r * 0.7, 0, 0, Math.PI * 2); ctx.fill(); } }
+      if (ck === 0 || ck === 3 || ck === 4) { ctx.globalAlpha = ck === 3 ? 0.75 : 0.55; for (const x of side ? [-8] : [-8, 8]) P.blob(ctx, x, 5, ck === 3 ? 3.8 : 2.8, ck === 3 ? 2.4 : 1.8, '#ff9fb4'); ctx.globalAlpha = 1; }
       if (ck === 2) for (const x of side ? [-8] : [-8, 8]) for (const [dx, dy] of [[-1.5, 4], [1, 3.6], [0, 5.6]]) P.blob(ctx, x + dx, dy, 0.55, 0.55, '#b9785a');
       if (ck === 4 && !side) { ctx.save(); ctx.translate(8, 4.5); ctx.rotate(-0.4); P.rrect(ctx, -3.5, -1.3, 7, 2.6, 1, '#ffe9c4', LINE, 0.7); ctx.restore(); }
       // 코·입
@@ -233,19 +218,19 @@
         ctx.stroke();
       }
       if (a.species === 'penguin') { if (a.species === 'mole' && L.band) P.rrect(ctx, -12, -8, 24, 4, 2, L.band, LINE, 1); if (L.bow) { P.blob(ctx, -4, 12.5, 3.5, 2.4, L.bow, LINE, 1); P.blob(ctx, 4, 12.5, 3.5, 2.4, L.bow, LINE, 1); P.blob(ctx, 0, 12.5, 1.6, 1.6, L.bow, LINE, 1); } return; }
-      ctx.strokeStyle = '#3a2a2e'; ctx.lineWidth = 1.15; ctx.lineCap = 'round'; ctx.beginPath();
+      ctx.strokeStyle = LINE; ctx.lineWidth = 1.2; ctx.beginPath();
       const mx = side ? -8 : 0;
       const mo = a.species === 'human' ? L.mouth | 0 : 0;
       if (a.mouth === 'o' || mo === 4) { ctx.ellipse(mx, 7, 1.4, 1.6, 0, 0, Math.PI * 2); }
       else if (mo === 1) { ctx.moveTo(mx - 2.4, 6); ctx.quadraticCurveTo(mx, 8.6, mx + 2.4, 6); }
       else if (mo === 2) { ctx.moveTo(mx - 2.6, 6); ctx.quadraticCurveTo(mx - 1.3, 8, mx, 6.4); ctx.quadraticCurveTo(mx + 1.3, 8, mx + 2.6, 6); }
       else if (mo === 3) { ctx.stroke(); ctx.beginPath(); ctx.moveTo(mx - 2.6, 5.8); ctx.quadraticCurveTo(mx, 10.5, mx + 2.6, 5.8); ctx.closePath(); ctx.fillStyle = '#d9536a'; ctx.fill(); }
-      else if (a.species === 'human') { ctx.moveTo(mx - 1.7, 6.3); ctx.quadraticCurveTo(mx, 8, mx + 1.7, 6.3); }
       else { ctx.moveTo(mx - 1.8, 6.4); ctx.quadraticCurveTo(mx - 0.9, 7.6, mx, 6.6); ctx.quadraticCurveTo(mx + 0.9, 7.6, mx + 1.8, 6.4); }
       ctx.stroke();
       if (a.species === 'mole' && L.band) P.rrect(ctx, -12, -8, 24, 4, 2, L.band, LINE, 1);
       if (a.species === 'mole' && L.ribbon) { P.blob(ctx, 8, -10, 3.5, 2.5, L.ribbon, LINE, 1); P.blob(ctx, 13, -10, 3.5, 2.5, L.ribbon, LINE, 1); }
       if (a.species === 'hedgehog') { ctx.strokeStyle = '#7a6a5a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(-5, 0.5, 3.4, 0, Math.PI * 2); if (!side) ctx.arc(5, 0.5, 3.4, 0, Math.PI * 2); ctx.stroke(); }
+      if (a.species === 'human' && L.glasses) this.glasses(ctx, L.glasses | 0, side);
     },
     // 사람 눈 모양 (0 = 기본은 위에서 그림). true를 돌려주면 기본 눈을 그리지 않는다
     eye(ctx, es, x, blink) {

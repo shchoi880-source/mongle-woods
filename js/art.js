@@ -52,7 +52,7 @@
     const h = fill.length === 4 ? fill.slice(1).split('').map((c) => c + c).join('') : fill.slice(1), n = parseInt(h, 16);
     const r = n >> 16, gg = (n >> 8) & 255, b = n & 255;
     // 어둡게 + 살짝 보랏빛 갈색 쪽으로
-    const mix = (c, t) => Math.round(c * 0.32 + t * 0.22);
+    const mix = (c, t) => Math.round(c * 0.5 + t * 0.18);
     v = `rgb(${mix(r, 90)},${mix(gg, 60)},${mix(b, 80)})`; lineCache.set(fill, v); return v;
   };
   const ink = (line, fill) => (line === C.line ? A.inkOf(fill) : line);
