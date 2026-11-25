@@ -234,7 +234,9 @@ input, select, textarea { font: inherit; color: var(--ink); }
 .book p { margin: 4px 0; }
 
 /* ---- 지도·지금 할 일 ---- */
-.hud-goal { position: absolute; top: calc(70px + var(--safe-t)); left: calc(10px + var(--safe-l)); max-width: min(78vw, 420px); background: rgba(255,250,241,.94); border-radius: 14px; padding: 6px 12px; box-shadow: var(--shadow); font-size: 13px; text-align: left; display: none; gap: 6px; align-items: center; line-height: 1.35; word-break: keep-all; }
+.hud-goals { position: absolute; top: calc(70px + var(--safe-t)); left: calc(10px + var(--safe-l)); display: flex; flex-direction: column; align-items: flex-start; gap: 6px; max-width: min(78vw, 420px); opacity: 0; transition: opacity .3s; pointer-events: none; }
+.hud-on .hud-goals { opacity: 1; } .hud-goals > * { pointer-events: auto; }
+.hud-goal { max-width: 100%; background: rgba(255,250,241,.94); border-radius: 14px; padding: 6px 12px; box-shadow: var(--shadow); font-size: 13px; text-align: left; display: none; gap: 6px; align-items: center; line-height: 1.35; word-break: keep-all; }
 .hud-on .hud-goal.on { display: flex; } .hud-goal span { flex: none; }
 .btn-map { margin-left: 2px; }
 .hud-top .hud-money { margin-left: auto; }
@@ -348,3 +350,22 @@ input, select, textarea { font: inherit; color: var(--ink); }
 @keyframes popspin { 0% { transform: scale(.2) rotate(-25deg); } 70% { transform: scale(1.25) rotate(8deg); } 100% { transform: scale(1) rotate(0); } }
 .itempop.rare { animation: popin .4s cubic-bezier(.3,1.7,.5,1), rareglow 1.2s ease-in-out .4s 2; }
 @keyframes rareglow { 50% { box-shadow: 0 0 0 5px #ffe066, 0 0 34px rgba(255,210,80,.8); } }
+
+/* 큰 목표 막대 (10차 회의 B) */
+.hud-big { display: none; align-items: center; gap: 7px; background: rgba(255,250,241,.94); border-radius: 14px; padding: 5px 10px 5px 8px; box-shadow: var(--shadow); font-size: 12px; width: min(62vw, 230px); text-align: left; }
+.hud-on .hud-big.on { display: flex; }
+.hud-big .hb-ico { font-size: 17px; flex: none; }
+.hud-big .hb-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.hud-big .hb-name { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hud-big .hb-pct { flex: none; font-weight: 800; color: #b5762a; min-width: 32px; text-align: right; }
+.hud-big.ready { box-shadow: 0 0 0 2px #ffd36b, var(--shadow); animation: bigready 1.6s ease-in-out infinite; }
+@keyframes bigready { 50% { box-shadow: 0 0 0 4px #ffe599, 0 0 16px rgba(255,200,80,.7); } }
+.gbar { display: block; height: 7px; border-radius: 6px; background: #eadbc4; overflow: hidden; }
+.gbar i { display: block; height: 100%; border-radius: 6px; background: linear-gradient(90deg, #ffcf6b, #ff9e57); transition: width .6s cubic-bezier(.3,1.4,.5,1); }
+.goalrow { background: #fff8ec; border-radius: 14px; padding: 10px 12px; margin-bottom: 8px; display: flex; flex-direction: column; gap: 5px; }
+.goalrow .gr-top { display: flex; justify-content: space-between; font-size: 14px; }
+.goalrow .gr-top span { font-weight: 800; color: #b5762a; }
+.goalrow .gbar { height: 10px; }
+.goalrow.done .gbar i { background: linear-gradient(90deg, #9fdc7c, #5bbf6a); }
+.goalrow.ready { box-shadow: 0 0 0 2px #ffd36b; }
+.goalrow .btn { align-self: flex-end; }
