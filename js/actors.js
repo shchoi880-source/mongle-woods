@@ -59,6 +59,14 @@
     heads: [['female-wavy', '웨이브'], ['female-bob', '단발'], ['female-bun', '똥머리'], ['male-curly', '곱슬'], ['male-side-part', '옆가르마'], ['male-tousled', '부스스']],
     bodies: [['overalls', '멜빵바지'], ['cardigan', '가디건']],
     accs: [['', '없음'], ['postal-cap', '우편 모자'], ['round-glasses', '동그란 안경'], ['hair-bow', '머리 리본']],
+    // 부위(슬롯) — 부위마다 하나씩 동시에 쓴다 (오너: 모자+안경 같이). 그리는 순서: 옷 → 머리 → 목 → 입 → 얼굴 → 머리 위
+    // 새 부품은 assets/chars/parts/accessory-<이름>.webp 를 올리고 여기 목록에 한 줄 넣으면 된다
+    slots: [
+      { k: 'neck', name: '🧣 목', cname: '목도리 색', items: [] },
+      { k: 'mouth', name: '😷 입·얼굴 아래', cname: '마스크 색', items: [] },
+      { k: 'face', name: '👓 얼굴 (안경)', cname: '안경 색', items: [['round-glasses', '동그란 안경']] },
+      { k: 'hat', name: '🎩 머리 장식 (모자·리본)', cname: '모자·리본 색', items: [['postal-cap', '우편 모자'], ['hair-bow', '머리 리본']] },
+    ],
     // [이름, 색상(도), 채도(절대값, null = 원래 × 배), 밝기 배수, 보여 줄 색]
     hair: [['원래', null, 1, 1, '#8a4a28'], ['검정', 260, 0.12, 0.42, '#2f2a30'], ['초코', 18, 0.55, 0.72, '#5a3424'], ['금발', 42, 0.7, 1.6, '#e8c060'], ['분홍', 340, 0.6, 1.5, '#f2a0bc'], ['민트', 165, 0.45, 1.45, '#8fd8c0'], ['라벤더', 268, 0.4, 1.45, '#b8a0e0'], ['은빛', 220, 0.1, 1.55, '#c8ccd8'], ['빨강', 4, 0.7, 1.05, '#c0402c'], ['하늘', 205, 0.55, 1.45, '#8cc0ec']],
     cloth: [['원래', null, 1, 1, ''], ['분홍', 340, 0.6, 1.05, '#f0a0b8'], ['하늘', 205, 0.55, 1.05, '#8cc4ec'], ['민트', 160, 0.45, 1, '#88d4b8'], ['노랑', 46, 0.75, 1.1, '#f0d060'], ['보라', 268, 0.45, 1, '#b098dc'], ['빨강', 4, 0.65, 0.95, '#d05040'], ['남색', 228, 0.45, 0.7, '#3c4c80'], ['초록', 105, 0.4, 0.9, '#78a858'], ['크림', 38, 0.35, 1.35, '#f0e0c0']],
@@ -96,10 +104,20 @@
     } catch (e) { return im; }
     cv.naturalWidth = cv.width; partCache.set(key, cv); return cv;
   };
+  // 옛 저장(소품 한 칸 acc)을 부위로 옮긴다
+  A.pkFix = (pk) => {
+    if (pk && pk.acc !== undefined) {
+      const s = PK.slots.find((x) => x.items.some((it) => it[0] === pk.acc));
+      if (s && pk[s.k] === undefined) { pk[s.k] = pk.acc; pk[s.k + 'C'] = pk.ac || 0; }
+      delete pk.acc; delete pk.ac;
+    }
+    return pk;
+  };
   A.pkLayers = (pk) => {
+    A.pkFix(pk);
     const out = [A.pkPart('outfit', pk.body || 'overalls', pk.bc), A.pkPart('head', pk.head || 'female-wavy', pk.hc)];
     if (out.some((x) => !x)) return null;
-    if (pk.acc) { const a = A.pkPart('accessory', pk.acc, pk.ac); if (a) out.push(a); }
+    for (const s of PK.slots) if (pk[s.k]) { const a = A.pkPart('accessory', pk[s.k], pk[s.k + 'C']); if (a) out.push(a); }
     return out;
   };
 
@@ -125,17 +143,21 @@
     ctx.translate(0, -hop - lift);
     ctx.scale((a.dir === 1 ? -1 : 1) * (1 + squash * 0.5), 1 + breath - squash);
     if (a.sleep) ctx.globalAlpha *= 0.92;
-    // 도구: 손 자리에서 바깥쪽으로 들고 있다 (예전엔 얼굴 앞을 가렸다). 뒤를 보면 몸 뒤에
+    // 도구 (오너: 도끼를 왜 저렇게 들고 있냐): 평소엔 등에 메고(어깨 너머로 머리만 보임), 쓸 때만 손에 들고 휘두른다
     const hasTool = a.tool && a.tool !== 'hand';
+    const using = (a.swing || 0) > 0 || (a.kind === 'player' && G.fishing && G.fishing.state && G.fishing.state !== 'idle');
     const tool = () => {
-      const [hx, hy, ex] = back ? [-12, -31, 0.15] : side ? [9, -30, 0.95] : [13, -31, 1.05];
-      ctx.save(); ctx.translate(hx, hy); ctx.scale(1.1, 1.1); ctx.rotate(ex); ctx.translate(-9, 10);
-      A.actor.tool(ctx, a, t, false, false); ctx.restore();
+      ctx.save();
+      if (using) { const [hx, hy, ex] = side ? [7, -29, 0.5] : [9, -29, 0.55]; ctx.translate(hx, hy); ctx.rotate(ex); }
+      else { ctx.translate(back ? -6 : -8, back ? -12 : -14); ctx.rotate(0.22); ctx.scale(0.95, 0.95); } // 도구 그림 자체가 -0.6 기울어 있어 최종 각도는 왼쪽 위로 약 20도
+      ctx.translate(-9, 10); A.actor.tool(ctx, using ? a : { tool: a.tool, swing: 0 }, t, false, false); ctx.restore();
     };
-    if (hasTool && back) tool();
+    // 등에 멘 도구는 몸 뒤(뒷모습일 땐 앞), 쓰는 도구는 몸 앞(뒷모습일 땐 뒤)
+    const toolBehind = using ? back : !back;
+    if (hasTool && toolBehind) tool();
     // 아틀라스에서 발바닥이 셀 바닥보다 6px 위에 등록되어 있다.
     for (const L of ims) ctx.drawImage(L, col * size, row * size, size, size, -height / 2, -height + 3, height, height);
-    if (hasTool && !back) tool();
+    if (hasTool && !toolBehind) tool();
     ctx.restore();
   }
   // 일러스트로 그리기: 정면 그림 하나를 통통 튀기고, 왼쪽을 보면 뒤집는다

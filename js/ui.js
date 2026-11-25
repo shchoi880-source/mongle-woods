@@ -433,14 +433,21 @@
     const preload = () => { G.art.pkLayers(look.pk); setTimeout(() => G.art.pkLayers(look.pk), 200); };
     function drawBuilder() {
       builder.innerHTML = ''; builder.style.display = look.pk ? '' : 'none'; if (!look.pk) return;
-      builder.append(row('머리 모양', PK.heads, 'head'), row('머리 색', PK.hair, 'hc', true), row('옷', PK.bodies, 'body'), row('옷 색', PK.cloth, 'bc', true), row('소품', PK.accs, 'acc'));
-      if (look.pk.acc) builder.append(row('소품 색', PK.cloth, 'ac', true));
+      G.art.pkFix(look.pk);
+      builder.append(row('머리 모양', PK.heads, 'head'), row('머리 색', PK.hair, 'hc', true), row('옷', PK.bodies, 'body'), row('옷 색', PK.cloth, 'bc', true));
+      // 부위마다 하나씩 (모자 + 안경 같이 쓰기). 아직 부품이 없는 부위는 감춘다
+      for (const s of PK.slots.slice().reverse()) {
+        if (!s.items.length) continue;
+        if (look.pk[s.k] === undefined) look.pk[s.k] = '';
+        builder.append(row(s.name, [['', '없음']].concat(s.items), s.k));
+        if (look.pk[s.k]) builder.append(row(s.cname, PK.cloth, s.k + 'C', true));
+      }
     }
     for (const [id, label] of options) {
       if (id !== 'custom') G.art.loadPostkeeper(id);
       const b = $('button', 'tab', label);
       b.onclick = () => {
-        if (id === 'custom') { look.pk = look.pk || { head: look.illu === 'postkeeper-male' ? 'male-curly' : 'female-wavy', body: 'overalls', acc: 'postal-cap', hc: 0, bc: 0, ac: 0 }; preload(); }
+        if (id === 'custom') { look.pk = look.pk || { head: look.illu === 'postkeeper-male' ? 'male-curly' : 'female-wavy', body: 'overalls', hat: 'postal-cap', face: '', hc: 0, bc: 0, hatC: 0, faceC: 0 }; preload(); }
         else { delete look.pk; look.illu = id; }
         G.audio.sfx('tap');
         update();
