@@ -1,4 +1,4 @@
-// 묶음 3: 텃밭(농사) — 집 옆 6칸(집 단계마다 +3), 계절 작물 12종, 물 주기(비·눈 오는 날은 자동), 수확·거대 작물, 요리 8종
+// 묶음 3: 텃밭(농사) — 밭 구역 10×6(D23), 계절 작물 23종(그림은 cropart.js), 물 주기(비·눈 오는 날은 자동), 수확·거대 작물, 요리 8종
 // 원칙: 벌 없음 — 물을 깜빡해도 시들지 않고 그동안 자라지 않을 뿐
 // 시간(2026-11 개편): grow 1 = 마을 4시간(실제 4분). 물은 한 번 주면 마을 12시간(실제 12분) 촉촉. 비·눈이 오면 저절로 촉촉
 (function (G) {
@@ -19,6 +19,18 @@
     { id: 'pumpkin', ix: 9, name: '호박', season: 'autumn', grow: 5, seed: 160, val: 560, col: ['#ff9a3a', '#5aa548'] },
     { id: 'sweet_potato', ix: 10, name: '고구마', season: 'autumn', grow: 4, seed: 100, val: 320, col: ['#b0507a', '#7cc35a'] },
     { id: 'wheat', ix: 11, name: '밀', season: 'autumn', grow: 3, seed: 60, val: 180, col: ['#e8c45a', '#c9b45a'] },
+    // 2026-11 오너: "씨앗 종류가 부족하다" → 11종 추가 (ix는 끝에만)
+    { id: 'lettuce', ix: 12, name: '상추', season: 'spring', grow: 2, seed: 50, val: 150, col: ['#9ad66e', '#6cbf4e'] },
+    { id: 'pea', ix: 13, name: '완두콩', season: 'spring', grow: 4, seed: 90, val: 300, col: ['#7cc35a', '#5aa548'] },
+    { id: 'onion', ix: 14, name: '양파', season: 'spring', grow: 4, seed: 80, val: 270, col: ['#e8b86a', '#7cc35a'] },
+    { id: 'pepper', ix: 15, name: '고추', season: 'summer', grow: 4, seed: 90, val: 300, col: ['#e8402c', '#5aa548'] },
+    { id: 'eggplant', ix: 16, name: '가지', season: 'summer', grow: 5, seed: 120, val: 400, col: ['#6a3a8a', '#5aa548'] },
+    { id: 'cucumber', ix: 17, name: '오이', season: 'summer', grow: 3, seed: 70, val: 230, col: ['#4e9e4a', '#7cc35a'] },
+    { id: 'sunflower', ix: 18, name: '해바라기', season: 'summer', grow: 6, seed: 180, val: 700, col: ['#ffd23a', '#5aa548'] },
+    { id: 'peanut', ix: 19, name: '땅콩', season: 'autumn', grow: 4, seed: 90, val: 290, col: ['#d9a868', '#7cc35a'] },
+    { id: 'broccoli', ix: 20, name: '브로콜리', season: 'autumn', grow: 5, seed: 130, val: 460, col: ['#3f8a3a', '#7cc35a'] },
+    { id: 'garlic', ix: 21, name: '마늘', season: 'winter', grow: 4, seed: 90, val: 300, col: ['#f6efe4', '#7cc35a'] },
+    { id: 'green_onion', ix: 22, name: '대파', season: 'winter', grow: 3, seed: 60, val: 200, col: ['#f4f8ec', '#4e9e4a'] },
   ]);
   const items = [];
   for (const c of D.all('crops')) {
