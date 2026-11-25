@@ -42,39 +42,49 @@
   function characterImage(src) {
     if (typeof Image === 'undefined') return null;
     let im = illu.get(src);
-    if (!im) { im = new Image(); im.decoding = 'async'; im.src = src; illu.set(src, im); }
-    return im.complete && im.naturalWidth ? im : null;
+    if (!im) { im = new Image(); im.decoding = 'async'; im.onerror = () => { im.missing = true; }; im.src = src; illu.set(src, im); }
+    return !im.missing && im.complete && im.naturalWidth ? im : null;
   }
+  // 이웃 걷기 그림 (우편지기와 같은 3×3 시트: 줄 = 정면·오른쪽·뒷면, 칸 = 서기·왼발·오른발).
+  // assets/chars/s/<id>-walk.png 를 올리면 코드 수정 없이 그 이웃은 발을 떼며 걷는다. 없으면 정면 그림으로
+  A.walkSheet = (id) => (ILLU.includes(id) && G.settings.get('illu') !== false ? characterImage(`assets/chars/s/${id}-walk.png`) : null);
+  const WALK_H = { rabbit: 78, hedgehog: 70, human: 72 };
   A.charImg = (id) => ILLU.includes(id) && G.settings.get('illu') !== false ? characterImage(A.illuURL(id)) : null;
   A.postkeeperId = (look) => look && look.illu === 'postkeeper-male' ? 'postkeeper-male' : 'postkeeper';
   A.loadPostkeeper = (id) => characterImage(`assets/chars/s/${id}-walk.png`);
 
   // 각 행은 정면·오른쪽·뒷면, 각 열은 서기·왼발·오른발이다.
   const WALK_FRAMES = [1, 0, 2, 0];
-  function drawPostkeeper(ctx, a, im, t) {
+  function drawPostkeeper(ctx, a, im, t, H) {
     const side = a.dir === 1 || a.dir === 3;
     const back = a.dir === 2;
     const row = back ? 2 : side ? 1 : 0;
     const phase = a.walk || 0;
     const col = a.moving ? WALK_FRAMES[Math.floor(phase * 4) % 4] : 0;
     const size = im.naturalWidth / 3;
-    const height = 72;
+    const height = H || 72;
     const hop = a.hop || 0;
     const squash = a.squash || 0;
     const breath = a.moving ? 0 : Math.sin(t * 2.4 + (a.seed || 0)) * 0.012;
+    // 걸음 위아래 (오너: 이동이 부자연스럽다): 두 발이 모이는 프레임에서 몸이 살짝 올라가고, 발을 디딜 때 내려온다
+    const lift = a.moving && col === 0 ? 1.6 : 0;
     ctx.save();
     ctx.translate(a.x, a.y);
     P.shadow(ctx, 0, 0, 22 - Math.min(hop, 10) * 0.6, 0.26);
-    ctx.translate(0, -hop);
+    ctx.translate(0, -hop - lift);
     ctx.scale((a.dir === 1 ? -1 : 1) * (1 + squash * 0.5), 1 + breath - squash);
     if (a.sleep) ctx.globalAlpha *= 0.92;
+    // 도구: 손 자리에서 바깥쪽으로 들고 있다 (예전엔 얼굴 앞을 가렸다). 뒤를 보면 몸 뒤에
+    const hasTool = a.tool && a.tool !== 'hand';
+    const tool = () => {
+      const [hx, hy, ex] = back ? [-12, -31, 0.15] : side ? [9, -30, 0.95] : [13, -31, 1.05];
+      ctx.save(); ctx.translate(hx, hy); ctx.scale(1.1, 1.1); ctx.rotate(ex); ctx.translate(-9, 10);
+      A.actor.tool(ctx, a, t, false, false); ctx.restore();
+    };
+    if (hasTool && back) tool();
     // 아틀라스에서 발바닥이 셀 바닥보다 6px 위에 등록되어 있다.
     ctx.drawImage(im, col * size, row * size, size, size, -height / 2, -height + 3, height, height);
-    if (a.tool && a.tool !== 'hand') {
-      ctx.translate(2, -16);
-      ctx.scale(1.15, 1.15);
-      A.actor.tool(ctx, a, t, side, back);
-    }
+    if (hasTool && !back) tool();
     ctx.restore();
   }
   // 일러스트로 그리기: 정면 그림 하나를 통통 튀기고, 왼쪽을 보면 뒤집는다
@@ -91,10 +101,11 @@
     const mv = a.moving, ph = a.walk || 0;
     const s = mv ? Math.abs(Math.sin(ph * Math.PI * 2)) : 0;             // 0 = 땅, 1 = 가장 높이
     const land = mv ? Math.pow(1 - s, 4) : 0;                             // 착지 순간
-    const hopY = s * (a.mode === 'run' ? 9 : 7);
+    const hopY = s * (a.mode === 'run' ? 4 : 3);
     const br = Math.sin(t * 2.4 + (a.seed || 0)) * 0.022, sq = a.squash || 0, hop = a.hop || 0;
-    const sy = 1 + s * 0.07 - land * 0.13 + br - sq, sx = 1 - s * 0.04 + land * 0.1 - br * 0.5 + sq * 0.5;
-    const lean = mv ? (a.dir === 1 ? -1 : a.dir === 3 ? 1 : 0) * 0.07 + Math.sin(ph * Math.PI * 2) * 0.045 : 0;
+    const sy = 1 + s * 0.025 - land * 0.05 + br - sq, sx = 1 - s * 0.015 + land * 0.04 - br * 0.5 + sq * 0.5;
+    // 뒤뚱뒤뚱: 걸음마다 좌우로 번갈아 기울기 (높이 뛰던 것보다 자연스럽게)
+    const lean = mv ? (a.dir === 1 ? -1 : a.dir === 3 ? 1 : 0) * 0.05 + Math.sin(ph * Math.PI * 2) * 0.09 : 0;
     ctx.save(); ctx.translate(a.x, a.y);
     P.shadow(ctx, 0, 0, (Math.max(20, W * 0.55) - Math.min(hop, 10) * 0.6) * (1 - s * 0.18), 0.26 * (1 - s * 0.25));
     ctx.translate(0, -hopY - hop); ctx.rotate(lean);
@@ -133,6 +144,8 @@
         const portrait = characterImage(A.illuURL(id));
         if (portrait) { A.drawIllu(ctx, a, portrait, t); return; }
       }
+      const sheet = a.id && A.walkSheet(a.id);
+      if (sheet) { drawPostkeeper(ctx, a, sheet, t, WALK_H[a.species] || 68); return; }
       const im = a.id && A.charImg(a.id);
       if (im) { A.drawIllu(ctx, a, im, t); return; }
       const sp = SPECIES[a.species] || {};
