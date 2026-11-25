@@ -123,6 +123,15 @@
       G.wallet.add(r.reward, 'request'); G.audio.sfx('coin');
       G.npc.addFs(r.who, 3, 'request');
       G.ui.toast(`부탁 완료! +${G.fmt.money(r.reward)}`, { icon: '📝' });
+      // 가구 얻기 쉽게: 세 번 중 한 번쯤 이웃이 가구를 덤으로 (가방이 차면 보관함으로)
+      if (G.house && Math.random() < 0.35) {
+        const pool = G.house.SHOP_FORMS.filter((f) => f.val <= 1800), f = pool[Math.floor(Math.random() * pool.length)];
+        if (f) {
+          const x = { c: f.col ? Math.floor(Math.random() * G.house.COLS.length) : 0 }, id = 'furn:' + f.id;
+          let ok = false; if (G.inv.canFit(id, x)) { G.inv.add(id, 1, x); ok = true; } else if (G.storage && G.storage.slots.length < G.storage.size) { G.storage.slots.push({ id, n: 1, x }); G.save.mark('storage'); ok = true; }
+          if (ok) { G.house.see(f.id); setTimeout(() => G.ui.toast(`${G.npc.VILLAGERS[r.who].name}: "이것도 가져가!" — ${G.items.name(id, x)}${G.inv.slots.some((s) => s.id === id) ? '' : ' (보관함)'}`, { icon: '🎁', ms: 3200 }), 900); }
+        }
+      }
       G.emit('request:done', { who: r.who });
       if (st.list.length && st.list.every((x) => x.state === 'done')) {
         st.stamps++; st.doneDays++;
