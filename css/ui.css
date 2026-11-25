@@ -343,3 +343,8 @@ input, select, textarea { font: inherit; color: var(--ink); }
 .shoptabs .tab { flex: 1; font-size: 15px; padding: 9px 12px; }
 .chip .swatch { display: inline-block; width: 16px; height: 16px; border-radius: 5px; margin-right: 5px; vertical-align: -3px; border: 1px solid rgba(91,70,54,.3); }
 .lookico { font-size: 40px; line-height: 64px; display: block; height: 64px; }
+/* 10차 회의: 획득 알림 손맛 */
+.itempop .pop-ico img { animation: popspin .55s cubic-bezier(.3,1.8,.5,1); }
+@keyframes popspin { 0% { transform: scale(.2) rotate(-25deg); } 70% { transform: scale(1.25) rotate(8deg); } 100% { transform: scale(1) rotate(0); } }
+.itempop.rare { animation: popin .4s cubic-bezier(.3,1.7,.5,1), rareglow 1.2s ease-in-out .4s 2; }
+@keyframes rareglow { 50% { box-shadow: 0 0 0 5px #ffe066, 0 0 34px rgba(255,210,80,.8); } }
