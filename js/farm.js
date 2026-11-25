@@ -175,8 +175,9 @@
   F.target = (fx, fy) => {
     const p = F.at(Math.floor(fx / TILE), Math.floor(fy / TILE)); if (!p) return null;
     const s = F.stage(p);
-    if (s === 3) return { kind: 'farm', ref: p, act: 'harvest', icon: '🧺', label: '수확', name: D.get('crops', p.crop).name };
-    if (s >= 0) return { kind: 'farm', ref: p, act: F.watered(p) ? 'look' : 'water', icon: F.watered(p) ? '🌱' : 'tool:can', label: F.watered(p) ? '보기' : '물 주기', name: D.get('crops', p.crop).name };
+    // 이름 + 상태 (오너: 누가 봐도 뭔지 알아야) — 「옥수수 · 3분 남음」
+    if (s === 3) return { kind: 'farm', ref: p, act: 'harvest', icon: '🧺', label: '수확', name: D.get('crops', p.crop).name + ' · 다 자랐어요!' };
+    if (s >= 0) { const w = F.watered(p); return { kind: 'farm', ref: p, act: w ? 'look' : 'water', icon: w ? '🌱' : 'tool:can', label: w ? '보기' : '물 주기', name: D.get('crops', p.crop).name + (w ? ` · ${F.minsLeft(p)}분 남음` : ' · 목말라요 💧') }; }
     return { kind: 'farm', ref: p, act: 'plant', icon: '🌰', label: '심기', name: '텃밭' };
   };
   F.act = async (tg) => {
