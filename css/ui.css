@@ -380,5 +380,3 @@ input, select, textarea { font: inherit; color: var(--ink); }
 .dialog.haspic .dlg-text { padding-right: 4px; }
 @media (max-width: 720px) { .dlg-pic { height: 118px; right: 8px; } }
 .folkpic.illu { width: 120px; height: 120px; object-fit: contain; }
-.illu-on .looked, .illu-on .mestick > .subtabs:not(.illumode) { display: none; }
-.illu-on .illumode::after { content: '그림 캐릭터예요. 머리·옷을 직접 고르려면 「직접 꾸미기」를 눌러요.'; display: block; width: 100%; font-size: 12px; color: #9a8a7a; margin-top: 4px; }

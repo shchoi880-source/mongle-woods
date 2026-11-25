@@ -386,77 +386,60 @@
   UI.lookPreview = (look, size = 180) => {
     const cv = $('canvas', 'cpreview'); cv.width = size * 1.1; cv.height = size * 1.1; cv.style.width = size + 'px'; cv.style.height = size + 'px';
     const g = cv.getContext('2d'), W = cv.width, actor = { species: 'human', look, x: 0, y: 0, dir: 0, tool: 'hand', seed: 0 };
-    let raf = 0, pose = 0, turn = 0; const t0 = performance.now();
+    let raf = 0, walkStart = -Infinity; const t0 = performance.now();
     const loop = () => {
       const t = (performance.now() - t0) / 1000;
       g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, W, W);
       g.fillStyle = '#fff6e6'; g.beginPath(); g.arc(W / 2, W * 0.55, W * 0.44, 0, 6.3); g.fill();
-      pose = Math.max(0, pose - 1 / 60); actor.hop = pose > 0 ? Math.sin((1 - pose / 0.35) * Math.PI) * 6 : 0;
-      actor.dir = turn > 0 ? [0, 3, 2, 1][Math.floor(t * 1.6) % 4] : 0; turn = Math.max(0, turn - 1 / 60);
-      const k = W / 76; g.setTransform(k, 0, 0, k, W / 2, W * 0.91);
+      const elapsed = t - walkStart;
+      actor.moving = elapsed < 3.2;
+      actor.walk = actor.moving ? (elapsed * 2.2) % 1 : 0;
+      actor.dir = actor.moving ? [0, 3, 2, 1][Math.floor(elapsed / 0.8)] : 0;
+      const k = W / 82; g.setTransform(k, 0, 0, k, W / 2, W * 0.91);
       G.art.actor.draw(g, actor, t);
       raf = requestAnimationFrame(loop);
     };
     loop();
-    return { el: cv, poke() { pose = 0.35; }, spin() { turn = 2.6; }, stop() { cancelAnimationFrame(raf); } };
+    return { el: cv, walk() { walkStart = (performance.now() - t0) / 1000; }, stop() { cancelAnimationFrame(raf); } };
   };
-  // 항목 고르기 편집기: 분류 탭(얼굴·머리·옷·소품) + 항목마다 칩(색은 동그라미, 모양은 이름)
-  UI.lookEditor = (look, onChange) => {
-    const L = G.art.LOOK, wrap = $('div', 'looked'), cats = $('div', 'subtabs'), box = $('div', 'lookparts');
-    let cat = 'hair';
-    const render = () => {
-      cats.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.c === cat));
-      box.innerHTML = '';
-      for (const pt of L.PARTS.filter((x) => x.cat === cat)) {
-        const row = $('div', 'lookpart'); row.append($('b', null, pt.name));
-        const chips = $('div', 'chips');
-        const n = L.count(pt);
-        for (let i = 0; i < n; i++) {
-          const cur = (look[pt.k] === undefined ? (L.def()[pt.k] || 0) : look[pt.k]) === i;
-          const locked = L.isLocked(pt, i);
-          const c = $('button', 'chip' + (pt.colors ? ' sw' : '') + (cur ? ' on' : '') + (locked ? ' locked' : ''), pt.colors ? '' : (locked ? '🔒 ' : '') + esc(pt.names[i]));
-          if (pt.colors) { c.style.background = pt.colors[i]; c.setAttribute('aria-label', pt.name + ' ' + (i + 1)); }
-          c.onclick = () => {
-            if (locked) { const lk = pt.locks[i], f = G.fest && G.fest.byId(lk); UI.toast(lk === 'shop' ? `「${pt.names[i]}」은 땅굴상점 옷 코너에서 살 수 있어요! (날마다 바뀌어요)` : f && lk !== 'gold' ? `「${pt.names[i]}」은 ${f.name}에서 받을 수 있어요!` : `「${pt.names[i]}」은 축제 모자 4개를 모두 모으면 받아요!`, { icon: '🔒' }); G.audio.sfx('error'); return; }
-            look[pt.k] = i; G.audio.sfx('pop'); onChange && onChange(pt.k); render();
-          };
-          chips.append(c);
-        }
-        row.append(chips); box.append(row);
+  UI.postkeeperPicker = (look, preview) => {
+    const picker = $('div', 'subtabs');
+    const options = [['postkeeper', '여자 우편지기'], ['postkeeper-male', '남자 우편지기']];
+    const buttons = new Map();
+    const update = () => {
+      for (const [id, b] of buttons) {
+        const selected = G.art.postkeeperId(look) === id;
+        b.classList.toggle('on', selected);
+        b.setAttribute('aria-pressed', String(selected));
       }
     };
-    for (const [id, nm] of L.CATS) { const b = $('button', 'tab', nm); b.dataset.c = id; b.onclick = () => { G.audio.sfx('tap'); cat = id; render(); }; cats.append(b); }
-    const rnd = $('button', 'tab', '🎲 랜덤'); rnd.onclick = () => { Object.assign(look, L.random()); G.audio.sfx('pop'); onChange && onChange('*'); render(); }; cats.append(rnd);
-    wrap.append(cats, box); render();
-    return wrap;
+    for (const [id, label] of options) {
+      G.art.loadPostkeeper(id);
+      const b = $('button', 'tab', label);
+      b.onclick = () => {
+        look.illu = id;
+        G.audio.sfx('tap');
+        update();
+      };
+      buttons.set(id, b);
+      picker.append(b);
+    }
+    const walk = $('button', 'btn ghost small', '걷는 모습 보기');
+    walk.onclick = () => { G.audio.sfx('tap'); preview.walk(); };
+    picker.append(walk);
+    update();
+    return picker;
   };
   // 잎첩 '나' 탭: 이름·마을 이름·모습을 언제든 무료로 바꾼다
-  // 그림 캐릭터 (오너가 준비한 우편지기 일러스트) 또는 직접 꾸민 모습
-  UI.illuMode = (look, onChange) => {
-    const mode = $('div', 'subtabs illumode');
-    const draw = () => {
-      mode.innerHTML = '';
-      for (const [v, nm] of [['postkeeper', '🧢 우편지기 그림'], ['postkeeper-male', '🧢 우편지기 그림 (남)'], [0, '🎨 직접 꾸미기']]) {
-        const b = $('button', 'tab' + ((look.illu || 0) === v ? ' on' : ''), nm);
-        b.onclick = () => { if (v) { look.illu = v; G.art.charImg(v); } else delete look.illu; G.audio.sfx('tap'); draw(); onChange(); sync(); };
-        mode.append(b);
-      }
-    };
-    // 그림 캐릭터일 땐 머리·옷 고르기 칸을 접는다 (바꿔도 안 보이니까)
-    const sync = () => { const root = mode.closest('.create, .pane'); if (root) root.classList.toggle('illu-on', !!look.illu); };
-    draw(); setTimeout(sync, 0); return mode;
-  };
   function mePane(pane) {
     const pl = G.player, look = Object.assign(G.art.LOOK.def(), pl.look || {});
     const pv = UI.lookPreview(look, 150); UI._previewStop = pv.stop;
     const top = $('div', 'mebox'), info = $('div', 'meinfo');
     const nameIn = $('input'); nameIn.maxLength = 8; nameIn.value = pl.name || ''; nameIn.placeholder = '이름 (최대 8자)';
     const townIn = $('input'); townIn.maxLength = 8; townIn.value = pl.town || ''; townIn.placeholder = '마을 이름 (최대 8자)';
-    const spin = $('button', 'btn ghost', '🔄'); spin.onclick = () => pv.spin(); spin.title = '돌려 보기';
     info.append($('label', 'muted small', '내 이름'), nameIn, $('label', 'muted small', '마을 이름'), townIn);
     top.append(pv.el, info);
-    info.append(UI.illuMode(look, () => { pv.poke(); setTimeout(() => pv.poke(), 300); }));
-    const ed = UI.lookEditor(look, () => pv.poke());
+    info.append(UI.postkeeperPicker(look, pv));
     const save = $('button', 'btn', '저장 ✨');
     save.onclick = () => {
       const name = nameIn.value.trim(), town = townIn.value.trim();
@@ -467,10 +450,8 @@
       G.audio.sfx('chime'); UI.toast(renamed ? `이제 「${name}」(이)라고 불러 줄게요!` : '새 모습 멋져요!', { icon: '🪞' });
       if (G.game && G.game.pl) G.game.pl.squash = 0.12;
     };
-    const row2 = $('div', 'row'); row2.append(spin, save); info.append(row2);
-    // 미리보기 + 분류 탭은 스크롤해도 위에 붙어 있게
-    const stick = $('div', 'mestick'); stick.append(top, ed.firstChild);
-    pane.append(stick, ed, $('div', 'muted small', '언제든 다시 바꿀 수 있어요. 돈은 들지 않아요.'));
+    info.append(save);
+    pane.append(top);
   }
 
   // ---------- 멀티플레이 UI (친구 탭 · 채팅 · 선물) ----------

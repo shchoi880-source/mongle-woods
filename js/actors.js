@@ -39,12 +39,44 @@
   const illu = new Map();
   A.ILLU = ILLU;
   A.illuURL = (id, big) => `assets/chars/s/${id}${big ? '' : '-w'}.webp`;
-  A.charImg = (id) => {
-    if (!(ILLU.includes(id) || id === 'postkeeper' || id === 'postkeeper-male') || typeof Image === 'undefined' || (G.settings && G.settings.get && G.settings.get('illu') === false)) return null;
-    let im = illu.get(id);
-    if (!im) { im = new Image(); im.decoding = 'async'; im.src = A.illuURL(id); illu.set(id, im); }
+  function characterImage(src) {
+    if (typeof Image === 'undefined') return null;
+    let im = illu.get(src);
+    if (!im) { im = new Image(); im.decoding = 'async'; im.src = src; illu.set(src, im); }
     return im.complete && im.naturalWidth ? im : null;
-  };
+  }
+  A.charImg = (id) => ILLU.includes(id) && G.settings.get('illu') !== false ? characterImage(A.illuURL(id)) : null;
+  A.postkeeperId = (look) => look && look.illu === 'postkeeper-male' ? 'postkeeper-male' : 'postkeeper';
+  A.loadPostkeeper = (id) => characterImage(`assets/chars/s/${id}-walk.png`);
+
+  // 각 행은 정면·오른쪽·뒷면, 각 열은 서기·왼발·오른발이다.
+  const WALK_FRAMES = [1, 0, 2, 0];
+  function drawPostkeeper(ctx, a, im, t) {
+    const side = a.dir === 1 || a.dir === 3;
+    const back = a.dir === 2;
+    const row = back ? 2 : side ? 1 : 0;
+    const phase = a.walk || 0;
+    const col = a.moving ? WALK_FRAMES[Math.floor(phase * 4) % 4] : 0;
+    const size = im.naturalWidth / 3;
+    const height = 72;
+    const hop = a.hop || 0;
+    const squash = a.squash || 0;
+    const breath = a.moving ? 0 : Math.sin(t * 2.4 + (a.seed || 0)) * 0.012;
+    ctx.save();
+    ctx.translate(a.x, a.y);
+    P.shadow(ctx, 0, 0, 22 - Math.min(hop, 10) * 0.6, 0.26);
+    ctx.translate(0, -hop);
+    ctx.scale((a.dir === 1 ? -1 : 1) * (1 + squash * 0.5), 1 + breath - squash);
+    if (a.sleep) ctx.globalAlpha *= 0.92;
+    // 아틀라스에서 발바닥이 셀 바닥보다 6px 위에 등록되어 있다.
+    ctx.drawImage(im, col * size, row * size, size, size, -height / 2, -height + 3, height, height);
+    if (a.tool && a.tool !== 'hand') {
+      ctx.translate(2, -16);
+      ctx.scale(1.15, 1.15);
+      A.actor.tool(ctx, a, t, side, back);
+    }
+    ctx.restore();
+  }
   // 일러스트로 그리기: 정면 그림 하나를 통통 튀기고, 왼쪽을 보면 뒤집는다
   // 종이인형 방식 (오너: "그림이 미끄러지듯 움직여 이상하다"): 걸음마다 통통 뛰고(뜰 때 늘어나고 착지할 때 납작),
   // 가는 쪽으로 살짝 기울고, 방향을 바꾸면 종이처럼 휙 뒤집힌다
@@ -94,7 +126,14 @@
   // a: {x,y,dir,species,look,walk,moving,run,t0,blinkT,emote,emoteT,hop,sleep,tool,swing}
   A.actor = {
     draw(ctx, a, t) {
-      const key = (a.look && a.look.illu) || a.id, im = key && A.charImg(key);
+      if (a.species === 'human') {
+        const id = A.postkeeperId(a.look);
+        const sprite = A.loadPostkeeper(id);
+        if (sprite) { drawPostkeeper(ctx, a, sprite, t); return; }
+        const portrait = characterImage(A.illuURL(id));
+        if (portrait) { A.drawIllu(ctx, a, portrait, t); return; }
+      }
+      const im = a.id && A.charImg(a.id);
       if (im) { A.drawIllu(ctx, a, im, t); return; }
       const sp = SPECIES[a.species] || {};
       const L = a.look || {};

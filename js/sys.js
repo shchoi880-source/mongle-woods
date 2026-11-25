@@ -145,18 +145,7 @@
       for (const [t, nm, pr] of [['net', '튼튼 잠자리채', 3000], ['rod', '튼튼 낚싯대', 3000], ['can', '큰 물뿌리개', 2500]]) {
         if (G.player.hasTool(t) && !(G.player.up && G.player.up[t])) list.push({ kind: 'up', id: t, name: nm, price: pr, key: 'up_' + t });
       }
-      // 👕 옷 가게 (9차 회의): 아직 없는 옷·모자 중 날마다 4개
-      if (G.art && G.art.LOOK) {
-        const PRICE = { hat18: 5000, hat19: 6000, hat20: 8000, hat21: 7000, hat22: 4000, hat23: 4500, outfit9: 9000, outfit10: 3500, outfit11: 4000, outfit12: 8000, outfit13: 12000, outfit14: 3000 };
-        const own = G.player.unlocks || {};
-        const pool = Object.keys(PRICE).filter((k) => !own[k]);
-        const R2 = G.rng.stream(G.rng.KEYS.SHOP, d, 9);
-        for (let k = 0; k < 4 && pool.length; k++) {
-          const key = pool.splice(Math.floor(R2() * pool.length), 1)[0], part = key.replace(/\d+$/, ''), idx = +key.replace(/^\D+/, '');
-          const pt = G.art.LOOK.PARTS.find((x) => x.k === part);
-          list.push({ kind: 'look', id: key, part, idx, name: pt.names[idx], price: PRICE[key], key: 'look_' + key });
-        }
-      }
+      // 새 우편지기가 옷·모자를 착용할 수 있을 때 판매를 다시 연다.
       if (G.ranch) {
         for (const [k, v] of Object.entries(G.ranch.KINDS)) list.push({ kind: 'animal', id: k, name: v.baby, price: v.price, key: 'an_' + k });
       }
@@ -180,10 +169,7 @@
         return { ok: true };
       }
       if (entry.kind === 'look') {
-        if ((G.player.unlocks || {})[entry.id]) return { ok: false, why: '이미 가지고 있어요.' };
-        if (!G.wallet.spend(entry.price, 'buy')) return { ok: false, why: '몽이 조금 모자라요.' };
-        G.player.unlocks = Object.assign({}, G.player.unlocks, { [entry.id]: 1 }); G.save.mark('look');
-        G.emit('shop:buy', { id: entry.id, price: entry.price }); return { ok: true };
+        return { ok: false, why: '새 우편지기 옷을 준비 중이에요.' };
       }
       if (entry.kind === 'plot') {
         if (G.wallet.get() < entry.price) return { ok: false, why: '몽이 조금 모자라요.' };
