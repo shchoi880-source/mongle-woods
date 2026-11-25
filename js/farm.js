@@ -38,14 +38,30 @@
     items.push({ id: 'crop:' + c.id, name: c.name, cat: 'crop', val: c.val, stack: 10, ref: c });
   }
   const DISHES = [
-    { id: 'radish_soup', name: '무 시금치국', val: 900, need: [['crop:radish', 1], ['crop:spinach', 1]] },
-    { id: 'cabbage_stew', name: '배추찜', val: 1300, need: [['crop:cabbage', 1], ['crop:radish', 1]] },
-    { id: 'jam', name: '딸기잼', val: 1000, need: [['crop:strawberry', 2]] },
-    { id: 'carrot_soup', name: '당근 수프', val: 900, need: [['crop:carrot', 1], ['crop:potato', 1]] },
-    { id: 'hwachae', name: '수박화채', val: 1500, need: [['crop:watermelon', 1], ['crop:tomato', 1]] },
-    { id: 'grilled_corn', name: '옥수수 구이', val: 1000, need: [['crop:corn', 2]] },
-    { id: 'pumpkin_pie', name: '호박 파이', val: 1400, need: [['crop:pumpkin', 1], ['crop:wheat', 2]] },
-    { id: 'matang', name: '고구마 맛탕', val: 900, need: [['crop:sweet_potato', 2]] },
+    // tool: 요리 장면 도구 (pot 냄비 · pan 프라이팬 · oven 오븐 · jar 유리병 · bowl 그릇 · grill 석쇠), look: 아이콘 모양, col: 요리 색
+    { id: 'radish_soup', name: '무 시금치국', val: 900, need: [['crop:radish', 1], ['crop:spinach', 1]], tool: 'pot', look: 'soup', col: '#efe2b8' },
+    { id: 'cabbage_stew', name: '배추찜', val: 1300, need: [['crop:cabbage', 1], ['crop:radish', 1]], tool: 'pot', look: 'stew', col: '#c9e08a' },
+    { id: 'jam', name: '딸기잼', val: 1000, need: [['crop:strawberry', 2]], tool: 'pot', look: 'jar', col: '#ff4a5a' },
+    { id: 'carrot_soup', name: '당근 수프', val: 900, need: [['crop:carrot', 1], ['crop:potato', 1]], tool: 'pot', look: 'soup', col: '#ff9a3a' },
+    { id: 'hwachae', name: '수박화채', val: 1500, need: [['crop:watermelon', 1], ['crop:tomato', 1]], tool: 'bowl', look: 'hwachae', col: '#ff8fa8' },
+    { id: 'grilled_corn', name: '옥수수 구이', val: 1000, need: [['crop:corn', 2]], tool: 'grill', look: 'plate', col: '#ffc23a' },
+    { id: 'pumpkin_pie', name: '호박 파이', val: 1400, need: [['crop:pumpkin', 1], ['crop:wheat', 2]], tool: 'oven', look: 'pie', col: '#e88a3a' },
+    { id: 'matang', name: '고구마 맛탕', val: 900, need: [['crop:sweet_potato', 2]], tool: 'pan', look: 'plate', col: '#c97a3a' },
+    // 2026-11 새 작물 요리 (오너: 요리도 좋을 듯)
+    { id: 'lettuce_salad', name: '상추 샐러드', val: 850, need: [['crop:lettuce', 1], ['crop:tomato', 1]], tool: 'bowl', look: 'salad', col: '#9ad66e' },
+    { id: 'pea_soup', name: '완두콩 수프', val: 900, need: [['crop:pea', 2]], tool: 'pot', look: 'soup', col: '#9ad66e' },
+    { id: 'onion_rings', name: '양파링', val: 950, need: [['crop:onion', 1], ['crop:wheat', 1]], tool: 'pan', look: 'rings', col: '#e8b46a' },
+    { id: 'gochujang', name: '고추장', val: 900, need: [['crop:pepper', 2]], tool: 'pot', look: 'jar', col: '#c8302a' },
+    { id: 'eggplant_bake', name: '가지구이', val: 1150, need: [['crop:eggplant', 1], ['crop:garlic', 1]], tool: 'grill', look: 'plate', col: '#7a4a9a' },
+    { id: 'cucumber_kimchi', name: '오이소박이', val: 900, need: [['crop:cucumber', 1], ['crop:green_onion', 1]], tool: 'bowl', look: 'plate', col: '#4e9e4a' },
+    { id: 'sunflower_seeds', name: '볶은 해바라기씨', val: 1100, need: [['crop:sunflower', 1]], tool: 'pan', look: 'snack', col: '#8a6a48' },
+    { id: 'peanut_butter', name: '땅콩버터', val: 950, need: [['crop:peanut', 2]], tool: 'pot', look: 'jar', col: '#c98a4a' },
+    { id: 'broccoli_soup', name: '브로콜리 수프', val: 1150, need: [['crop:broccoli', 1], ['crop:potato', 1]], tool: 'pot', look: 'soup', col: '#8fc06a' },
+    { id: 'garlic_bread', name: '마늘빵', val: 950, need: [['crop:garlic', 1], ['crop:wheat', 1]], tool: 'oven', look: 'bread', col: '#e8b46a' },
+    { id: 'pajeon', name: '파전', val: 1000, need: [['crop:green_onion', 1], ['crop:wheat', 1]], tool: 'pan', look: 'pancake', col: '#f0c870' },
+    { id: 'potato_pancake', name: '감자전', val: 750, need: [['crop:potato', 2]], tool: 'pan', look: 'pancake', col: '#f0d890' },
+    { id: 'pumpkin_porridge', name: '호박죽', val: 1300, need: [['crop:pumpkin', 1], ['crop:sweet_potato', 1]], tool: 'pot', look: 'soup', col: '#ffb040' },
+    { id: 'bibimbap', name: '몽글 비빔밥', val: 2200, need: [['crop:lettuce', 1], ['crop:carrot', 1], ['crop:spinach', 1], ['crop:pepper', 1]], tool: 'bowl', look: 'bibimbap', col: '#f6efe4' },
   ];
   for (const d of DISHES) items.push({ id: 'dish:' + d.id, name: d.name, cat: 'dish', val: d.val, stack: 10, ref: d });
   D.add('items', items);

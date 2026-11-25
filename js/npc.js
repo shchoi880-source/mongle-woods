@@ -29,10 +29,10 @@
   const LV = [0, 5, 15, 35, 70]; // 하트 1~4 문턱
   // 좋아하는 선물: 아이템 id 또는 'cat:<분류>'
   const FAV = {
-    ddalang: ['crop:carrot', 'crop:strawberry', 'dish:jam'], sogeum: ['cat:fish', 'dish:radish_soup', 'dish:hwachae'],
-    lime: ['crop:strawberry', 'dish:pumpkin_pie', 'cat:shell'], jjongal: ['fruit_acorn', 'crop:corn', 'dish:grilled_corn', 'egg'],
-    danchu: ['crop:radish', 'crop:spinach', 'cat:fossil'], hotteok: ['crop:sweet_potato', 'dish:matang', 'milk', 'dish:pancake'],
-    mungchi: ['crop:wheat', 'crop:pumpkin', 'dish:carrot_soup'], mongsil: ['crop:cabbage', 'dish:cabbage_stew', 'star_fragment'],
+    ddalang: ['crop:carrot', 'crop:strawberry', 'dish:jam', 'dish:lettuce_salad'], sogeum: ['cat:fish', 'dish:radish_soup', 'dish:hwachae'],
+    lime: ['crop:strawberry', 'dish:pumpkin_pie', 'cat:shell'], jjongal: ['fruit_acorn', 'crop:corn', 'dish:grilled_corn', 'egg', 'dish:peanut_butter'],
+    danchu: ['crop:radish', 'crop:spinach', 'cat:fossil'], hotteok: ['crop:sweet_potato', 'dish:matang', 'milk', 'dish:pancake', 'dish:pajeon'],
+    mungchi: ['crop:wheat', 'crop:pumpkin', 'dish:carrot_soup'], mongsil: ['crop:cabbage', 'dish:cabbage_stew', 'star_fragment', 'dish:pumpkin_porridge'],
   };
   const GIFT_SAY = {
     ddalang: ['우와아, 이거 내가 제일 좋아하는 거야! 어떻게 알았어?! 랄랄!', '고마워! 방울이 기뻐서 저절로 울려!'],

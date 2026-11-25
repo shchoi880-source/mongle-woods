@@ -799,6 +799,8 @@
     const sp = $('select'); [['느리게', 22], ['보통', 32], ['빠르게', 50], ['즉시', 999]].forEach(([n, v]) => { const o = $('option', null, n); o.value = v; if (G.settings.get('textSpeed') === v) o.selected = true; sp.append(o); });
     sp.onchange = () => G.settings.set('textSpeed', +sp.value);
     pane.append(row('글자 속도', sp));
+    const ck = $('input'); ck.type = 'checkbox'; ck.checked = G.settings.get('cookSkip') !== true; ck.onchange = () => G.settings.set('cookSkip', !ck.checked);
+    pane.append(row('요리하는 장면 보기', ck));
     const vw = $('select'); [['가까이', 0.87], ['보통', 1], ['멀리', 1.15]].forEach(([n, v]) => { const o = $('option', null, n); o.value = v; if (G.settings.get('view') === v) o.selected = true; vw.append(o); });
     vw.onchange = () => { G.settings.set('view', +vw.value); G.game.resize(); };
     pane.append(row('시야', vw));

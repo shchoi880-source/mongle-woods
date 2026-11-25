@@ -169,7 +169,15 @@
               row.append(sw);
             }
             const b = document.createElement('button'); b.className = 'btn small' + (can ? '' : ' off'); b.textContent = owned ? '있음' : '만들기';
-            b.onclick = () => {
+            b.onclick = async () => {
+              // 요리는 만드는 장면을 보여 준다 (건너뛰기·다음부터 바로 완성 가능)
+              if (r.cook && G.cook && G.craft.can(r) && G.inv.canFit(r.out)) {
+                await G.cook.play(r);
+                const res2 = G.craft.make(r, c);
+                if (!res2.ok) { G.audio.sfx('error'); G.ui.toast(res2.why, { icon: '🍳' }); return; }
+                G.audio.sfx('catch'); G.ui.toast(`${G.craft.name(r)}${G.josa(G.craft.name(r), '을/를').slice(-1)} 만들었어요! 가방에 넣었어요.`, { icon: '🍳', ms: 2400 });
+                render(); return;
+              }
               const res = G.craft.make(r, c);
               if (!res.ok) { G.audio.sfx('error'); G.ui.toast(owned ? '이미 가지고 있어요.' : res.why, { icon: '🔨' }); return; }
               G.audio.sfx('dug'); G.ui.itemPop(r.out.startsWith('tool:') ? r.out : r.out + '', r.out.startsWith('furn:') ? { c } : null, `${G.craft.name(r)}${G.josa(G.craft.name(r), '을/를').slice(-1)} 만들었다!`);
