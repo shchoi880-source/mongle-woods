@@ -719,7 +719,8 @@
     A.actor.draw(c, a, t);
     // 콩알: 머리 위
     const breath = Math.sin(t * 2.6) * 0.6;
-    const bob = pl.moving ? Math.abs(Math.sin(pl.walk * Math.PI * 2)) * -2.2 : 0;
+    const ill = pl.look && pl.look.illu && A.charImg(pl.look.illu);
+    const bob = pl.moving ? Math.abs(Math.sin(pl.walk * Math.PI * 2)) * (ill ? -(pl.mode === 'run' ? 9 : 7) * 1.05 : -2.2) : 0;
     const illu = pl.look && pl.look.illu && A.charImg(pl.look.illu);
     A.kongal(c, pl.x + (pl.dir === 1 ? 2 : pl.dir === 3 ? -2 : 0), pl.y - (illu ? 68 : 53) + bob + breath - (a.hop || 0), kg, t);
   }

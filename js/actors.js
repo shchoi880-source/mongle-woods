@@ -46,17 +46,30 @@
     return im.complete && im.naturalWidth ? im : null;
   };
   // 일러스트로 그리기: 정면 그림 하나를 통통 튀기고, 왼쪽을 보면 뒤집는다
+  // 종이인형 방식 (오너: "그림이 미끄러지듯 움직여 이상하다"): 걸음마다 통통 뛰고(뜰 때 늘어나고 착지할 때 납작),
+  // 가는 쪽으로 살짝 기울고, 방향을 바꾸면 종이처럼 휙 뒤집힌다
   A.drawIllu = (ctx, a, im, t) => {
     const H = a.species === 'human' ? 66 : a.species === 'rabbit' ? 70 : a.species === 'hedgehog' ? 62 : 60, W = H * im.naturalWidth / im.naturalHeight;
-    const ph = a.walk || 0, mv = a.moving;
-    const bob = mv ? Math.abs(Math.sin(ph * Math.PI * 2)) * 3 : 0, tilt = mv ? Math.sin(ph * Math.PI * 2) * 0.07 : 0;
-    const br = Math.sin(t * 2.4 + (a.seed || 0)) * 0.018, sq = a.squash || 0, hop = a.hop || 0;
+    const dt = Math.min(0.05, Math.max(0, t - (a._lt || t))); a._lt = t;
+    // 뒤집기: 왼쪽(1)·오른쪽(3)을 보면 그쪽으로, 위·아래는 그대로
+    if (a.dir === 1) a._face = -1; else if (a.dir === 3) a._face = 1; else if (!a._face) a._face = 1;
+    if (a._fx === undefined) a._fx = a._face;
+    a._fx += (a._face - a._fx) * Math.min(1, dt * 16);
+    const fx = Math.abs(a._fx) < 0.08 ? Math.sign(a._fx || 1) * 0.08 : a._fx;
+    const mv = a.moving, ph = a.walk || 0;
+    const s = mv ? Math.abs(Math.sin(ph * Math.PI * 2)) : 0;             // 0 = 땅, 1 = 가장 높이
+    const land = mv ? Math.pow(1 - s, 4) : 0;                             // 착지 순간
+    const hopY = s * (a.mode === 'run' ? 9 : 7);
+    const br = Math.sin(t * 2.4 + (a.seed || 0)) * 0.022, sq = a.squash || 0, hop = a.hop || 0;
+    const sy = 1 + s * 0.07 - land * 0.13 + br - sq, sx = 1 - s * 0.04 + land * 0.1 - br * 0.5 + sq * 0.5;
+    const lean = mv ? (a.dir === 1 ? -1 : a.dir === 3 ? 1 : 0) * 0.07 + Math.sin(ph * Math.PI * 2) * 0.045 : 0;
     ctx.save(); ctx.translate(a.x, a.y);
-    P.shadow(ctx, 0, 0, Math.max(20, W * 0.55) - Math.min(hop, 10) * 0.6, 0.26);
-    ctx.translate(0, -bob - hop); ctx.rotate(tilt);
-    ctx.scale((a.dir === 1 ? -1 : 1) * (1 + sq * 0.5 - br * 0.5), 1 + br - sq);
-    if (a.sleep) ctx.globalAlpha *= 0.92;
+    P.shadow(ctx, 0, 0, (Math.max(20, W * 0.55) - Math.min(hop, 10) * 0.6) * (1 - s * 0.18), 0.26 * (1 - s * 0.25));
+    ctx.translate(0, -hopY - hop); ctx.rotate(lean);
+    ctx.scale(fx * sx, sy);
+    if (a.dir === 2 && mv) ctx.filter = 'brightness(0.94)'; // 뒤로 걸을 땐 살짝 그늘 (뒷모습 그림이 오면 교체)
     ctx.drawImage(im, -W / 2, -H, W, H);
+    ctx.filter = 'none';
     // 도구는 그림 위 손 자리에
     if (a.tool && a.tool !== 'hand') { ctx.save(); ctx.translate(2, -16); ctx.scale(1.15, 1.15); A.actor.tool(ctx, a, t, a.dir === 1 || a.dir === 3, a.dir === 2); ctx.restore(); }
     ctx.restore();
