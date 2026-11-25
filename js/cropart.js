@@ -140,6 +140,9 @@
     else { leaf(g, 0, 0, 12, 4, -0.4); leaf(g, 0, 0, 12, 4, 0.4); }
   });
 
+  // 다 자란 작물 위에 뜨는 수확물 그림 (오너: 누가 봐도 뭔지 알아야) — 작물 키에 맞춰 높이
+  const TOP = { corn: 50, sunflower: 54, green_onion: 34, tomato: 32, pepper: 28, eggplant: 30, cucumber: 32, pea: 30, wheat: 32, potato: 26, garlic: 26, onion: 26 };
+  const prodIcon = (id) => A.sprite('prodico:' + id, 32, 32, (g) => { if (PRODUCE[id]) PRODUCE[id](g); });
   // 밭 그리기 교체: 칸 가운데 아래에서 살랑. 다 자란 작물은 반짝 고리
   F.collect = (R, rect, t) => {
     for (const p of F.st.plots) {
@@ -152,6 +155,12 @@
         ctx.drawImage(sp, -OX, -OY, SW, SH);
         if (s === 3) { const k = (t * 0.7 + p.tx * 0.3) % 1; ctx.strokeStyle = `rgba(255,240,150,${(1 - k) * 0.8})`; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.ellipse(0, -2, 9 + k * 6, 3 + k * 2, 0, 0, 6.3); ctx.stroke(); }
         ctx.restore();
+        if (s === 3 && PRODUCE[p.crop]) {
+          const by = y - (TOP[p.crop] || 22) - 10 + Math.sin(t * 3 + p.tx) * 1.5;
+          ctx.save(); ctx.beginPath(); ctx.moveTo(x - 3, by + 8); ctx.lineTo(x, by + 12); ctx.lineTo(x + 3, by + 8); ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.fill();
+          ctx.beginPath(); ctx.arc(x, by, 9.5, 0, 6.3); ctx.fill(); ctx.strokeStyle = 'rgba(140,110,80,0.5)'; ctx.lineWidth = 1; ctx.stroke();
+          ctx.drawImage(prodIcon(p.crop), x - 8, by - 8, 16, 16); ctx.restore();
+        }
       } });
     }
   };
