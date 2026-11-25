@@ -237,7 +237,8 @@
       if (!p.crop) continue;
       const c = D.get('crops', p.crop); if (!c || p.prog >= c.grow) continue;
       if (p.gp === undefined) p.gp = (p.prog || 0) * GROW_MIN;
-      const use = Math.max(0, Math.min(mins, (p.wet || 0) - now)); if (!use) continue;
+      // 공통 시간(D21): 떠날 때 촉촉했던 작물은 자리 비운 내내 자란다 (콩알이 물을 챙겨 줘요). 안 준 작물은 그대로
+      const use = (p.wet || 0) > now ? mins : 0; if (!use) continue;
       p.gp += use; p.wet -= use; const np = Math.min(c.grow, Math.floor(p.gp / GROW_MIN));
       if (np !== p.prog) { p.prog = np; grew++; }
     }

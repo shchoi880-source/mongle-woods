@@ -243,6 +243,8 @@
         api = { app: appApi, auth: authApi, db: dbApi };
         const app = appApi.initializeApp(G.FIREBASE_CONFIG);
         auth = authApi.getAuth(app); db = dbApi.getDatabase(app);
+        // 공통 시간(D21): 서버 시각에 맞춘다 (기기 시계를 바꿔도 마을 시간은 그대로)
+        try { dbApi.onValue(dbApi.ref(db, '.info/serverTimeOffset'), (snap) => { if (G.time && G.time.setServerOffset) G.time.setServerOffset(+snap.val() || 0); }); } catch (e) { /* 기기 시계로 계속 */ }
         try { await authApi.setPersistence(auth, authApi.browserLocalPersistence); } catch (e) { /* 세션 내 로그인은 계속 가능 */ }
         authApi.onAuthStateChanged(auth, (user) => handleUser(user));
         try { await authApi.getRedirectResult(auth); } catch (e) { fail(e); }
