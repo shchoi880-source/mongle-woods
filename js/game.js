@@ -461,6 +461,12 @@
       pl.stepT -= dt * (speed / (4 * TILE));
       if (pl.stepT <= 0 && pl.moving) {
         pl.stepT = 0.23;
+        // 발밑 흙먼지·풀잎 (10차 회의: 생동감)
+        if (!(G.house && G.house.inside)) {
+          const tt = G.world.tileAt(pl.x, pl.y), T2 = G.TERR, run = inMode === 'run';
+          if (tt === T2.PATH || tt === T2.SAND) for (let k = 0; k < (run ? 3 : 1); k++) GM.fx.push({ x: pl.x + (Math.random() - 0.5) * 10, y: pl.y - 1, vx: (Math.random() - 0.5) * 20 - mv.x * 20, vy: -8 - Math.random() * 10, t: 0, life: 0.45, kind: 'dust', c: tt === T2.SAND ? 'rgba(240,220,170,0.7)' : 'rgba(210,180,140,0.6)' });
+          else if (tt === T2.GRASS && run) for (let k = 0; k < 2; k++) GM.fx.push({ x: pl.x + (Math.random() - 0.5) * 12, y: pl.y - 2, vx: (Math.random() - 0.5) * 60, vy: -40 - Math.random() * 30, g: 200, t: 0, life: 0.4, kind: 'grass', c: '#7cc35a' });
+        }
         const t = G.house && G.house.inside ? -1 : G.world.tileAt(pl.x, pl.y), T = G.TERR;
         G.audio.sfx('step', { surf: t === -1 ? 'wood' : t === T.SAND ? 'sand' : t === T.BRIDGE ? 'wood' : A.season === 'winter' && t === T.GRASS ? 'snow' : 'grass', vol: pl.mode === 'sneak' ? 0.4 : pl.mode === 'run' ? 1.4 : 1 });
       }
@@ -494,6 +500,7 @@
     if (pl.idleT > 10 && t - kg.lastLine > 10) { kg.lastLine = t; const l = u.pick(G.lines('kongal', 'idle'), Math.random()).text; kongalSay(l); if (l === '폴짝!') kongalReact('jump'); }
   }
   function updateFx(dt) {
+    if (GM.shake > 0) GM.shake = Math.max(0, GM.shake - dt * 3);
     for (let i = GM.fx.length - 1; i >= 0; i--) {
       const f = GM.fx[i]; f.t += dt; if (f.t > f.life) { GM.fx.splice(i, 1); continue; }
       f.x += f.vx * dt; f.y += f.vy * dt; if (f.g) f.vy += f.g * dt;
@@ -511,7 +518,8 @@
     ctx.fillStyle = A.C.sea; ctx.fillRect(0, 0, cv.width, cv.height);
     const rect = cam.rect();
     // 카메라를 기기 픽셀에 맞춰 정수화 (흔들림 방지)
-    const camX = Math.round(cam.x * cam.PX) / cam.PX, camY = Math.round(cam.y * cam.PX) / cam.PX;
+    const shk = GM.shake > 0 ? GM.shake : 0, sx = shk ? Math.sin(t * 70) * shk * 3 : 0, sy = shk ? Math.cos(t * 53) * shk * 2 : 0;
+    const camX = Math.round((cam.x + sx) * cam.PX) / cam.PX, camY = Math.round((cam.y + sy) * cam.PX) / cam.PX;
     const S = G.C.CHUNK * TILE;
     // 레이어 0: 지면 청크
     const cx0 = Math.floor(rect.x / S), cy0 = Math.floor(rect.y / S), cx1 = Math.floor((rect.x + rect.w) / S), cy1 = Math.floor((rect.y + rect.h) / S);
@@ -550,6 +558,10 @@
       const a = 1 - f.t / f.life; ctx.globalAlpha = a;
       if (f.kind === 'star') { ctx.fillStyle = f.c; ctx.beginPath(); ctx.arc(f.x, f.y, 2.2 * a + 0.5, 0, 6.28); ctx.fill(); }
       else if (f.kind === 'leaf') { ctx.fillStyle = f.c; ctx.beginPath(); ctx.ellipse(f.x, f.y, 3, 1.8, f.t * 4, 0, 6.28); ctx.fill(); }
+      else if (f.kind === 'confetti') { ctx.save(); ctx.translate(f.x, f.y); ctx.rotate(f.t * (f.spin || 8)); ctx.fillStyle = f.c; ctx.fillRect(-2.2, -1.2, 4.4, 2.4); ctx.restore(); }
+      else if (f.kind === 'ring') { ctx.strokeStyle = f.c; ctx.lineWidth = 3 * a; ctx.beginPath(); ctx.arc(f.x, f.y, 6 + (1 - a) * (f.r || 40), 0, 6.28); ctx.stroke(); }
+      else if (f.kind === 'dust') { ctx.fillStyle = f.c; ctx.beginPath(); ctx.arc(f.x, f.y, 2 + (1 - a) * 4, 0, 6.28); ctx.fill(); }
+      else if (f.kind === 'grass') { ctx.strokeStyle = f.c; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(f.x + f.vx * 0.04, f.y - 3); ctx.stroke(); }
       else { ctx.fillStyle = f.c; ctx.beginPath(); ctx.arc(f.x, f.y, 1.8, 0, 6.28); ctx.fill(); }
     }
     ctx.globalAlpha = 1;
@@ -861,6 +873,20 @@
     ctx.fillStyle = '#a5d873'; ctx.beginPath(); ctx.ellipse(0, -90, 170, 40, 0, Math.PI, 0); ctx.fill();
     for (let k = -3; k <= 3; k++) { ctx.fillStyle = k % 2 ? '#6db552' : '#8fd16a'; ctx.beginPath(); ctx.arc(k * 40, -128 - Math.abs(k) * -4, 18, 0, 6.28); ctx.fill(); ctx.fillStyle = '#a7724a'; ctx.fillRect(k * 40 - 2, -112, 4, 14); }
     ctx.restore();
+    // 언덕 위 우편지기와 콩알 (10차 회의: 움직이는 첫 화면) + 나비 두 마리
+    {
+      const s2 = Math.min(w, h) / 360, hop = Math.abs(Math.sin(t * 2.4)) * 10;
+      ctx.save(); ctx.translate(w / 2 + 125 * s2, h * 0.92 - 112 * s2 - hop * s2); ctx.scale(s2 * 1.3, s2 * 1.3);
+      A.actor.draw(ctx, { species: 'human', look: pl.look && pl.look.skin !== undefined ? pl.look : A.LOOK.def(), x: 0, y: 0, dir: 0, tool: 'net', seed: 1, moving: false }, t);
+      A.kongal(ctx, 0, -53, { blink: A.actor.blink(kg, t) }, t);
+      ctx.restore();
+      for (let k = 0; k < 2; k++) {
+        const bx = w / 2 + Math.sin(t * (0.7 + k * 0.3) + k * 2) * w * 0.3, by = h * (0.55 + k * 0.08) + Math.sin(t * 2.1 + k) * 20;
+        const f = Math.abs(Math.sin(t * 14 + k)); ctx.save(); ctx.translate(bx, by); ctx.scale(s2 * 2, s2 * 2);
+        ctx.fillStyle = k ? '#ffd84d' : '#ffb3c7'; for (const sx of [-1, 1]) { ctx.beginPath(); ctx.ellipse(sx * 4 * (0.3 + f * 0.7), -2, 4 * (0.3 + f * 0.7), 3.4, 0, 0, 6.3); ctx.fill(); }
+        ctx.fillStyle = '#5b4636'; ctx.fillRect(-0.7, -4, 1.4, 6); ctx.restore();
+      }
+    }
     // 떠다니는 구름
     ctx.fillStyle = 'rgba(255,255,255,0.8)';
     for (let k = 0; k < 5; k++) { const x = ((t * (8 + k * 3) + k * 220) % (w + 300)) - 150, y = h * (0.12 + k * 0.08); ctx.beginPath(); ctx.ellipse(x, y, 60 * s, 18 * s, 0, 0, 6.28); ctx.ellipse(x + 30 * s, y - 10 * s, 30 * s, 16 * s, 0, 0, 6.28); ctx.fill(); }
@@ -998,9 +1024,21 @@
   });
   G.on('quest:done', (p) => { G.wallet.add(300, 'quest'); G.ui.toast(`할 일 완료: ${p.text} (+300몽 · 첫날 ${G.quest.doneCount()}/${G.quest.CARDS.length})`, { icon: '✅', ms: 3000 }); G.audio.sfx('chime'); fxSparkle(pl.x, pl.y - 50, 8); });
   G.on('stamp:earn', (p) => { setTimeout(async () => { G.audio.sfx('stamp'); kongalReact('jump'); await G.ui.say([{ who: 'kongal', text: '꼬물꼬물! (오늘 멋졌어!)' }, { who: 'sys', text: p.id === 'daily' ? '오늘의 부탁을 모두 들어줬어요! 반짝 도장을 하나 받았어요.' : '반짝 도장을 하나 받았어요! 내일은 박물관이 문을 열고, 새 이웃도 온대요.' }]); }, 1400); });
+  // 잡았을 때 손맛 (10차 회의): 빛 고리 + 꽃가루, 희귀·새 종·변이는 더 크게 + 살짝 흔들림
+  GM.celebrate = (x, y, big) => {
+    const cols = ['#ff6b8b', '#ffd24d', '#7cc35a', '#4d96ff', '#c9b3ff', '#ff9a3a'];
+    GM.fx.push({ x, y, vx: 0, vy: 0, t: 0, life: big ? 0.7 : 0.45, kind: 'ring', c: big ? '#ffe066' : '#ffffff', r: big ? 70 : 36 });
+    for (let k = 0; k < (big ? 30 : 12); k++) { const a = Math.random() * 6.28, sp = 60 + Math.random() * (big ? 160 : 90); GM.fx.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 80, g: 260, t: 0, life: 0.8 + Math.random() * 0.5, kind: 'confetti', c: cols[k % cols.length], spin: 6 + Math.random() * 10 }); }
+    if (big) { GM.shake = 0.5; if (G.settings.get('vibrate') && navigator.vibrate) navigator.vibrate([30, 40, 30]); }
+  };
+  G.on('eco:caught', (p) => {
+    const sp = G.data.get(p.kind === 'bug' ? 'bugs' : 'fish', p.ix) || G.data.all(p.kind === 'bug' ? 'bugs' : 'fish').find((r) => r.ix === p.ix);
+    const big = (sp && sp.tier >= 3) || p.v > 0;
+    setTimeout(() => GM.celebrate(pl.x, pl.y - 40, big), 60);
+  });
   G.on('dex:new', (p) => {
     if (!p.newSp) return;
-    fxSparkle(pl.x, pl.y - 60, 10, '#ffe066');
+    fxSparkle(pl.x, pl.y - 60, 10, '#ffe066'); GM.shake = Math.max(GM.shake || 0, 0.3);
     // 도감 5종마다 작은 축하 선물 (10차 회의: 모으는 재미를 자주 느끼게)
     const n = G.collect.total();
     if (n > 0 && n % 5 === 0) setTimeout(() => { const money = n * 100; G.wallet.add(money, 'dex'); G.audio.sfx('rare'); G.ui.toast(`📖 도감 ${n}종 달성! 보리 할멈이 ${G.fmt.money(money)}을 보냈어요.`, { icon: '🎉', ms: 3500 }); }, 1800);
