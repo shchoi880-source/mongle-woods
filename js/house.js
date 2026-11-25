@@ -44,8 +44,8 @@
   G.data.add('items', FORMS.filter((f) => !f.hidden).map((f) => ({ id: 'furn:' + f.id, name: f.name, cat: 'furn', val: Math.round(f.val / 4), stack: 1, ref: f, buy: f.val })));
 
   // ---------- 상태 ----------
-  // 방: 7×6 타일, 위 2줄은 벽, 바닥 7×4, 문은 아래 가운데
-  const ROOM = { w: 7, h: 6, wall: 2, door: 3 };
+  // 방: 텐트 9×7 타일(오너 피드백: 텐트가 너무 작다 → 7×6에서 넓힘), 위 2줄은 벽, 문은 아래 가운데
+  const ROOM = { w: 9, h: 7, wall: 2, door: 4 };
   const st = { items: [], starter: false, rated: 0, wall: 0, floor: 0 }; // items: {f, x, y, r, c} · wall/floor: 0 = 집 기본, 1~ = 고른 무늬
   // 벽지·바닥 (8차 회의: 꾸미기 강화). 번호는 끝에만 추가
   const WALLS = [null,
@@ -73,7 +73,16 @@
   const H = G.house = { inside: false, st, ROOM, FORMS, SHOP_FORMS: FORMS.filter((f) => !f.hidden), COLS, COLN, editing: false };
   H.WALLS = WALLS; H.FLOORS = FLOORS;
   // 방 크기는 둥지 단계에 따라 (텐트 7×6 → 오두막 9×7 → 작은 집 11×8). 오른쪽·아래로만 넓어져서 가구 위치는 그대로다
-  function syncRoom() { const r = G.nest ? G.nest.room() : { w: 7, h: 6 }; ROOM.w = r.w; ROOM.h = r.h; ROOM.door = Math.floor(r.w / 2); RW = ROOM.w * TILE; RH = ROOM.h * TILE; }
+  function syncRoom() {
+    const r = G.nest ? G.nest.room() : { w: 9, h: 7 }; ROOM.w = r.w; ROOM.h = r.h; ROOM.door = Math.floor(r.w / 2); RW = ROOM.w * TILE; RH = ROOM.h * TILE;
+    // 방이 넓어지면 문 위치가 바뀐다 → 새 문 앞을 막은 가구·방 밖으로 나간 가구는 빈 자리로 옮긴다
+    for (const o of st.items) {
+      const f = form(o.f); if (!f) continue; const b = fp(o);
+      const out = o.x < 0 || o.y < ROOM.wall || o.x + b.w > ROOM.w || o.y + b.h > ROOM.h;
+      const door = f.layer !== 'rug' && o.x <= ROOM.door && ROOM.door < o.x + b.w && o.y + b.h === ROOM.h;
+      if (out || door) { const sp = H.findSpot(o); if (sp) { o.x = sp[0]; o.y = sp[1]; } }
+    }
+  }
   H.syncRoom = syncRoom;
 
   const form = (id) => G.data.get('furn', id);
@@ -96,7 +105,7 @@
   H.findSpot = (it) => {
     const order = [];
     for (let y = ROOM.wall; y < ROOM.h; y++) for (let x = 0; x < ROOM.w; x++) order.push([x, y]);
-    order.sort((a, b) => Math.hypot(a[0] - 3, a[1] - 3.5) - Math.hypot(b[0] - 3, b[1] - 3.5));
+    const cx = ROOM.w / 2 - 0.5, cy = (ROOM.wall + ROOM.h) / 2; order.sort((a, b) => Math.hypot(a[0] - cx, a[1] - cy) - Math.hypot(b[0] - cx, b[1] - cy));
     for (const [x, y] of order) if (H.canPlace(it, x, y)) return [x, y];
     return null;
   };
@@ -258,6 +267,15 @@
     G.scene.pop(); G.audio.sfx('close'); G.ui.refreshHud(); G.save.mark('area');
   };
 
+  // 가구마다 할 수 있는 것 (오너 피드백: 텐트 안에서 할 게 너무 없다)
+  const ACTS = {
+    bed: ['😴', '자기·쉬기'], workbench: ['🔨', '만들기'], stove: ['🍳', '요리하기'], fridge: ['📦', '보관함'], crate: ['📦', '보관함'],
+    wardrobe: ['👕', '옷 갈아입기'], desk: ['🎯', '큰 목표'], shelf: ['📖', '책 보기'], globe: ['🗺️', '지도'], tv: ['📺', '소식 보기'],
+    radio: ['🎵', '켜기'], clock: ['⏰', '시계 보기'], piano: ['🎹', '연주하기'], chair: ['🪑', '앉기'], sofa: ['🛋️', '앉기'], bench: ['🪑', '앉기'], cushion: ['🪑', '앉기'],
+    aquarium: ['🐟', '구경하기'], bathtub: ['🫧', '목욕하기'], teddy: ['🧸', '안아 주기'], fireplace: ['🔥', '불 쬐기'], plant: ['💧', '물 주기'], tree_pot: ['💧', '물 주기'],
+    lamp: ['💡', '켜기·끄기'], floorlamp: ['💡', '켜기·끄기'], starlamp: ['💡', '켜기·끄기'],
+  };
+  H.ACTS = ACTS;
   function targetIn() {
     const pl = G.player; const DIRS = [[0, 1], [-1, 0], [0, -1], [1, 0]]; const [dx, dy] = DIRS[pl.dir];
     const fx = pl.x + dx * 22, fy = pl.y + dy * 22 - 4;
@@ -285,7 +303,7 @@
         const o = targetIn();
         H.target = o;
         if (G.ui.dialogOpen() || G.ui.open) G.ui.setAction('✋', '', '');
-        else if (o) G.ui.setAction(o.f === 'bed' ? '😴' : o.f === 'radio' ? '🎵' : o.f === 'workbench' ? '🔨' : '✋', o.f === 'bed' ? '쉬기' : o.f === 'radio' ? '켜기' : o.f === 'workbench' ? '만들기' : '만지기', form(o.f).name);
+        else if (o) { const a = ACTS[o.f] || ['✋', '만지기']; G.ui.setAction(a[0], a[1], form(o.f).name); }
         else G.ui.setAction('🚪', G.player.y > RH - 30 ? '나가기' : '', '');
       }
     },
@@ -309,11 +327,30 @@
     const o = H.target, pl = G.player;
     if (!o) { if (pl.y > RH - 30) H.exit(); else { pl.squash = 0.12; G.audio.sfx('bump'); } return; }
     o.wob = 0.35;
-    if (o.f === 'bed') await G.game.restMenu();
-    else if (o.f === 'workbench') await G.craft.open();
-    else if (o.f === 'radio') { G.audio.sfx('chime'); G.game.kongalSay('♪'); }
-    else if (o.f === 'clock') { const l = G.time.label(); await G.ui.say([{ who: 'sys', text: `똑딱똑딱. 지금은 ${l.clock}이에요.` }]); }
-    else { G.audio.sfx('tap'); }
+    const K = G.game.kongalSay, say = (text, who = 'sys') => G.ui.say([{ who, text }]);
+    switch (o.f) {
+      case 'bed': await G.game.restMenu(); break;
+      case 'workbench': await G.craft.open(); break;
+      case 'stove': await G.craft.open('cook'); break;
+      case 'fridge': case 'crate': G.audio.sfx('open'); G.ui.notebook('storage'); break;
+      case 'wardrobe': G.audio.sfx('open'); G.ui.notebook('me'); break;
+      case 'desk': G.audio.sfx('open'); G.goals ? G.goals.open() : G.ui.notebook('todo'); break;
+      case 'shelf': if (G.lantern.st.pages) await G.lantern.book(); else { G.audio.sfx('tap'); await say('책장에 그림책 자리가 비어 있어요. 등불을 켜면 큰솜이 그림책이 한 장씩 생겨요.'); } break;
+      case 'globe': G.map.open(); break;
+      case 'tv': if (G.news && G.news.open) await G.news.open(); else K('지지직…'); break;
+      case 'radio': G.audio.sfx('chime'); K('♪'); break;
+      case 'clock': { const l = G.time.label(); await say(`똑딱똑딱. 지금은 ${l.clock}이에요. 다음 아침까지 약 ${G.time.minsToMorning()}분.`); break; }
+      case 'piano': { const m = [[72, 74, 76, 72], [76, 77, 79], [79, 81, 79, 77, 76, 72], [67, 72, 76, 79]][Math.floor(Math.random() * 4)]; G.audio.melody ? G.audio.melody(m) : G.audio.sfx('chime'); K(['♪♫', '도레미!', '랄라~'][Math.floor(Math.random() * 3)]); break; }
+      case 'chair': case 'sofa': case 'bench': case 'cushion': pl.squash = 0.15; G.audio.sfx('pop'); K(['아~ 편하다', '쉬어 가자!', '폭신폭신'][Math.floor(Math.random() * 3)]); break;
+      case 'aquarium': G.audio.sfx('plop'); K('뽀글뽀글…'); break;
+      case 'bathtub': G.audio.sfx('plop'); K('거품 목욕 최고!'); break;
+      case 'teddy': G.audio.sfx('pickup'); K('꼬옥 ♥'); break;
+      case 'fireplace': G.audio.sfx('chime'); K('따뜻해~'); break;
+      case 'plant': case 'tree_pot': G.audio.sfx('pickup'); K('쑥쑥 자라라!'); break;
+      case 'cake': K('냠… 아니, 장식이었지!'); break;
+      case 'lamp': case 'floorlamp': case 'starlamp': G.audio.sfx('tap'); o.off = !o.off; break;
+      default: G.audio.sfx('tap');
+    }
   }
 
   function toRoom(cx, cy) { const dpr = Math.min(globalThis.devicePixelRatio || 1, 2); return { x: cx * dpr / PXr - ox, y: cy * dpr / PXr - oy }; }
@@ -373,7 +410,7 @@
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.fillStyle = `rgba(40,30,70,${(g.a - 0.2) * 0.5})`; ctx.fillRect(0, 0, cv.width, cv.height);
       ctx.globalCompositeOperation = 'lighter';
-      for (const o of st.items) if (form(o.f).light) { const sp = G.art.light(60, 'rgba(255,210,140,0.5)'); const b = fp(o); ctx.drawImage(sp, ((o.x + b.w / 2) * TILE + ox - 60) * PXr, (o.y * TILE + oy - 60) * PXr); }
+      for (const o of st.items) if (form(o.f).light && !o.off) { const sp = G.art.light(60, 'rgba(255,210,140,0.5)'); const b = fp(o); ctx.drawImage(sp, ((o.x + b.w / 2) * TILE + ox - 60) * PXr, (o.y * TILE + oy - 60) * PXr); }
       ctx.globalCompositeOperation = 'source-over';
       ctx.setTransform(PXr, 0, 0, PXr, ox * PXr, oy * PXr);
     }

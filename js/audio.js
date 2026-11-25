@@ -121,6 +121,9 @@
     try { const f = SFX[name]; if (f) f(o); } catch (e) { G.log.err('sfx:' + name, e); }
   };
 
+  // 짧은 가락 (피아노 가구)
+  AU.melody = (ms) => { if (!ac) return; try { ms.forEach((m, i) => note('kalimba', m, ac.currentTime + i * 0.18, 0.45, 'sfx')); } catch (e) { G.log.err('melody', e); } };
+
   // ---------- 옹알이 목소리 ----------
   // 글자마다 짧은 음절 블립. 화자별 음높이·빠르기.
   const VOICES = { ddalang: { base: 76, var: 5, inst: 'pluck' }, bori: { base: 62, var: 3, inst: 'marimba' }, todak: { base: 60, var: 6, inst: 'marimba' }, tosil: { base: 70, var: 3, inst: 'pluck' }, kongal: { base: 90, var: 4, inst: 'kalimba' }, sogeum: { base: 64, var: 4, inst: 'marimba' }, lime: { base: 79, var: 3, inst: 'pluck' }, slowpoke: { base: 55, var: 2, inst: 'marimba' }, jjongal: { base: 82, var: 6, inst: 'pluck' }, danchu: { base: 68, var: 1, inst: 'kalimba' }, hotteok: { base: 57, var: 5, inst: 'marimba' }, mungchi: { base: 74, var: 2, inst: 'kalimba' }, mongsil: { base: 77, var: 4, inst: 'pluck' }, danpung: { base: 64, var: 2, inst: 'kalimba' }, sys: null };

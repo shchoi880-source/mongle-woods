@@ -321,7 +321,18 @@
   }
   function o_poke(o) { o.shakeT = 0.3; G.audio.sfx(o.kind === 'lamp' ? 'chime' : 'tap'); }
   GM.restMenu = async function tentMenu() {
-    const i = await G.ui.choose({ who: 'sys', text: '내 텐트예요. 무엇을 할까요?' }, ['저장하기', '콩알이랑 잠깐 쉬기', '그만두기']);
+    const h = G.time.hour(), late = h >= 18 || h < 5;
+    const opts = late ? ['아침까지 푹 자기', '저장하기', '콩알이랑 잠깐 쉬기', '그만두기'] : ['저장하기', '콩알이랑 잠깐 쉬기', '그만두기'];
+    let i = await G.ui.choose({ who: 'sys', text: late ? '포근한 침대예요. 밤이 깊었어요.' : '포근한 침대예요. 저녁 6시부터는 아침까지 잘 수 있어요.' }, opts);
+    if (late) {
+      if (i === 0) {
+        kg.sleep = true; G.audio.sfx('close');
+        const real = G.time.sleep();
+        await G.ui.say([{ who: 'kongal', text: '새근… 새근….' }, { who: 'sys', text: `푹 잤어요! 상쾌한 아침이에요. (밤 ${real}분을 건너뛰고, 텃밭·목장은 그만큼 자랐어요)` }]);
+        kg.sleep = false; G.audio.sfx('chime'); G.save.now('sleep'); return;
+      }
+      i -= 1;
+    }
     if (i === 0) { const r = G.save.now('tent'); G.audio.sfx('save'); G.ui.toast(r.ok ? '저장했어요! 언제든 이어서 할 수 있어요.' : '저장하지 못했어요.', { icon: '💾' }); }
     else if (i === 1) {
       kg.sleep = true;

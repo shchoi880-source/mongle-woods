@@ -366,7 +366,8 @@
       ({ bag: bagPane, me: mePane, friends: friendsPane, dex: dexPane, folk: folkPane, todo: todoPane, set: setPane })[id](pane, close);
     };
     for (const [id, nm] of TABS) { const b = $('button', 'tab', nm); b.dataset.t = id; b.onclick = () => { G.audio.sfx('tap'); show(id); }; tabs.append(b); }
-    body.append(tabs, pane); show(tab);
+    const sto = tab === 'storage'; if (sto) tab = 'bag';
+    body.append(tabs, pane); show(tab); if (sto) storagePane(pane);
     if (Date.now() - (G.settings.get('lastExport') || 0) > 7 * 864e5 && G.time.st.playDays > 1) tabs.querySelector('[data-t=set]').classList.add('badge');
   }, { wide: true, cls: 'nb' });
 
@@ -934,7 +935,7 @@
       const buy = $('div', 'buyrow');
       for (const e of G.shop.stock()) {
         const own = e.kind === 'tool' ? G.player.hasTool(e.id) : e.kind === 'look' ? !!(G.player.unlocks || {})[e.id] : G.shop.soldOut(e);
-        const ico = e.kind === 'look' ? `<span class="lookico">${e.part === 'hat' ? '👒' : '👕'}</span>` : e.kind === 'plot' ? `<img src="${G.art.iconURL('seed:carrot', 64)}" alt=""><i class="upmark">＋</i>` : e.kind === 'tool' || e.kind === 'up' ? `<img src="${G.art.iconURL('tool:' + e.id, 64)}" alt="">${e.kind === 'up' ? '<i class="upmark">⬆</i>' : ''}` : e.kind === 'seed' ? `<img src="${G.art.iconURL('seed:' + e.id, 64)}" alt="">` : e.kind === 'animal' ? `<img src="${G.art.iconURL('animal:' + e.id, 64)}" alt="">` : `<img src="${G.art.iconURL('furn:' + e.id + '#' + e.c, 64)}" alt="">`;
+        const ico = e.kind === 'look' ? `<span class="lookico">${e.part === 'hat' ? '👒' : '👕'}</span>` : e.kind === 'plot' ? `<img src="${G.art.iconURL('seed:carrot', 64)}" alt=""><i class="upmark">＋</i>` : e.kind === 'bag' ? '<span class="lookico">🎒</span><i class="upmark">＋</i>' : e.kind === 'tool' || e.kind === 'up' ? `<img src="${G.art.iconURL('tool:' + e.id, 64)}" alt="">${e.kind === 'up' ? '<i class="upmark">⬆</i>' : ''}` : e.kind === 'seed' ? `<img src="${G.art.iconURL('seed:' + e.id, 64)}" alt="">` : e.kind === 'animal' ? `<img src="${G.art.iconURL('animal:' + e.id, 64)}" alt="">` : `<img src="${G.art.iconURL('furn:' + e.id + '#' + e.c, 64)}" alt="">`;
         const b = $('button', 'buycard' + (own ? ' off' : ''), `${ico}<b>${esc(e.name)}</b><small>${own ? (e.kind === 'tool' ? '가지고 있음' : '다 팔림') : G.fmt.money(e.price)}</small>`);
         b.onclick = async () => {
           if (own) return;
@@ -947,6 +948,7 @@
           else if (r.gift) { tip('씨앗 첫 손님 덤으로 물뿌리개를 받았어요! 텃밭은 집 옆에 있어요.', '🚿', 4000); }
           else if (e.kind === 'tool') { G.player.setTool(e.id); tip(e.id === 'axe' ? '도끼를 샀어요! 나무를 찍으면 목재가 나와요.' : e.id === 'can' ? '물뿌리개를 샀어요! 텃밭에 물을 줘요.' : '삽을 샀어요! 땅의 금(✕)을 파 보세요.', '🧰'); }
           else if (e.kind === 'look') tip(`「${e.name}」을 샀어요! 잎첩 🪞 나에서 입어 봐요.`, '👕', 3600);
+          else if (e.kind === 'bag') tip(`가방이 ${G.inv.size}칸이 됐어요!`, '🎒');
           else if (e.kind === 'plot') tip(`텃밭이 ${r.n}칸 넓어졌어요! (모두 ${G.farm.st.plots.length}칸)`, '🥕');
           else if (e.kind === 'up') tip({ net: '튼튼 잠자리채! 채가 더 넓게 닿아요.', rod: '튼튼 낚싯대! 물고기가 더 멀리서 오고, 당기기가 넉넉해져요.', can: '큰 물뿌리개! 주변 5×3 칸에 한 번에 물을 줘요.' }[e.id], '⬆️', 3600);
           else if (e.kind === 'seed') tip(`${e.name}를 샀어요! 집 옆 텃밭에 심어요.`, '🌱');

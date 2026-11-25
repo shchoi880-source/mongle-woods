@@ -1,4 +1,4 @@
-// 시스템: 가방(30칸)·지갑(몽)·판매/구매·유행 바람·도감·첫날 할 일
+// 시스템: 가방(30칸, 상점에서 80칸까지)·지갑(몽)·판매/구매·유행 바람·도감·첫날 할 일
 (function (G) {
   'use strict';
   const u = G.u;
@@ -30,6 +30,9 @@
   const inv = { size: 30, slots: [] };
   G.inv = {
     get size() { return inv.size; },
+    MAX: 80,
+    growPrice: () => [3000, 8000, 18000, 35000, 60000][Math.max(0, Math.floor((inv.size - 30) / 10))] || 60000,
+    grow() { inv.size = Math.min(80, inv.size + 10); G.save.mark('bag'); },
     get slots() { return inv.slots; },
     free() { return inv.size - inv.slots.length; },
     // 같은 종류(부가 정보 없는 것)는 쌓는다. 남은 수량 반환
@@ -136,6 +139,8 @@
         if (G.TOOLS.can && !G.player.hasTool('can')) list.push({ kind: 'tool', id: 'can', name: G.TOOLS.can.name, price: G.TOOLS.can.price, key: 'can' });
         if ((G.farm.st.extra || 0) < G.farm.EXTRA_MAX) list.push({ kind: 'plot', id: 'plot', name: `텃밭 3칸 넓히기 (지금 ${G.farm.st.plots.length}칸)`, price: G.farm.expandPrice(), key: 'plot' });
       }
+      // 가방 늘리기 (오너 요청: 30칸은 좁다) 30 → 80칸, 10칸씩
+      if (G.inv.size < G.inv.MAX) list.push({ kind: 'bag', id: 'bag', name: `가방 10칸 늘리기 (지금 ${G.inv.size}칸)`, price: G.inv.growPrice(), key: 'bag' });
       // 도구 업그레이드 (한 번 사면 영구)
       for (const [t, nm, pr] of [['net', '튼튼 잠자리채', 3000], ['rod', '튼튼 낚싯대', 3000], ['can', '큰 물뿌리개', 2500]]) {
         if (G.player.hasTool(t) && !(G.player.up && G.player.up[t])) list.push({ kind: 'up', id: t, name: nm, price: pr, key: 'up_' + t });
@@ -184,6 +189,11 @@
         if (G.wallet.get() < entry.price) return { ok: false, why: '몽이 조금 모자라요.' };
         const r = G.farm.expand(); if (!r.ok) return r;
         G.wallet.spend(entry.price, 'buy'); G.emit('shop:buy', { id: 'plot', price: entry.price }); return { ok: true, n: r.n };
+      }
+      if (entry.kind === 'bag') {
+        if (G.inv.size >= G.inv.MAX) return { ok: false, why: '가방이 이미 가장 커요.' };
+        if (!G.wallet.spend(G.inv.growPrice(), 'buy')) return { ok: false, why: '몽이 조금 모자라요.' };
+        G.inv.grow(); G.emit('shop:buy', { id: 'bag', price: entry.price }); return { ok: true };
       }
       if (entry.kind === 'up') {
         if (G.player.up && G.player.up[entry.id]) return { ok: false, why: '이미 좋은 걸 가지고 있어요.' };
