@@ -296,7 +296,7 @@
       return !(G.yard && G.yard.blocked(tx, ty)); // 마당에 놓은 가구
     },
     // 길 찾기 (타일 BFS, 4방향): 픽셀 (x,y) → 목표 (tx,ty) 근처 설 수 있는 칸까지. 타일 가운데 점 목록 또는 null
-    findPath(x, y, tx, ty, max = 4000) {
+    findPath(x, y, tx, ty, max = 9000) {
       const m = W.map; if (!m) return null; const w = m.w, h = m.h;
       const sx = Math.floor(x / TILE), sy = Math.floor(y / TILE), gx = Math.floor(tx / TILE), gy = Math.floor(ty / TILE);
       if (sx === gx && sy === gy) return [];
