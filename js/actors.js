@@ -53,6 +53,56 @@
   A.postkeeperId = (look) => look && look.illu === 'postkeeper-male' ? 'postkeeper-male' : 'postkeeper';
   A.loadPostkeeper = (id) => characterImage(`assets/chars/s/${id}-walk.png`);
 
+  // ---------- 우편지기 꾸미기 (GPT가 만든 겹쳐 입는 부품, 걷기 시트와 같은 3×3) ----------
+  // look.pk = { head, body, acc, hc, bc, ac } — 머리·옷·소품을 겹쳐 그리고, 색은 부품 그림의 해당 색만 골라 바꾼다
+  const PK = A.PK = {
+    heads: [['female-wavy', '웨이브'], ['female-bob', '단발'], ['female-bun', '똥머리'], ['male-curly', '곱슬'], ['male-side-part', '옆가르마'], ['male-tousled', '부스스']],
+    bodies: [['overalls', '멜빵바지'], ['cardigan', '가디건']],
+    accs: [['', '없음'], ['postal-cap', '우편 모자'], ['round-glasses', '동그란 안경'], ['hair-bow', '머리 리본']],
+    // [이름, 색상(도), 채도(절대값, null = 원래 × 배), 밝기 배수, 보여 줄 색]
+    hair: [['원래', null, 1, 1, '#8a4a28'], ['검정', 260, 0.12, 0.42, '#2f2a30'], ['초코', 18, 0.55, 0.72, '#5a3424'], ['금발', 42, 0.7, 1.6, '#e8c060'], ['분홍', 340, 0.6, 1.5, '#f2a0bc'], ['민트', 165, 0.45, 1.45, '#8fd8c0'], ['라벤더', 268, 0.4, 1.45, '#b8a0e0'], ['은빛', 220, 0.1, 1.55, '#c8ccd8'], ['빨강', 4, 0.7, 1.05, '#c0402c'], ['하늘', 205, 0.55, 1.45, '#8cc0ec']],
+    cloth: [['원래', null, 1, 1, ''], ['분홍', 340, 0.6, 1.05, '#f0a0b8'], ['하늘', 205, 0.55, 1.05, '#8cc4ec'], ['민트', 160, 0.45, 1, '#88d4b8'], ['노랑', 46, 0.75, 1.1, '#f0d060'], ['보라', 268, 0.45, 1, '#b098dc'], ['빨강', 4, 0.65, 0.95, '#d05040'], ['남색', 228, 0.45, 0.7, '#3c4c80'], ['초록', 105, 0.4, 0.9, '#78a858'], ['크림', 38, 0.35, 1.35, '#f0e0c0']],
+  };
+  // 부품별로 바꿀 색 범위 (HSL): 머리카락 = 갈색, 멜빵 = 청색, 가디건 = 붉은색, 모자 = 올리브, 리본 = 빨강
+  const MASK = {
+    head: (h, s, l) => h >= 12 && h <= 40 && s > 0.25 && l > 0.16 && l < 0.62,
+    overalls: (h, s, l) => h >= 175 && h <= 245 && l > 0.25 && l < 0.9,
+    cardigan: (h, s, l) => (h < 16 || h >= 345) && s > 0.35 && l > 0.15 && l < 0.78,
+    'postal-cap': (h, s, l) => h >= 28 && h <= 62 && s > 0.12 && l > 0.15,
+    'hair-bow': (h, s, l) => (h < 22 || h >= 335) && s > 0.3,
+    'round-glasses': (h, s, l) => h >= 10 && h <= 45 && s > 0.2,
+  };
+  const partCache = new Map();
+  function rgb2hsl(r, g, b) { r /= 255; g /= 255; b /= 255; const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2; if (mx === mn) return [0, 0, l]; const d = mx - mn, s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn); let h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; return [h * 60, s, l]; }
+  function hsl2rgb(h, s, l) { h /= 360; const f = (p, q, t) => { if (t < 0) t += 1; if (t > 1) t -= 1; return t < 1 / 6 ? p + (q - p) * 6 * t : t < 1 / 2 ? q : t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p; }; if (!s) return [l * 255, l * 255, l * 255]; const q = l < 0.5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q; return [f(p, q, h + 1 / 3) * 255, f(p, q, h) * 255, f(p, q, h - 1 / 3) * 255]; }
+  // 부품 그림(+색) — 색을 바꾼 건 한 번 만들어 캐시
+  A.pkPart = (kind, name, ci) => {
+    if (!name) return null;
+    const im = characterImage(`assets/chars/parts/${kind}-${name}.webp`); if (!im) return null;
+    const pal = kind === 'head' ? PK.hair : PK.cloth, c = pal[ci | 0];
+    if (!c || c[1] === null || typeof document === 'undefined') return im;
+    const key = kind + name + ci; let cv = partCache.get(key); if (cv) return cv;
+    cv = document.createElement('canvas'); cv.width = im.naturalWidth; cv.height = im.naturalHeight;
+    const g = cv.getContext('2d', { willReadFrequently: true }); g.drawImage(im, 0, 0);
+    try {
+      const d = g.getImageData(0, 0, cv.width, cv.height), px = d.data, m = MASK[kind === 'head' ? 'head' : name];
+      for (let i = 0; i < px.length; i += 4) {
+        if (px[i + 3] < 8) continue;
+        const [h, s, l] = rgb2hsl(px[i], px[i + 1], px[i + 2]); if (!m || !m(h, s, l)) continue;
+        const [r, gg, b] = hsl2rgb(c[1], c[2] === null ? s : Math.min(1, c[2] * (0.6 + s * 0.8)), Math.min(0.96, l * c[3]));
+        px[i] = r; px[i + 1] = gg; px[i + 2] = b;
+      }
+      g.putImageData(d, 0, 0);
+    } catch (e) { return im; }
+    cv.naturalWidth = cv.width; partCache.set(key, cv); return cv;
+  };
+  A.pkLayers = (pk) => {
+    const out = [A.pkPart('outfit', pk.body || 'overalls', pk.bc), A.pkPart('head', pk.head || 'female-wavy', pk.hc)];
+    if (out.some((x) => !x)) return null;
+    if (pk.acc) { const a = A.pkPart('accessory', pk.acc, pk.ac); if (a) out.push(a); }
+    return out;
+  };
+
   // 각 행은 정면·오른쪽·뒷면, 각 열은 서기·왼발·오른발이다.
   const WALK_FRAMES = [1, 0, 2, 0];
   function drawPostkeeper(ctx, a, im, t, H) {
@@ -61,7 +111,8 @@
     const row = back ? 2 : side ? 1 : 0;
     const phase = a.walk || 0;
     const col = a.moving ? WALK_FRAMES[Math.floor(phase * 4) % 4] : 0;
-    const size = im.naturalWidth / 3;
+    const ims = Array.isArray(im) ? im : [im];
+    const size = ims[0].naturalWidth / 3;
     const height = H || 72;
     const hop = a.hop || 0;
     const squash = a.squash || 0;
@@ -83,7 +134,7 @@
     };
     if (hasTool && back) tool();
     // 아틀라스에서 발바닥이 셀 바닥보다 6px 위에 등록되어 있다.
-    ctx.drawImage(im, col * size, row * size, size, size, -height / 2, -height + 3, height, height);
+    for (const L of ims) ctx.drawImage(L, col * size, row * size, size, size, -height / 2, -height + 3, height, height);
     if (hasTool && !back) tool();
     ctx.restore();
   }
@@ -138,6 +189,7 @@
   A.actor = {
     draw(ctx, a, t) {
       if (a.species === 'human') {
+        if (a.look && a.look.pk) { const ls = A.pkLayers(a.look.pk); if (ls) { drawPostkeeper(ctx, a, ls, t); return; } }
         const id = A.postkeeperId(a.look);
         const sprite = A.loadPostkeeper(id);
         if (sprite) { drawPostkeeper(ctx, a, sprite, t); return; }
