@@ -720,7 +720,8 @@
     // 콩알: 머리 위
     const breath = Math.sin(t * 2.6) * 0.6;
     const bob = pl.moving ? Math.abs(Math.sin(pl.walk * Math.PI * 2)) * -2.2 : 0;
-    A.kongal(c, pl.x + (pl.dir === 1 ? 2 : pl.dir === 3 ? -2 : 0), pl.y - 53 + bob + breath - (a.hop || 0), kg, t);
+    const illu = pl.look && pl.look.illu && A.charImg(pl.look.illu);
+    A.kongal(c, pl.x + (pl.dir === 1 ? 2 : pl.dir === 3 ? -2 : 0), pl.y - (illu ? 68 : 53) + bob + breath - (a.hop || 0), kg, t);
   }
   function drawHeld(t) {
     const k = 1 - pl.holdT / 1.2;
@@ -929,7 +930,8 @@
   let createEl = null;
   G.scene.define('create', {
     enter() {
-      const look = A.LOOK.def();
+      const look = Object.assign(A.LOOK.def(), { illu: 'postkeeper' }); // 새 우편지기는 그림 캐릭터로 시작 (직접 꾸미기로 바꿀 수 있음)
+      A.charImg('postkeeper'); A.charImg('postkeeper-male');
       createEl = document.createElement('div'); createEl.className = 'create';
       createEl.innerHTML = '<h2>어떤 우편지기인가요?</h2>';
       const wrap = document.createElement('div'); wrap.className = 'cwrap';
@@ -939,6 +941,7 @@
       const townIn = document.createElement('input'); townIn.placeholder = '마을 이름 (최대 8자)'; townIn.maxLength = 8; townIn.value = '몽글숲';
       const ins = document.createElement('div'); ins.className = 'cparts'; ins.append(nameIn, townIn); left.append(ins);
       const right = document.createElement('div'); right.className = 'cright';
+      right.append(G.ui.illuMode(look, () => { pv.poke(); setTimeout(() => pv.poke(), 300); }));
       right.append(G.ui.lookEditor(look, () => pv.poke()));
       const note = document.createElement('div'); note.className = 'muted small'; note.textContent = '이름과 모습은 나중에 잎첩 「🪞 나」에서 언제든 바꿀 수 있어요.';
       right.append(note);
@@ -1010,6 +1013,7 @@
     G.tide.refresh(G.time.day());
     G.farm.ensurePlots(); G.farm.tick(G.time.day()); G.ranch.tick(G.time.day());
     if (!fresh) awayGrow();
+    if (!fresh && !(pl.look && pl.look.illu)) setTimeout(() => G.events.tip('illu', '새 그림 캐릭터가 생겼어요! 잎첩 🪞 나에서 「우편지기 그림」으로 바꿔 보세요.'), 6000);
     GM.drops = (G.world.state.drops || []).map((d) => Object.assign({ vy: 0, h: 0, t: 0 }, d));
     G.npc.init();
     G.eco.clear();
