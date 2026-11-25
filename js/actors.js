@@ -35,7 +35,7 @@
   };
 
   // 캐릭터 일러스트 (오너가 준비한 그림, assets/chars/s). 마을 이웃은 이 그림으로 그린다
-  const ILLU = ['bori', 'danchu', 'ddalang', 'hotteok', 'jjongal', 'lime', 'mongsil', 'mungchi', 'sogeum'];
+  const ILLU = ['bori', 'danchu', 'ddalang', 'hotteok', 'jjongal', 'lime', 'mongsil', 'mungchi', 'sogeum', 'tosil', 'todak', 'slowpoke', 'danpung'];
   const illu = new Map();
   A.ILLU = ILLU;
   A.illuURL = (id, big) => `assets/chars/s/${id}${big ? '' : '-w'}.webp`;
@@ -47,7 +47,7 @@
   }
   // 이웃 걷기 그림 (우편지기와 같은 3×3 시트: 줄 = 정면·오른쪽·뒷면, 칸 = 서기·왼발·오른발).
   // assets/chars/s/<id>-walk.png 를 올리면 코드 수정 없이 그 이웃은 발을 떼며 걷는다. 없으면 정면 그림으로
-  A.walkSheet = (id) => (ILLU.includes(id) && G.settings.get('illu') !== false ? characterImage(`assets/chars/s/${id}-walk.png`) : null);
+  A.walkSheet = (id) => (ILLU.includes(id) && G.settings.get('illu') !== false ? characterImage(`assets/chars/s/${id}-walk.webp`) : null);
   const WALK_H = { rabbit: 78, hedgehog: 70, human: 72 };
   A.charImg = (id) => ILLU.includes(id) && G.settings.get('illu') !== false ? characterImage(A.illuURL(id)) : null;
   A.postkeeperId = (look) => look && look.illu === 'postkeeper-male' ? 'postkeeper-male' : 'postkeeper';
@@ -91,7 +91,7 @@
   // 종이인형 방식 (오너: "그림이 미끄러지듯 움직여 이상하다"): 걸음마다 통통 뛰고(뜰 때 늘어나고 착지할 때 납작),
   // 가는 쪽으로 살짝 기울고, 방향을 바꾸면 종이처럼 휙 뒤집힌다
   A.drawIllu = (ctx, a, im, t) => {
-    const H = a.species === 'human' ? 66 : a.species === 'rabbit' ? 70 : a.species === 'hedgehog' ? 62 : 60, W = H * im.naturalWidth / im.naturalHeight;
+    const H = a.species === 'human' ? 66 : a.species === 'rabbit' ? 70 : a.species === 'hedgehog' ? 62 : a.species === 'mole' ? 50 : a.species === 'tortoise' ? 60 : a.species === 'fox' ? 62 : 60, W = H * im.naturalWidth / im.naturalHeight;
     const dt = Math.min(0.05, Math.max(0, t - (a._lt || t))); a._lt = t;
     // 뒤집기: 왼쪽(1)·오른쪽(3)을 보면 그쪽으로, 위·아래는 그대로
     if (a.dir === 1) a._face = -1; else if (a.dir === 3) a._face = 1; else if (!a._face) a._face = 1;
