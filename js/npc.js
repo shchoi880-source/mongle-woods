@@ -122,28 +122,39 @@
         // 배회
         if (n.wait > 0) { n.wait -= dt; n.moving = false; continue; }
         const dx = n.tx - n.x, dy = n.ty - n.y, len = Math.hypot(dx, dy);
-        if (len < 4 || n.stuck > 1.2) {
-          n.stuck = 0; n.wait = 1 + Math.random() * 3;
-          for (let k = 0; k < 8; k++) {
-            const a = Math.random() * 6.28, r = Math.random() * act.r * TILE;
-            const x = act.ax + Math.cos(a) * r, y = act.ay + Math.sin(a) * r;
-            if (G.world.canStand(x, y, n.r)) { n.tx = x; n.ty = y; break; }
-          }
-          // 활동 장소가 바뀌어 멀어졌으면 곧장 출발. 너무 멀면(화면 밖) 순간이동으로 따라잡는다
+        // 길 찾기 (오너 친구 제보: 이웃이 걷다가 길에 막혀 그대로 서 있다 — 직선으로만 걷던 탓)
+        const pick = (x, y) => { const path = G.world.findPath(n.x, n.y, x, y); if (path) { n.tx = x; n.ty = y; n.path = path; n.wait = 0; return true; } return false; };
+        if (len < 4 || n.stuck > 1.2 || !n.path) {
+          const wasStuck = n.stuck > 1.2; n.stuck = 0; n.path = null; n.wait = wasStuck ? 0.3 : 1 + Math.random() * 3;
           const far = u.dist(n.x, n.y, act.ax, act.ay);
+          // 활동 장소가 멀면 그쪽으로 (길이 있으면 걸어서). 화면 밖이고 멀면 순간이동으로 따라잡는다
           if (far > act.r * TILE * 1.6) {
-            n.wait = 0; n.tx = act.ax; n.ty = act.ay;
             if (d > TILE * 14 && far > TILE * 6) { const q = standNear(act.ax, act.ay, n.r); if (q) { n.x = q.x; n.y = q.y; } }
+            else if (pick(act.ax, act.ay)) n.wait = 0;
           }
+          // 활동 장소 안에서 걸어갈 수 있는 곳 고르기 (안 되면 지금 자리 근처라도)
+          for (let k = 0; k < 10 && !n.path; k++) {
+            const near = k >= 6, a = Math.random() * 6.28, r = Math.random() * (near ? 3 : act.r) * TILE;
+            const x = (near ? n.x : act.ax) + Math.cos(a) * r, y = (near ? n.y : act.ay) + Math.sin(a) * r;
+            if (G.world.canStand(x, y, n.r)) pick(x, y);
+          }
+          if (!n.path) { n.path = []; n.tx = n.x; n.ty = n.y; }
+          n.moving = false;
         } else {
-          const sp = 2.6 * TILE * dt;
+          // 다음 길목(타일 가운데)으로. 지나치지 않게 남은 거리만큼만
+          let wp = n.path[0] || { x: n.tx, y: n.ty };
+          if (Math.hypot(wp.x - n.x, wp.y - n.y) < 3 && n.path.length) { n.path.shift(); wp = n.path[0] || { x: n.tx, y: n.ty }; }
+          const wx = wp.x - n.x, wy = wp.y - n.y, wl = Math.hypot(wx, wy) || 1;
+          const sp = Math.min(2.6 * TILE * dt, wl);
           const ox = n.x, oy = n.y;
-          G.world.move(n, dx / len * sp, dy / len * sp);
+          G.world.move(n, wx / wl * sp, wy / wl * sp);
           const moved = Math.hypot(n.x - ox, n.y - oy);
           if (moved < sp * 0.3) n.stuck = (n.stuck || 0) + dt; else n.stuck = 0;
-          // 오래 막히면(강 건너편 등) 조용히 장소로 옮긴다
-          if (n.stuck > 1.1 && d > TILE * 10) { const q = standNear(act.ax, act.ay, n.r); if (q) { n.x = q.x; n.y = q.y; n.stuck = 0; } }
-          n.moving = moved > 0.01; n.dir = faceDir(dx, dy);
+          // 막히면 0.5초 뒤 길을 다시 찾고, 그래도 막히면 다른 곳으로 (화면 밖이면 조용히 옮기기)
+          if (n.stuck > 0.5 && !n.repath) { n.repath = true; n.stuck = 0; if (!pick(n.tx, n.ty)) n.stuck = 9; }
+          if (n.stuck > 1.1 && d > TILE * 10) { const q = standNear(act.ax, act.ay, n.r); if (q) { n.x = q.x; n.y = q.y; n.stuck = 9; } }
+          if (moved > 1) n.repath = false;
+          n.moving = moved > 0.01; n.dir = faceDir(wx, wy);
           n.walk = (n.walk + dt / 0.5) % 1;
         }
       }

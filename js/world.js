@@ -295,6 +295,28 @@
       const o = W.objAtTile(tx, ty); if (o && o.solid) return false;
       return !(G.yard && G.yard.blocked(tx, ty)); // 마당에 놓은 가구
     },
+    // 길 찾기 (타일 BFS, 4방향): 픽셀 (x,y) → 목표 (tx,ty) 근처 설 수 있는 칸까지. 타일 가운데 점 목록 또는 null
+    findPath(x, y, tx, ty, max = 4000) {
+      const m = W.map; if (!m) return null; const w = m.w, h = m.h;
+      const sx = Math.floor(x / TILE), sy = Math.floor(y / TILE), gx = Math.floor(tx / TILE), gy = Math.floor(ty / TILE);
+      if (sx === gx && sy === gy) return [];
+      const goal = (cx, cy) => Math.abs(cx - gx) + Math.abs(cy - gy) <= 1 && W.walkableTile(cx, cy);
+      const prev = new Map(), start = sy * w + sx; prev.set(start, start);
+      const q = [start]; let end = -1;
+      for (let qi = 0; qi < q.length && qi < max; qi++) {
+        const c = q[qi], cx = c % w, cy = (c / w) | 0;
+        if (c !== start && goal(cx, cy)) { end = c; break; }
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const nx = cx + dx, ny = cy + dy; if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+          const ni = ny * w + nx; if (prev.has(ni) || !W.walkableTile(nx, ny)) continue;
+          prev.set(ni, c); q.push(ni);
+        }
+      }
+      if (end < 0) return null;
+      const path = []; for (let c = end; c !== start; c = prev.get(c)) path.push({ x: (c % w) * TILE + 16, y: ((c / w) | 0) * TILE + 18 });
+      path.reverse(); if (path.length) { path[path.length - 1] = { x: tx, y: ty }; }
+      return path;
+    },
     // 원(반경 r)이 (x,y)에 있을 수 있는가 — 4방향 샘플
     canStand(x, y, r) {
       const pts = [[0, 0], [r, 0], [-r, 0], [0, r * 0.6], [0, -r * 0.6]];
