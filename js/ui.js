@@ -403,21 +403,45 @@
     return { el: cv, walk() { walkStart = (performance.now() - t0) / 1000; }, stop() { cancelAnimationFrame(raf); } };
   };
   UI.postkeeperPicker = (look, preview) => {
+    const wrap = $('div', 'pkpick');
     const picker = $('div', 'subtabs');
-    const options = [['postkeeper', '여자 우편지기'], ['postkeeper-male', '남자 우편지기']];
+    const options = [['postkeeper', '여자 우편지기'], ['postkeeper-male', '남자 우편지기'], ['custom', '🎨 직접 꾸미기']];
     const buttons = new Map();
+    const builder = $('div', 'lookparts pkbuild');
+    const cur = () => (look.pk ? 'custom' : G.art.postkeeperId(look));
     const update = () => {
       for (const [id, b] of buttons) {
-        const selected = G.art.postkeeperId(look) === id;
+        const selected = cur() === id;
         b.classList.toggle('on', selected);
         b.setAttribute('aria-pressed', String(selected));
       }
+      drawBuilder();
     };
+    // 직접 꾸미기: 머리·머리색·옷·옷 색·소품·소품 색 (GPT 부품 그림을 겹치고 색은 코드로 바꾼다)
+    const PK = G.art.PK;
+    const row = (title, items, key, pal) => {
+      const r = $('div', 'lookpart'); r.append($('b', null, title)); const cs = $('div', 'chips');
+      items.forEach((it, i) => {
+        const v = pal ? i : it[0], on = (look.pk[key] === undefined ? (pal ? 0 : items[0][0]) : look.pk[key]) === v;
+        const c = $('button', 'chip' + (pal ? ' sw' : '') + (on ? ' on' : ''), pal ? '' : esc(it[1]));
+        if (pal) { c.style.background = it[4] || '#fff'; c.title = it[0]; if (!it[4]) c.textContent = '원래'; c.style.fontSize = '10px'; }
+        c.onclick = () => { look.pk[key] = v; G.audio.sfx('pop'); preload(); drawBuilder(); };
+        cs.append(c);
+      });
+      r.append(cs); return r;
+    };
+    const preload = () => { G.art.pkLayers(look.pk); setTimeout(() => G.art.pkLayers(look.pk), 200); };
+    function drawBuilder() {
+      builder.innerHTML = ''; builder.style.display = look.pk ? '' : 'none'; if (!look.pk) return;
+      builder.append(row('머리 모양', PK.heads, 'head'), row('머리 색', PK.hair, 'hc', true), row('옷', PK.bodies, 'body'), row('옷 색', PK.cloth, 'bc', true), row('소품', PK.accs, 'acc'));
+      if (look.pk.acc) builder.append(row('소품 색', PK.cloth, 'ac', true));
+    }
     for (const [id, label] of options) {
-      G.art.loadPostkeeper(id);
+      if (id !== 'custom') G.art.loadPostkeeper(id);
       const b = $('button', 'tab', label);
       b.onclick = () => {
-        look.illu = id;
+        if (id === 'custom') { look.pk = look.pk || { head: look.illu === 'postkeeper-male' ? 'male-curly' : 'female-wavy', body: 'overalls', acc: 'postal-cap', hc: 0, bc: 0, ac: 0 }; preload(); }
+        else { delete look.pk; look.illu = id; }
         G.audio.sfx('tap');
         update();
       };
@@ -427,8 +451,10 @@
     const walk = $('button', 'btn ghost small', '걷는 모습 보기');
     walk.onclick = () => { G.audio.sfx('tap'); preview.walk(); };
     picker.append(walk);
+    wrap.append(picker, builder);
+    if (look.pk) preload();
     update();
-    return picker;
+    return wrap;
   };
   // 잎첩 '나' 탭: 이름·마을 이름·모습을 언제든 무료로 바꾼다
   function mePane(pane) {
@@ -439,19 +465,19 @@
     const townIn = $('input'); townIn.maxLength = 8; townIn.value = pl.town || ''; townIn.placeholder = '마을 이름 (최대 8자)';
     info.append($('label', 'muted small', '내 이름'), nameIn, $('label', 'muted small', '마을 이름'), townIn);
     top.append(pv.el, info);
-    info.append(UI.postkeeperPicker(look, pv));
+    const pk = UI.postkeeperPicker(look, pv); info.append(pk.firstChild); // 고르기 탭은 오른쪽, 직접 꾸미기 칸은 아래 넓게
     const save = $('button', 'btn', '저장 ✨');
     save.onclick = () => {
       const name = nameIn.value.trim(), town = townIn.value.trim();
       if (!name) { nameIn.focus(); nameIn.classList.add('shake'); setTimeout(() => nameIn.classList.remove('shake'), 400); G.audio.sfx('error'); return; }
       const renamed = name !== pl.name;
-      pl.look = Object.assign({}, look); pl.name = name; pl.town = town || pl.town || '몽글숲';
+      pl.look = Object.assign({}, look, look.pk ? { pk: Object.assign({}, look.pk) } : {}); pl.name = name; pl.town = town || pl.town || '몽글숲';
       G.save.mark('look'); G.save.now('look'); G.emit('player:look', {});
       G.audio.sfx('chime'); UI.toast(renamed ? `이제 「${name}」(이)라고 불러 줄게요!` : '새 모습 멋져요!', { icon: '🪞' });
       if (G.game && G.game.pl) G.game.pl.squash = 0.12;
     };
     info.append(save);
-    pane.append(top);
+    pane.append(top, pk);
   }
 
   // ---------- 멀티플레이 UI (친구 탭 · 채팅 · 선물) ----------

@@ -950,7 +950,7 @@
         const name = nameIn.value.trim(), town = townIn.value.trim() || '몽글숲';
         if (!name) { nameIn.focus(); nameIn.classList.add('shake'); setTimeout(() => nameIn.classList.remove('shake'), 400); G.audio.sfx('error'); return; }
         raf.stop();
-        pl.look = Object.assign({}, look); pl.name = name; pl.town = town;
+        pl.look = Object.assign({}, look, look.pk ? { pk: Object.assign({}, look.pk) } : {}); pl.name = name; pl.town = town;
         G.audio.sfx('chime');
         chooseMap(createEl);
       };
