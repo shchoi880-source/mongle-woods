@@ -423,9 +423,16 @@
       const r = $('div', 'lookpart'); r.append($('b', null, title)); const cs = $('div', 'chips');
       items.forEach((it, i) => {
         const v = pal ? i : it[0], on = (look.pk[key] === undefined ? (pal ? 0 : items[0][0]) : look.pk[key]) === v;
-        const c = $('button', 'chip' + (pal ? ' sw' : '') + (on ? ' on' : ''), pal ? '' : esc(it[1]));
+        const opt = pal ? null : Object.assign({ name: it[0] }, it[2] || {}), locked = G.art.pkLocked(opt);
+        const c = $('button', 'chip' + (pal ? ' sw' : '') + (on ? ' on' : '') + (locked ? ' locked' : ''), pal ? '' : (locked ? '🔒 ' : '') + esc(it[1]));
         if (pal) { c.style.background = it[4] || '#fff'; c.title = it[0]; if (!it[4]) c.textContent = '원래'; c.style.fontSize = '10px'; }
-        c.onclick = () => { look.pk[key] = v; G.audio.sfx('pop'); preload(); drawBuilder(); };
+        c.onclick = () => {
+          if (locked) {
+            const f = opt.lock !== 'shop' && G.fest && G.fest.FESTS.find((x) => 'hat' + x.hat === opt.lock);
+            UI.toast(opt.lock === 'shop' ? `「${it[1]}」은 땅굴상점 옷 코너에서 살 수 있어요! (날마다 바뀌어요)` : f ? `「${it[1]}」은 ${f.name}에서 ${f.tname}을 모아 받아요!` : `「${it[1]}」은 축제 모자 4개를 모두 모으면 받아요!`, { icon: '🔒' }); G.audio.sfx('error'); return;
+          }
+          look.pk[key] = v; G.audio.sfx('pop'); preload(); drawBuilder();
+        };
         cs.append(c);
       });
       r.append(cs); return r;
@@ -434,13 +441,14 @@
     function drawBuilder() {
       builder.innerHTML = ''; builder.style.display = look.pk ? '' : 'none'; if (!look.pk) return;
       G.art.pkFix(look.pk);
-      builder.append(row('머리 모양', PK.heads, 'head'), row('머리 색', PK.hair, 'hc', true), row('옷', PK.bodies, 'body'), row('옷 색', PK.cloth, 'bc', true));
+      builder.append(row('머리 모양', PK.heads, 'head'), row('머리 색', PK.hair, 'hc', true), row('옷', PK.bodies, 'body'));
+      if (G.art.pkColorable(look.pk.body || 'overalls')) builder.append(row('옷 색', PK.cloth, 'bc', true));
       // 부위마다 하나씩 (모자 + 안경 같이 쓰기). 아직 부품이 없는 부위는 감춘다
       for (const s of PK.slots.slice().reverse()) {
         if (!s.items.length) continue;
         if (look.pk[s.k] === undefined) look.pk[s.k] = '';
         builder.append(row(s.name, [['', '없음']].concat(s.items), s.k));
-        if (look.pk[s.k]) builder.append(row(s.cname, PK.cloth, s.k + 'C', true));
+        if (look.pk[s.k] && G.art.pkColorable(look.pk[s.k])) builder.append(row(s.cname, PK.cloth, s.k + 'C', true));
       }
     }
     for (const [id, label] of options) {
@@ -979,8 +987,8 @@
       const buy = $('div', 'buyrow');
       for (const e of G.shop.stock()) {
         if (e.kind === 'furn' && G.house) G.house.see(e.id);
-        const own = e.kind === 'tool' ? G.player.hasTool(e.id) : e.kind === 'look' ? !!(G.player.unlocks || {})[e.id] : G.shop.soldOut(e);
-        const ico = e.kind === 'look' ? `<span class="lookico">${e.part === 'hat' ? '👒' : '👕'}</span>` : e.kind === 'plot' ? `<img src="${G.art.iconURL('seed:carrot', 64)}" alt=""><i class="upmark">＋</i>` : e.kind === 'bag' ? '<span class="lookico">🎒</span><i class="upmark">＋</i>' : e.kind === 'tool' || e.kind === 'up' ? `<img src="${G.art.iconURL('tool:' + e.id, 64)}" alt="">${e.kind === 'up' ? '<i class="upmark">⬆</i>' : ''}` : e.kind === 'seed' ? `<img src="${G.art.iconURL('seed:' + e.id, 64)}" alt="">` : e.kind === 'animal' ? `<img src="${G.art.iconURL('animal:' + e.id, 64)}" alt="">` : `<img src="${G.art.iconURL('furn:' + e.id + '#' + e.c, 64)}" alt="">`;
+        const own = e.kind === 'tool' ? G.player.hasTool(e.id) : e.kind === 'look' || e.kind === 'pk' ? !!(G.player.unlocks || {})[e.key] : G.shop.soldOut(e);
+        const ico = e.kind === 'pk' ? `<span class="lookico">${e.part === 'hat' ? '🎩' : '👕'}</span>` : e.kind === 'look' ? `<span class="lookico">${e.part === 'hat' ? '👒' : '👕'}</span>` : e.kind === 'plot' ? `<img src="${G.art.iconURL('seed:carrot', 64)}" alt=""><i class="upmark">＋</i>` : e.kind === 'bag' ? '<span class="lookico">🎒</span><i class="upmark">＋</i>' : e.kind === 'tool' || e.kind === 'up' ? `<img src="${G.art.iconURL('tool:' + e.id, 64)}" alt="">${e.kind === 'up' ? '<i class="upmark">⬆</i>' : ''}` : e.kind === 'seed' ? `<img src="${G.art.iconURL('seed:' + e.id, 64)}" alt="">` : e.kind === 'animal' ? `<img src="${G.art.iconURL('animal:' + e.id, 64)}" alt="">` : `<img src="${G.art.iconURL('furn:' + e.id + '#' + e.c, 64)}" alt="">`;
         const b = $('button', 'buycard' + (own ? ' off' : ''), `${ico}<b>${esc(e.name)}</b><small>${own ? (e.kind === 'tool' ? '가지고 있음' : '다 팔림') : G.fmt.money(e.price)}</small>`);
         b.onclick = async () => {
           if (own) return;
@@ -992,6 +1000,7 @@
           if (e.kind === 'animal') { tip(r.first ? `${e.name}가 집 옆 목장에 왔어요! 쓰다듬으면 몇 분 뒤 선물을 줘요.` : `${e.name}가 목장에 도착했어요!`, '🐣', 4000); }
           else if (r.gift) { tip('씨앗 첫 손님 덤으로 물뿌리개를 받았어요! 텃밭은 집 옆에 있어요.', '🚿', 4000); }
           else if (e.kind === 'tool') { G.player.setTool(e.id); tip(e.id === 'axe' ? '도끼를 샀어요! 나무를 찍으면 목재가 나와요.' : e.id === 'can' ? '물뿌리개를 샀어요! 텃밭에 물을 줘요.' : '삽을 샀어요! 땅의 금(✕)을 파 보세요.', '🧰'); }
+          else if (e.kind === 'pk') tip(`「${e.name}」을 샀어요! 잎첩 🪞 나 → 🎨 직접 꾸미기에서 입어 봐요.`, '👕', 3800);
           else if (e.kind === 'look') tip(`「${e.name}」을 샀어요! 잎첩 🪞 나에서 입어 봐요.`, '👕', 3600);
           else if (e.kind === 'bag') tip(`가방이 ${G.inv.size}칸이 됐어요!`, '🎒');
           else if (e.kind === 'plot') tip(`텃밭이 ${r.n}칸 넓어졌어요! (모두 ${G.farm.st.plots.length}칸)`, '🥕');

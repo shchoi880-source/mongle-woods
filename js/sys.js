@@ -145,7 +145,15 @@
       for (const [t, nm, pr] of [['net', '튼튼 잠자리채', 3000], ['rod', '튼튼 낚싯대', 3000], ['can', '큰 물뿌리개', 2500]]) {
         if (G.player.hasTool(t) && !(G.player.up && G.player.up[t])) list.push({ kind: 'up', id: t, name: nm, price: pr, key: 'up_' + t });
       }
-      // 새 우편지기가 옷·모자를 착용할 수 있을 때 판매를 다시 연다.
+      // 👕 옷 코너 (되살림): 아직 없는 옷·모자 중 날마다 3개 (GPT 부품 그림)
+      if (G.art && G.art.PK) {
+        const pool = [];
+        for (const it of G.art.PK.bodies) if (it[2] && it[2].lock === 'shop') pool.push({ part: 'body', it });
+        for (const s of G.art.PK.slots) for (const it of s.items) if (it[2] && it[2].lock === 'shop') pool.push({ part: s.k, it });
+        const own = G.player.unlocks || {}, left = pool.filter((x) => !own['pk_' + x.it[0]]);
+        const R3 = G.rng.stream(G.rng.KEYS.SHOP, d, 11);
+        for (let k = 0; k < 3 && left.length; k++) { const x = left.splice(Math.floor(R3() * left.length), 1)[0]; list.push({ kind: 'pk', id: x.it[0], part: x.part, name: x.it[1], price: x.it[2].price, key: 'pk_' + x.it[0] }); }
+      }
       if (G.ranch) {
         for (const [k, v] of Object.entries(G.ranch.KINDS)) list.push({ kind: 'animal', id: k, name: v.baby, price: v.price, key: 'an_' + k });
       }
@@ -170,6 +178,12 @@
       }
       if (entry.kind === 'look') {
         return { ok: false, why: '새 우편지기 옷을 준비 중이에요.' };
+      }
+      if (entry.kind === 'pk') {
+        if ((G.player.unlocks || {})[entry.key]) return { ok: false, why: '이미 가지고 있어요.' };
+        if (!G.wallet.spend(entry.price, 'buy')) return { ok: false, why: '몽이 조금 모자라요.' };
+        G.player.unlocks = Object.assign({}, G.player.unlocks, { [entry.key]: 1 }); G.save.mark('unlock');
+        G.emit('shop:buy', { id: entry.key, price: entry.price }); return { ok: true };
       }
       if (entry.kind === 'plot') {
         if (G.wallet.get() < entry.price) return { ok: false, why: '몽이 조금 모자라요.' };
@@ -225,7 +239,7 @@
       if (G.farm) for (const c of G.data.all('crops')) put('seed:' + c.id, 30);
       G.save.mark('admin');
     },
-    hats() { const u = { hat13: 1, hat14: 1, hat15: 1, hat16: 1, hat17: 1 }; for (let i = 18; i <= 23; i++) u['hat' + i] = 1; for (let i = 9; i <= 14; i++) u['outfit' + i] = 1; G.player.unlocks = Object.assign({}, G.player.unlocks, u); },
+    hats() { const u = { hat13: 1, hat14: 1, hat15: 1, hat16: 1, hat17: 1 }; for (let i = 18; i <= 23; i++) u['hat' + i] = 1; for (let i = 9; i <= 14; i++) u['outfit' + i] = 1; if (G.art && G.art.PK) for (const it of G.art.PK.bodies.concat(...G.art.PK.slots.map((x) => x.items))) if (it[2] && it[2].lock === 'shop') u['pk_' + it[0]] = 1; G.player.unlocks = Object.assign({}, G.player.unlocks, u); },
     all() { G.admin.money(); G.admin.tools(); G.admin.items(); G.admin.hats(); econ.adminGift = true; G.save.now('admin'); },
   };
   G.save.section('econ', {

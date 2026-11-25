@@ -50,7 +50,7 @@
       G.audio.sfx('stamp');
       await G.ui.say([
         { who: 'bori', text: `${f.tname}${G.josa(f.tname, '을/를').slice(-1)} ${NEED}개나 모았구나! ${f.name}의 선물이란다. 콕!` },
-        { who: 'sys', text: `${f.icon} 「${f.hatName}」을 받았어요! 잎첩 🪞 나 → 소품에서 써 볼 수 있어요.` },
+        { who: 'sys', text: `${f.icon} 「${f.hatName}」을 받았어요! 잎첩 🪞 나 → 🎨 직접 꾸미기 → 머리 장식에서 써 볼 수 있어요.` },
       ]);
       if (FESTS.every(unlocked) && !(G.player.unlocks || {}).hat17) {
         FE.unlock(17); G.audio.sfx('rare');
