@@ -405,25 +405,20 @@
   UI.postkeeperPicker = (look, preview) => {
     const wrap = $('div', 'pkpick');
     const picker = $('div', 'subtabs');
-    const options = [['postkeeper', '여자 우편지기'], ['postkeeper-male', '남자 우편지기'], ['custom', '🎨 직접 꾸미기']];
-    const buttons = new Map();
+    const A = G.art, PK = A.PK;
+    // 오너: "남·녀를 나눠 시켰는데 한데 섞여 이상하다" → 먼저 여·남을 고르고, 그쪽 머리·옷만 보여 준다
+    if (!look.pk) look.pk = A.pkDefault(look.illu === 'postkeeper-male' ? 'male' : 'female');
+    A.pkFix(look.pk);
+    const gender = () => A.pkGender(look.pk);
+    const sync = () => { look.illu = gender() === 'male' ? 'postkeeper-male' : 'postkeeper'; };
     const builder = $('div', 'lookparts pkbuild');
-    const cur = () => (look.pk ? 'custom' : G.art.postkeeperId(look));
-    const update = () => {
-      for (const [id, b] of buttons) {
-        const selected = cur() === id;
-        b.classList.toggle('on', selected);
-        b.setAttribute('aria-pressed', String(selected));
-      }
-      drawBuilder();
-    };
-    // 직접 꾸미기: 머리·머리색·옷·옷 색·소품·소품 색 (GPT 부품 그림을 겹치고 색은 코드로 바꾼다)
-    const PK = G.art.PK;
+    const buttons = new Map();
+    const update = () => { for (const [g, b] of buttons) { const on = gender() === g; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); } drawBuilder(); };
     const row = (title, items, key, pal) => {
       const r = $('div', 'lookpart'); r.append($('b', null, title)); const cs = $('div', 'chips');
       items.forEach((it, i) => {
         const v = pal ? i : it[0], on = (look.pk[key] === undefined ? (pal ? 0 : items[0][0]) : look.pk[key]) === v;
-        const opt = pal ? null : Object.assign({ name: it[0] }, it[2] || {}), locked = G.art.pkLocked(opt);
+        const opt = pal ? null : Object.assign({ name: it[0] }, it[2] || {}), locked = A.pkLocked(opt);
         const c = $('button', 'chip' + (pal ? ' sw' : '') + (on ? ' on' : '') + (locked ? ' locked' : ''), pal ? '' : (locked ? '🔒 ' : '') + esc(it[1]));
         if (pal) { c.style.background = it[4] || '#fff'; c.title = it[0]; if (!it[4]) c.textContent = '원래'; c.style.fontSize = '10px'; }
         c.onclick = () => {
@@ -431,44 +426,47 @@
             const f = opt.lock !== 'shop' && G.fest && G.fest.FESTS.find((x) => 'hat' + x.hat === opt.lock);
             UI.toast(opt.lock === 'shop' ? `「${it[1]}」은 땅굴상점 옷 코너에서 살 수 있어요! (날마다 바뀌어요)` : f ? `「${it[1]}」은 ${f.name}에서 ${f.tname}을 모아 받아요!` : `「${it[1]}」은 축제 모자 4개를 모두 모으면 받아요!`, { icon: '🔒' }); G.audio.sfx('error'); return;
           }
-          look.pk[key] = v; G.audio.sfx('pop'); preload(); drawBuilder();
+          look.pk[key] = v; sync(); G.audio.sfx('pop'); preload(); drawBuilder();
         };
         cs.append(c);
       });
       r.append(cs); return r;
     };
-    const preload = () => { G.art.pkLayers(look.pk); setTimeout(() => G.art.pkLayers(look.pk), 200); };
+    const preload = () => { A.pkLayers(look.pk); setTimeout(() => A.pkLayers(look.pk), 200); };
     function drawBuilder() {
-      builder.innerHTML = ''; builder.style.display = look.pk ? '' : 'none'; if (!look.pk) return;
-      G.art.pkFix(look.pk);
-      builder.append(row('머리 모양', PK.heads, 'head'), row('머리 색', PK.hair, 'hc', true), row('옷', PK.bodies, 'body'));
-      if (G.art.pkColorable(look.pk.body || 'overalls')) builder.append(row('옷 색', PK.cloth, 'bc', true));
+      builder.innerHTML = '';
+      const g = gender(), mine = (it) => !(it[2] && it[2].only && it[2].only !== g);
+      builder.append(row('머리 모양', PK.heads.filter((h) => h[0].startsWith(g + '-')), 'head'), row('머리 색', PK.hair, 'hc', true), row('옷', PK.bodies.filter(mine), 'body'));
+      if (A.pkColorable(look.pk.body || 'overalls')) builder.append(row('옷 색', PK.cloth, 'bc', true));
       // 부위마다 하나씩 (모자 + 안경 같이 쓰기). 아직 부품이 없는 부위는 감춘다
       for (const s of PK.slots.slice().reverse()) {
         if (!s.items.length) continue;
         if (look.pk[s.k] === undefined) look.pk[s.k] = '';
-        builder.append(row(s.name, [['', '없음']].concat(s.items), s.k));
-        if (look.pk[s.k] && G.art.pkColorable(look.pk[s.k])) builder.append(row(s.cname, PK.cloth, s.k + 'C', true));
+        builder.append(row(s.name, [['', '없음']].concat(s.items.filter(mine)), s.k));
+        if (look.pk[s.k] && A.pkColorable(look.pk[s.k])) builder.append(row(s.cname, PK.cloth, s.k + 'C', true));
       }
+      const reset = $('button', 'btn ghost small', '↺ 처음 모습으로');
+      reset.onclick = () => { look.pk = A.pkDefault(g); sync(); G.audio.sfx('tap'); preload(); update(); };
+      builder.append(reset);
     }
-    for (const [id, label] of options) {
-      if (id !== 'custom') G.art.loadPostkeeper(id);
+    for (const [g, label] of [['female', '👧 여자 우편지기'], ['male', '👦 남자 우편지기']]) {
       const b = $('button', 'tab', label);
       b.onclick = () => {
-        if (id === 'custom') { look.pk = look.pk || { head: look.illu === 'postkeeper-male' ? 'male-curly' : 'female-wavy', body: 'overalls', hat: 'postal-cap', face: '', hc: 0, bc: 0, hatC: 0, faceC: 0 }; preload(); }
-        else { delete look.pk; look.illu = id; }
-        G.audio.sfx('tap');
-        update();
+        if (gender() !== g) {
+          // 머리는 그쪽 첫 머리로, 그쪽에 없는 옷은 멜빵바지로 (색·모자는 그대로)
+          const pk = look.pk, h = PK.heads.find((x) => x[0].startsWith(g + '-'));
+          pk.head = h[0]; const bo = PK.bodies.find((x) => x[0] === pk.body); if (bo && bo[2] && bo[2].only && bo[2].only !== g) pk.body = 'overalls';
+          sync(); preload();
+        }
+        G.audio.sfx('tap'); update();
       };
-      buttons.set(id, b);
-      picker.append(b);
+      buttons.set(g, b); picker.append(b);
     }
     const walk = $('button', 'btn ghost small', '걷는 모습 보기');
     walk.onclick = () => { G.audio.sfx('tap'); preview.walk(); };
     picker.append(walk);
     wrap.append(picker, builder);
-    if (look.pk) preload();
-    update();
+    sync(); preload(); update();
     return wrap;
   };
   // 잎첩 '나' 탭: 이름·마을 이름·모습을 언제든 무료로 바꾼다
