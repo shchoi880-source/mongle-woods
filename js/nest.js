@@ -15,12 +15,12 @@
   // ---------- 둥지 단계 ----------
   // 베타 조정(오너 확인 대기): 작은 집 '기증 30' → '기증 15' (현재 콘텐츠 수량 기준). 오두막은 원안(주민 4명)
   const STAGES = [
-    { id: 'tent', name: '텐트', cost: 5000, room: { w: 7, h: 6 } },
-    { id: 'cabin', name: '오두막', cost: 28000, room: { w: 9, h: 7 }, days: 5, active: 3, cond: () => Object.keys(G.npc.VILLAGERS).filter((id) => G.npc.isResident(id)).length >= 4, condText: '주민 4명 입주' },
-    { id: 'house', name: '작은 집', cost: 98000, room: { w: 11, h: 8 }, days: 14, active: 9, cond: () => G.museum.total() >= 15, condText: '박물관 기증 15점' },
+    { id: 'tent', name: '텐트', cost: 5000, room: { w: 9, h: 7 } },
+    { id: 'cabin', name: '오두막', cost: 28000, room: { w: 11, h: 8 }, days: 5, active: 3, cond: () => Object.keys(G.npc.VILLAGERS).filter((id) => G.npc.isResident(id)).length >= 4, condText: '주민 4명 입주' },
+    { id: 'house', name: '작은 집', cost: 98000, room: { w: 13, h: 9 }, days: 14, active: 9, cond: () => G.museum.total() >= 15, condText: '박물관 기증 15점' },
     // 2차 확장(2026-11): 돈 쓸 곳 + 긴 목표
-    { id: 'bighouse', name: '큰 집', cost: 240000, room: { w: 13, h: 9 }, days: 20, active: 14, cond: () => G.museum.total() >= 40, condText: '박물관 기증 40점' },
-    { id: 'dreamhouse', name: '꿈의 집', cost: 520000, room: { w: 15, h: 10 }, days: 30, active: 20, cond: () => G.museum.total() >= 70, condText: '박물관 기증 70점' },
+    { id: 'bighouse', name: '큰 집', cost: 240000, room: { w: 15, h: 10 }, days: 20, active: 14, cond: () => G.museum.total() >= 40, condText: '박물관 기증 40점' },
+    { id: 'dreamhouse', name: '꿈의 집', cost: 520000, room: { w: 17, h: 11 }, days: 30, active: 20, cond: () => G.museum.total() >= 70, condText: '박물관 기증 70점' },
   ];
   const st = { stage: 0, debt: 5000, paidTotal: 0, building: -1, badges: 0 };
 
@@ -134,16 +134,17 @@
       return { ok: true };
     },
     name: (r) => r.name || (G.items.get(r.out) || {}).name,
-    open() {
-      return G.ui.modal('작업대', (body) => {
+    open(mode) {
+      const cook = mode === 'cook';
+      return G.ui.modal(cook ? '보글 화덕 — 요리' : '작업대', (body) => {
         const colPick = {};
         const render = () => {
           body.innerHTML = '';
           const head = document.createElement('div'); head.className = 'pane-head';
-          head.innerHTML = '<span>재료: 나뭇가지(나무 흔들기) · 목재(도끼로 나무) · 돌·점토·철광석(삽으로 바위)</span>';
+          head.innerHTML = cook ? '<span>텃밭 작물·목장 생산물로 요리하면 훨씬 비싸게 팔려요</span>' : '<span>재료: 나뭇가지(나무 흔들기) · 목재(도끼로 나무) · 돌·점토·철광석(삽으로 바위)</span>';
           body.append(head);
           const list = document.createElement('div'); list.className = 'recipes';
-          for (const r of RECIPES) {
+          for (const r of RECIPES.filter((x) => !cook || x.cook)) {
             const f = r.out.startsWith('furn:') ? G.data.get('furn', r.out.slice(5)) : null;
             const c = colPick[r.id] || 0;
             const can = G.craft.can(r);

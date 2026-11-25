@@ -26,6 +26,8 @@
     // 놀이 시계: 실제 1초 = 1 (농사·목장 타이머용). 낮·밤 빠르기와 상관없이 실제 시간대로 자란다. 처음엔 마을 분에서 이어 받는다(옛 세이브 호환)
     pmin: () => { if (!st.pms) st.pms = Math.floor(T.now() / 60000); return Math.floor(st.pms); },
     rate: () => rateAt(T.hour()),
+    // 침대에서 아침(05:00)까지 자기: 마을 시계를 아침으로 넘기고, 그동안 작물·동물도 실제로 기다린 만큼 자란다(밤 길이 = 실제 몇 분)
+    sleep() { const real = T.minsToMorning(); const d = T.date(); let left = (G.C.DAY_H * 60 - (d.getHours() * 60 + d.getMinutes()) + 1440) % 1440 || 1440; st.vms += left * 60000 - d.getSeconds() * 1000 + 1000; T.pmin(); st.pms += real * 60; T.tick(); return real; },
     // 다음 아침(05시)까지 실제 몇 분
     minsToMorning() {
       const d = T.date(); let left = (G.C.DAY_H * 60 - (d.getHours() * 60 + d.getMinutes()) + 1440) % 1440 || 1440, h = d.getHours(), mm = d.getMinutes(), real = 0;
