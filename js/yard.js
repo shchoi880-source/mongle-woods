@@ -25,7 +25,7 @@
       const t = W.tile(x, y);
       if (!(t === G.TERR.GRASS || t === G.TERR.PATH) || W.objAtTile(x, y)) return '여기엔 놓을 수 없어요. 빈 풀밭이나 길 위에 놓아요.';
       if (YD.at(x, y)) return '다른 가구가 있어요.';
-      if (G.farm && G.farm.at(x, y)) return '텃밭 위에는 놓을 수 없어요.';
+      if (G.farm && (G.farm.at(x, y) || G.farm.inField(x, y))) return '밭 구역에는 놓을 수 없어요.';
       if (pen && x >= pen.x - 1 && x <= pen.x + pen.w && y >= pen.y - 1 && y <= pen.y + pen.h) return '목장 울타리 근처에는 놓을 수 없어요.';
       if (x === door.x && y > door.y && y <= door.y + 2) return '집 문 앞은 비워 둬요.';
       const pt = Math.floor(G.player.x / TILE), pty = Math.floor(G.player.y / TILE);

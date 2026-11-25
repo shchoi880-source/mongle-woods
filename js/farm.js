@@ -44,39 +44,85 @@
 
   // ---------- 상태 ----------
   // plots: [{tx,ty, crop, prog, water(day), giant}]
-  const st = { plots: [], lastTick: -1, lastMin: -1, harvested: 0, giants: 0, seedGift: false, dry: 0 };
+  const st = { plots: [], lastTick: -1, lastMin: -1, harvested: 0, giants: 0, seedGift: false, dry: 0, field: null };
   const F = G.farm = { st, DISHES, SEASON_OF };
 
   // 텃밭 자리: 집(텐트) 문 근처 풀밭에서 3칸씩 줄 (지도는 바꾸지 않고 '데칼'로만 그린다)
+  // 밭 구역 (오너: "밭 구조가 이상하다, 처음부터 공간을 잘 잡아야") — 텐트 가까이 가로 10 × 세로 6 칸을 한 번 정해 두고,
+  // 그 안을 줄 맞춰 채운다(최대 60칸). 구역 안의 풀꽃·나무·바위는 치운다. 예전처럼 흩어진 밭은 작물째 옮겨 온다
+  const FW = 10, FH = 6;
+  F.FW = FW; F.FH = FH;
+  F.inField = (x, y) => { const f = st.field; return !!f && x >= f.x && x < f.x + f.w && y >= f.y && y < f.y + f.h; };
+  function pickField() {
+    const W = G.world, m = W.map, door = m.plots.tent.door;
+    const nat = (o) => ['tree', 'pine', 'fruit', 'flower', 'rock'].includes(o.kind);
+    const pen = G.ranch && G.ranch.st.pen;
+    const inner = (x, y) => {
+      if (W.tile(x, y) !== G.TERR.GRASS) return false;
+      const o = W.objAtTile(x, y); if (o && !nat(o)) return false;
+      if (G.yard && G.yard.at(x, y)) return false;
+      if (pen && x >= pen.x - 1 && x <= pen.x + pen.w && y >= pen.y - 1 && y <= pen.y + pen.h) return false;
+      return !(x >= door.x - 2 && x <= door.x + 2 && y >= door.y - 3 && y <= door.y + 2);
+    };
+    const ring = (x, y) => { const t = W.tile(x, y); return t === G.TERR.GRASS || t === G.TERR.PATH || t === G.TERR.SAND || t === G.TERR.PLAZA; };
+    for (const [w, h] of [[FW, FH], [9, 6], [8, 6], [8, 5], [7, 5]]) {
+      let best = null, bd = 1e9;
+      for (let y0 = door.y - 14; y0 <= door.y + 12; y0++) for (let x0 = door.x - 18; x0 <= door.x + 14; x0++) {
+        const d = Math.hypot(x0 + w / 2 - door.x, y0 + h / 2 - door.y); if (d >= bd) continue;
+        let ok = true;
+        for (let y = y0; y < y0 + h && ok; y++) for (let x = x0; x < x0 + w && ok; x++) if (!inner(x, y)) ok = false;
+        // 둘레 한 칸은 걸어 들어갈 수 있는 땅이 대부분이어야 한다
+        if (ok) { let r = 0, n = 0; for (let x = x0 - 1; x <= x0 + w; x++) for (const y of [y0 - 1, y0 + h]) { n++; if (ring(x, y)) r++; } for (let y = y0; y < y0 + h; y++) for (const x of [x0 - 1, x0 + w]) { n++; if (ring(x, y)) r++; } if (r < n * 0.75) ok = false; }
+        if (ok) { bd = d; best = { x: x0, y: y0, w, h }; }
+      }
+      if (best) return best;
+    }
+    return null;
+  }
+  // 밭 칸 순서: 텐트 쪽 줄부터, 왼쪽에서 오른쪽으로
+  function fieldCells(f) {
+    const door = G.world.map.plots.tent.door, rows = [];
+    for (let k = 0; k < f.h; k++) rows.push(f.y + k);
+    if (f.y + f.h / 2 < door.y) rows.reverse();
+    const out = []; for (const y of rows) for (let x = f.x; x < f.x + f.w; x++) out.push([x, y]);
+    return out;
+  }
   F.ensurePlots = () => {
     const W = G.world, m = W.map; if (!m) return;
     const want = 6 + (G.nest ? G.nest.st.stage : 0) * 3 + (st.extra || 0) * 3; // 집 단계 + 상점에서 넓힌 만큼
-    if (st.plots.length >= want) return;
-    const tent = m.plots.tent, door = tent.door;
-    const used = new Set(st.plots.map((p) => p.tx + ',' + p.ty));
-    const ok = (x, y) => W.tile(x, y) === G.TERR.GRASS && !W.objAtTile(x, y) && !(G.yard && G.yard.at(x, y)) && !used.has(x + ',' + y) && !(x === door.x && y >= door.y && y <= door.y + 2);
-    // 문 옆(왼쪽·오른쪽)부터 나선으로 3칸 가로줄을 찾는다
-    for (let r = 1; r < 9 && st.plots.length < want; r++) {
-      for (const [dx, dy] of [[r + 1, 0], [-(r + 3), 0], [r + 1, 1], [-(r + 3), 1], [-1, r + 1], [-1, -(r + 1)], [r + 1, -1], [-(r + 3), -1]]) {
-        if (st.plots.length >= want) break;
-        const x0 = door.x + dx, y0 = door.y + dy;
-        if ([0, 1, 2].every((k) => ok(x0 + k, y0))) for (let k = 0; k < 3; k++) { st.plots.push({ tx: x0 + k, ty: y0, crop: null, prog: 0, water: -1, giant: false }); used.add(x0 + k + ',' + y0); }
+    if (!st.field) {
+      const f = pickField(); if (!f) return legacyPlots(want);
+      st.field = f;
+      // 예전 밭(흩어진 칸)은 작물 있는 칸부터 새 구역으로 옮긴다
+      const old = st.plots.slice().sort((a, b) => (b.crop ? 1 : 0) - (a.crop ? 1 : 0));
+      st.plots = []; const cells = fieldCells(f);
+      for (let i = 0; i < Math.min(cells.length, Math.max(want, old.filter((p) => p.crop).length)); i++) {
+        const o = old[i] || { crop: null, prog: 0, water: -1, giant: false };
+        st.plots.push(Object.assign({}, o, { tx: cells[i][0], ty: cells[i][1] }));
       }
+      G.save.mark('farm');
     }
-    // 그래도 모자라면(넓힌 밭): 지금 밭 가까운 곳부터 3칸 줄을 찾는다 (목장 울타리는 피함)
-    if (st.plots.length < want) {
-      const pen = G.ranch && G.ranch.st.pen, inPen = (x, y) => pen && x >= pen.x - 1 && x <= pen.x + pen.w && y >= pen.y - 1 && y <= pen.y + pen.h;
-      const cx = st.plots.length ? st.plots.reduce((a, p) => a + p.tx, 0) / st.plots.length : door.x, cy = st.plots.length ? st.plots.reduce((a, p) => a + p.ty, 0) / st.plots.length : door.y;
-      const cands = [];
-      for (let y0 = door.y - 16; y0 <= door.y + 16; y0++) for (let x0 = door.x - 18; x0 <= door.x + 16; x0++) cands.push([x0, y0, (x0 + 1 - cx) ** 2 + (y0 - cy) ** 2 * 1.5]);
-      cands.sort((a, b) => a[2] - b[2]);
-      for (const [x0, y0] of cands) {
-        if (st.plots.length >= want) break;
-        if ([0, 1, 2].every((k) => ok(x0 + k, y0) && !inPen(x0 + k, y0))) for (let k = 0; k < 3; k++) { st.plots.push({ tx: x0 + k, ty: y0, crop: null, prog: 0, water: -1, giant: false }); used.add(x0 + k + ',' + y0); }
-      }
+    W.clearNatural(st.field.x, st.field.y, st.field.w, st.field.h);
+    const cells = fieldCells(st.field), used = new Set(st.plots.map((p) => p.tx + ',' + p.ty));
+    for (const [x, y] of cells) {
+      if (st.plots.length >= Math.min(want, cells.length)) break;
+      if (used.has(x + ',' + y)) continue;
+      st.plots.push({ tx: x, ty: y, crop: null, prog: 0, water: -1, giant: false }); used.add(x + ',' + y);
     }
     G.save.mark('farm');
   };
+  // 밭 구역을 못 잡는 아주 드문 지도: 예전 방식(문 근처 3칸 줄)
+  function legacyPlots(want) {
+    const W = G.world, m = W.map, door = m.plots.tent.door;
+    const used = new Set(st.plots.map((p) => p.tx + ',' + p.ty));
+    const ok = (x, y) => W.tile(x, y) === G.TERR.GRASS && !W.objAtTile(x, y) && !(G.yard && G.yard.at(x, y)) && !used.has(x + ',' + y) && !(x === door.x && y >= door.y && y <= door.y + 2);
+    for (let r = 1; r < 14 && st.plots.length < want; r++) for (const [dx, dy] of [[r + 1, 0], [-(r + 3), 0], [r + 1, 1], [-(r + 3), 1], [-1, r + 1], [-1, -(r + 1)]]) {
+      if (st.plots.length >= want) break;
+      const x0 = door.x + dx, y0 = door.y + dy;
+      if ([0, 1, 2].every((k) => ok(x0 + k, y0))) for (let k = 0; k < 3; k++) { st.plots.push({ tx: x0 + k, ty: y0, crop: null, prog: 0, water: -1, giant: false }); used.add(x0 + k + ',' + y0); }
+    }
+    G.save.mark('farm');
+  }
   const GROW_MIN = 240, WET_MIN = 720; // 놀이 시계 단위(실제 초): 4분·12분
   F.GROW_MIN = GROW_MIN; F.WET_MIN = WET_MIN;
   const raining = () => { const w = G.weather.now().type; return w === 'rain' || w === 'snow'; };
@@ -176,7 +222,30 @@
 
   // ---------- 그리기 ----------
   F.drawSoil = (ctx, rect) => {
-    const P = G.art.paint;
+    const P = G.art.paint, f = st.field;
+    if (f) {
+      const X = f.x * TILE, Y = f.y * TILE, Wd = f.w * TILE, Hd = f.h * TILE;
+      if (!(X > rect.x + rect.w + 60 || X + Wd < rect.x - 60 || Y > rect.y + rect.h + 60 || Y + Hd < rect.y - 60)) {
+        // 아직 안 연 칸: 옅은 흙빛 + 점선 (상점에서 넓히면 열린다)
+        const used = new Set(st.plots.map((p) => p.tx + ',' + p.ty));
+        ctx.save(); ctx.setLineDash([3, 4]); ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(140,100,60,0.35)'; ctx.fillStyle = 'rgba(185,138,94,0.13)';
+        for (let y = f.y; y < f.y + f.h; y++) for (let x = f.x; x < f.x + f.w; x++) if (!used.has(x + ',' + y)) { ctx.beginPath(); ctx.roundRect(x * TILE + 3, y * TILE + 4, 26, 25, 6); ctx.fill(); ctx.stroke(); }
+        ctx.restore();
+        // 나무 울타리. 드나드는 문은 텐트 쪽(위 또는 아래) 가운데
+        const post = (px, py) => { P.rrect(ctx, px - 2.5, py - 12, 5, 13, 2, '#c98e5a', '#7a5233', 1); };
+        ctx.strokeStyle = '#a87448'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+        const door = G.world.map.plots.tent.door, gateTop = door.y < f.y;
+        const gate = X + Math.floor(f.w / 2) * TILE, topY = Y - 4, botY = Y + Hd + 4;
+        const hline = (y, withGate) => { if (withGate) { ctx.moveTo(X - 6, y); ctx.lineTo(gate - 4, y); ctx.moveTo(gate + TILE + 4, y); ctx.lineTo(X + Wd + 6, y); } else { ctx.moveTo(X - 6, y); ctx.lineTo(X + Wd + 6, y); } };
+        ctx.beginPath();
+        hline(topY, gateTop); hline(topY - 5, gateTop); hline(botY, !gateTop);
+        for (const sx of [X - 6, X + Wd + 6]) { ctx.moveTo(sx, topY); ctx.lineTo(sx, botY); }
+        ctx.stroke();
+        for (let x = X - 6; x <= X + Wd + 7; x += TILE) if (!(gateTop && x > gate - 6 && x < gate + TILE + 6)) post(x, Y - 2);
+        for (let y = Y + TILE - 2; y <= Y + Hd + 6; y += TILE) { post(X - 6, y); post(X + Wd + 6, y); }
+        if (gateTop) { post(gate - 4, Y - 2); post(gate + TILE + 4, Y - 2); } else { post(gate - 4, Y + Hd + 6); post(gate + TILE + 4, Y + Hd + 6); }
+      }
+    }
     for (const p of st.plots) {
       const x = p.tx * TILE, y = p.ty * TILE;
       if (x < rect.x - 40 || x > rect.x + rect.w + 40 || y < rect.y - 40 || y > rect.y + rect.h + 40) continue;

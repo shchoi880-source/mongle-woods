@@ -338,7 +338,7 @@
   }
   function nearestObj(m, kind, tx, ty) {
     let best = null, bd = 12 * 12;
-    for (const o of m.objs) { if (o.kind !== kind) continue; const d = (o.tx - tx) ** 2 + (o.ty - ty) ** 2; if (d < bd) { bd = d; best = o; } }
+    for (const o of m.objs) { if (o.kind !== kind || o.gone) continue; const d = (o.tx - tx) ** 2 + (o.ty - ty) ** 2; if (d < bd) { bd = d; best = o; } }
     return best ? { x: best.tx * TILE + 16, y: (best.ty + 1) * TILE + 10 } : null;
   }
   // 물가·해변 등 공용 장소 (광장에서 가까운 곳)

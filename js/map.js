@@ -17,7 +17,7 @@
     const plotAt = (k) => { const p = m.plots[k]; return p ? at((p.door.x + 0.5) * TILE, (p.door.y + 0.5) * TILE) : null; };
     // 가장 가까운 것 찾기 (위치가 정해지지 않은 미션도 ⭐로 안내)
     const near = (list, fx, fy) => { let best = null, bd = 1e18; for (const o of list) { const d = (fx(o) - pl.x) ** 2 + (fy(o) - pl.y) ** 2; if (d < bd) { bd = d; best = o; } } return best; };
-    const nearObj = (pred) => { const o = near(m.objs.filter(pred), (o) => o.tx * TILE + 16, (o) => o.ty * TILE + 16); return o ? at(o.tx * TILE + 16, o.ty * TILE + 16) : null; };
+    const nearObj = (pred) => { const o = near(m.objs.filter((x) => !x.gone && pred(x)), (o) => o.tx * TILE + 16, (o) => o.ty * TILE + 16); return o ? at(o.tx * TILE + 16, o.ty * TILE + 16) : null; };
     const nearWater = () => {
       let best = null, bd = 1e18; const W = G.world;
       for (let ty = 0; ty < m.h; ty += 1) for (let tx = 0; tx < m.w; tx += 1) {
@@ -99,7 +99,7 @@
     const g = c.getContext('2d');
     const col = COL.slice(); if (G.art.season === 'winter') { col[0] = '#e6eef8'; col[5] = '#dde7f3'; } else if (G.art.season === 'autumn') { col[0] = '#cfcb7d'; col[5] = '#bdbb6e'; }
     for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) { g.fillStyle = col[m.terr[y * m.w + x]]; g.fillRect(x * 4, y * 4, 4, 4); }
-    for (const o of m.objs) if (o.kind === 'tree' || o.kind === 'pine' || o.kind === 'fruit') { g.fillStyle = o.kind === 'pine' ? '#4f8f5a' : '#6aa84f'; g.beginPath(); g.arc(o.tx * 4 + 2, o.ty * 4 + 2, 2.2, 0, 6.3); g.fill(); }
+    for (const o of m.objs) if (!o.gone && (o.kind === 'tree' || o.kind === 'pine' || o.kind === 'fruit')) { g.fillStyle = o.kind === 'pine' ? '#4f8f5a' : '#6aa84f'; g.beginPath(); g.arc(o.tx * 4 + 2, o.ty * 4 + 2, 2.2, 0, 6.3); g.fill(); }
     terrCache = c; terrSeed = m.seed + ':' + G.art.season;
     return c;
   }
