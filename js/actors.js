@@ -57,7 +57,8 @@
   // look.pk = { head, body, acc, hc, bc, ac } — 머리·옷·소품을 겹쳐 그리고, 색은 부품 그림의 해당 색만 골라 바꾼다
   const PK = A.PK = {
     heads: [['female-wavy', '웨이브'], ['female-bob', '단발'], ['female-bun', '똥머리'], ['male-curly', '곱슬'], ['male-side-part', '옆가르마'], ['male-tousled', '부스스']],
-    bodies: [['overalls', '멜빵바지'], ['cardigan', '가디건']],
+    // [이름, 표시, 열기 조건] — g: 여·남 머리에 맞춘 그림이 따로 있음, f: 그림 파일 이름, lock: 'shop'(땅굴상점 옷 코너) 또는 'hatNN'(축제)
+    bodies: [['overalls', '멜빵바지'], ['cardigan', '가디건'], ['dress', '꽃 원피스', { f: 'female-dress', lock: 'shop', price: 6000 }], ['onepiece', '멜빵 반바지', { f: 'male-onepiece', lock: 'shop', price: 5000 }], ['raincoat', '노란 우비', { g: 1, lock: 'shop', price: 7000 }], ['pajamas', '별 잠옷', { g: 1, lock: 'shop', price: 4500 }]],
     accs: [['', '없음'], ['postal-cap', '우편 모자'], ['round-glasses', '동그란 안경'], ['hair-bow', '머리 리본']],
     // 부위(슬롯) — 부위마다 하나씩 동시에 쓴다 (오너: 모자+안경 같이). 그리는 순서: 옷 → 머리 → 목 → 입 → 얼굴 → 머리 위
     // 새 부품은 assets/chars/parts/accessory-<이름>.webp 를 올리고 여기 목록에 한 줄 넣으면 된다
@@ -65,7 +66,10 @@
       { k: 'neck', name: '🧣 목', cname: '목도리 색', items: [] },
       { k: 'mouth', name: '😷 입·얼굴 아래', cname: '마스크 색', items: [] },
       { k: 'face', name: '👓 얼굴 (안경)', cname: '안경 색', items: [['round-glasses', '동그란 안경']] },
-      { k: 'hat', name: '🎩 머리 장식 (모자·리본)', cname: '모자·리본 색', items: [['postal-cap', '우편 모자'], ['hair-bow', '머리 리본']] },
+      { k: 'hat', name: '🎩 머리 장식 (모자·리본)', cname: '모자·리본 색', items: [['postal-cap', '우편 모자'], ['hair-bow', '머리 리본'],
+        ['bear-ears', '곰돌이 귀', { g: 1, lock: 'shop', price: 5000 }], ['star-beret', '별 베레모', { g: 1, lock: 'shop', price: 6000 }],
+        ['sakura-pin', '벚꽃 핀', { g: 1, lock: 'hat13' }], ['watermelon-cap', '수박 모자', { g: 1, lock: 'hat14' }], ['pumpkin-hat', '호박 모자', { g: 1, lock: 'hat15' }],
+        ['snowflake-crown', '눈송이 왕관', { g: 1, lock: 'hat16' }], ['golden-crown', '황금 왕관', { g: 1, lock: 'hat17' }]] },
     ],
     // [이름, 색상(도), 채도(절대값, null = 원래 × 배), 밝기 배수, 보여 줄 색]
     hair: [['원래', null, 1, 1, '#8a4a28'], ['검정', 260, 0.12, 0.42, '#2f2a30'], ['초코', 18, 0.55, 0.72, '#5a3424'], ['금발', 42, 0.7, 1.6, '#e8c060'], ['분홍', 340, 0.6, 1.5, '#f2a0bc'], ['민트', 165, 0.45, 1.45, '#8fd8c0'], ['라벤더', 268, 0.4, 1.45, '#b8a0e0'], ['은빛', 220, 0.1, 1.55, '#c8ccd8'], ['빨강', 4, 0.7, 1.05, '#c0402c'], ['하늘', 205, 0.55, 1.45, '#8cc0ec']],
@@ -80,6 +84,7 @@
     'hair-bow': (h, s, l) => (h < 22 || h >= 335) && s > 0.3,
     'round-glasses': (h, s, l) => h >= 10 && h <= 45 && s > 0.2,
   };
+  A.pkColorable = (name) => !!MASK[name];
   const partCache = new Map();
   function rgb2hsl(r, g, b) { r /= 255; g /= 255; b /= 255; const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2; if (mx === mn) return [0, 0, l]; const d = mx - mn, s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn); let h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; return [h * 60, s, l]; }
   function hsl2rgb(h, s, l) { h /= 360; const f = (p, q, t) => { if (t < 0) t += 1; if (t > 1) t -= 1; return t < 1 / 6 ? p + (q - p) * 6 * t : t < 1 / 2 ? q : t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p; }; if (!s) return [l * 255, l * 255, l * 255]; const q = l < 0.5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q; return [f(p, q, h + 1 / 3) * 255, f(p, q, h) * 255, f(p, q, h - 1 / 3) * 255]; }
@@ -104,6 +109,10 @@
     } catch (e) { return im; }
     cv.naturalWidth = cv.width; partCache.set(key, cv); return cv;
   };
+  // 부품 정보·잠금
+  A.pkInfo = (kind, name) => { const list = kind === 'body' ? PK.bodies : PK.slots.flatMap((s) => s.items); const it = list.find((x) => x[0] === name); return it ? it[2] || {} : {}; };
+  A.pkLocked = (opt) => !!(opt && opt.lock && !((G.player && G.player.unlocks) || {})[opt.lock === 'shop' ? 'pk_' + opt.name : opt.lock]);
+  const fileOf = (kind, name, gender) => { const o = A.pkInfo(kind, name); return o.f || (o.g ? `${gender}-${name}` : name); };
   // 옛 저장(소품 한 칸 acc)을 부위로 옮긴다
   A.pkFix = (pk) => {
     if (pk && pk.acc !== undefined) {
@@ -115,9 +124,10 @@
   };
   A.pkLayers = (pk) => {
     A.pkFix(pk);
-    const out = [A.pkPart('outfit', pk.body || 'overalls', pk.bc), A.pkPart('head', pk.head || 'female-wavy', pk.hc)];
+    const gender = String(pk.head || '').startsWith('male') ? 'male' : 'female';
+    const out = [A.pkPart('outfit', fileOf('body', pk.body || 'overalls', gender), pk.bc), A.pkPart('head', pk.head || 'female-wavy', pk.hc)];
     if (out.some((x) => !x)) return null;
-    for (const s of PK.slots) if (pk[s.k]) { const a = A.pkPart('accessory', pk[s.k], pk[s.k + 'C']); if (a) out.push(a); }
+    for (const s of PK.slots) if (pk[s.k]) { const a = A.pkPart('accessory', fileOf('acc', pk[s.k], gender), pk[s.k + 'C']); if (a) out.push(a); }
     return out;
   };
 
