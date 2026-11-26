@@ -249,7 +249,11 @@
     if (ev.type === 'act' || ev.type === 'tapWorld' || ev.type === 'back') advance();
     return true;
   };
-  function bindDialogTap() { dialogEl.addEventListener('pointerdown', (e) => { e.preventDefault(); advance(); }); }
+  function bindDialogTap() {
+    dialogEl.addEventListener('pointerdown', (e) => { e.preventDefault(); UI._dlgTapAt = performance.now(); advance(); });
+    // 대화창을 눌러 닫으면 같은 손가락의 click이 아래 버튼(🏃·도구)에 떨어지던 문제 막기
+    addEventListener('click', (e) => { if (performance.now() - (UI._dlgTapAt || -1e9) < 500 && !(e.target.closest && e.target.closest('.dialog'))) { e.stopPropagation(); e.preventDefault(); } }, true);
+  }
 
   // ---------- 모달 (잎첩·상점·설정) ----------
   UI.modal = (title, build, o = {}) => new Promise((resolve) => {
