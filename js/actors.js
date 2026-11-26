@@ -166,13 +166,16 @@
     raincoat: '#dbac58', pajamas: '#b6a4c1' };
   const SLEEVE_DYES = ['','#d6a2a7','#9ebdca','#abc397','#dec482','#b4a1c7','#c68469','#8492a7','#879e73','#e6caa5'];
   function drawSwing(ctx, a, phase, pose, side, back) {
-    const [, , , x, y, angle] = pose, shoulder = side ? 4 : 7;
+    // 그림 속 두 손은 가슴 앞(약 4, -28)에 모여 있다. 따로 팔을 그리면 팔이 3개로 보여서(오너 제보),
+    // 손 위치를 가슴 쪽으로 당겨 "그림 속 손이 도구를 쥐고" 휘두르게 한다. 팔의 움직임은 몸 기울기·비틀기로 보인다
+    const hand = (px, py) => { const RX = side ? 3 : 4, RY = -28; return [RX + (px - RX) * 0.45, RY + (py - RY) * 0.45]; };
+    const [, , , x0, y0, angle] = pose, [x, y] = hand(x0, y0), shoulder = side ? 4 : 7;
     const palm = back ? x * 0.65 : x, elbowX = (shoulder + palm) / 2 - 2;
     const elbowY = (-35 + y) / 2 + (a.tool === 'can' ? 6 : 3);
     if (a.tool === 'net' || a.tool === 'axe' || a.tool === 'shovel') {
       const radius = a.tool === 'net' ? 33 : 25;
       const end = (p) => {
-        const [, , , hx, hy, ang] = actionPose(a.tool, Math.max(0, p));
+        const [, , , hx0, hy0, ang] = actionPose(a.tool, Math.max(0, p)), [hx, hy] = hand(hx0, hy0);
         return [(back ? hx * 0.65 : hx) + Math.sin(ang) * radius, hy - Math.cos(ang) * radius];
       };
       const a0 = end(phase - 0.13), b0 = end(phase - 0.06), c0 = end(phase);
@@ -189,9 +192,8 @@
     const sleeve = SLEEVE_DYES[look?.bc] || SLEEVE[style.replace(/^(female|male)-/, '')] || '#e3c69c';
     ctx.save();
     ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(shoulder, -35); ctx.quadraticCurveTo(elbowX, elbowY, palm, y);
-    ctx.lineWidth = 7.4; ctx.strokeStyle = '#80593e'; ctx.stroke();
-    ctx.lineWidth = 5.5; ctx.strokeStyle = sleeve; ctx.stroke();
+    // 오너 제보: 휘두르면 팔이 3개 — 그림에 이미 두 팔이 있으니 따로 팔(소매)을 그리지 않고 손만 그린다
+    void sleeve; void elbowX; void elbowY; void shoulder;
     ctx.translate(palm, y); ctx.rotate(angle);
     paintTool(ctx, a.tool);
     P.blob(ctx, 0, 0, 2.9, 3.4, '#efbd96', '#855c41', 0.9);
