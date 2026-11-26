@@ -235,7 +235,7 @@
 
   MP.teleport = (tx, ty) => {
     const W = G.world, pl = G.player, GM = G.game;
-    if ((G.house && G.house.inside) || (G.museumHall && G.museumHall.inside) || (G.villaHome && G.villaHome.inside)) { G.ui.toast('순간이동은 밖에서 할 수 있어요.', { icon: '✨' }); return false; }
+    if ((G.house && G.house.inside) || (G.museumHall && G.museumHall.inside) || (G.villaHome && G.villaHome.inside) || (G.cloudIsle && G.cloudIsle.inside)) { G.ui.toast('순간이동은 밖에서 할 수 있어요.', { icon: '✨' }); return false; }
     if (G.net && G.net.guest) { G.ui.toast('친구 마을에서는 순간이동을 할 수 없어요.', { icon: '✨' }); return false; }
     // 장소 바로 앞(아래쪽)에서 설 수 있는 가장 가까운 칸
     let best = null, bd = 1e9;
@@ -374,7 +374,10 @@
       wrap.append(cv, ctr);
       const legend = document.createElement('div'); legend.className = 'muted small maplegend';
       legend.textContent = (G.input.isTouch() || (globalThis.matchMedia && matchMedia('(pointer: coarse)').matches) ? '두 손가락으로 확대·축소, 끌어서 이동' : '휠·＋－로 확대·축소, 끌어서 이동') + ' · 표시를 누르면 이름과 길 안내 · 장소는 순간이동 가능 · 분홍 점은 내 위치';
-      body.append(wrap, info, legend);
+      // ☁️ 구름섬 나들이 (12차 C)
+      const sky = document.createElement('button'); sky.className = 'btn'; sky.style.marginTop = '8px'; sky.textContent = '☁️ 구름배 타고 구름섬 나들이';
+      sky.onclick = () => { G.audio.sfx('tap'); close(); setTimeout(() => G.cloudIsle && G.cloudIsle.offer(), 150); };
+      body.append(wrap, info, legend, sky);
     }, { wide: true });
   };
 
