@@ -13,19 +13,26 @@
   }
   // 악기 한 음(기준 C5)을 오프라인으로 굽기
   async function bake(kind) {
-    const sr = 22050, dur = kind === 'pad' ? 2.4 : 1.4;
+    const sr = 22050, dur = kind === 'pad' ? 2.4 : kind === 'flute' ? 2.2 : kind === 'piano' ? 2.0 : kind === 'musicbox' ? 1.8 : 1.4;
     const oc = new OfflineAudioContext(1, Math.ceil(sr * dur), sr);
     const f = 523.25, out = oc.createGain(); out.connect(oc.destination);
     const partials = kind === 'kalimba' ? [[1, 1, 1.2], [5.4, 0.25, 6], [2, 0.12, 3]]
       : kind === 'marimba' ? [[1, 1, 2.2], [4, 0.35, 9], [10, 0.08, 20]]
         : kind === 'pluck' ? [[1, 1, 3], [2, 0.5, 5], [3, 0.25, 8]]
-          : [[1, 1, 0.6], [2, 0.3, 0.8], [3.01, 0.12, 1]];
+          // 배경음 악기 (v0.17 동숲식 시간대 음악): 피아노·오르골·플루트
+          : kind === 'piano' ? [[1, 1, 1.6], [2, 0.42, 2.6], [3, 0.18, 3.8], [4.02, 0.08, 5.5], [5.03, 0.04, 7]]
+            : kind === 'musicbox' ? [[1, 1, 1.1], [3.01, 0.35, 3], [5.97, 0.14, 6], [8.9, 0.05, 9]]
+              : kind === 'flute' ? [[1, 1, 0.5], [2, 0.12, 0.6], [3, 0.05, 0.7]]
+                : [[1, 1, 0.6], [2, 0.3, 0.8], [3.01, 0.12, 1]];
     for (const [mul, amp, decay] of partials) {
       const o = oc.createOscillator(); o.type = 'sine'; o.frequency.value = f * mul;
       const g = oc.createGain();
-      const atk = kind === 'pad' ? 0.25 : 0.004;
+      const sus = kind === 'pad' || kind === 'flute', atk = kind === 'pad' ? 0.25 : kind === 'flute' ? 0.07 : 0.004;
       g.gain.setValueAtTime(0, 0); g.gain.linearRampToValueAtTime(amp * 0.5, atk);
-      g.gain.exponentialRampToValueAtTime(0.0008, dur * (kind === 'pad' ? 1 : 1 / decay) + atk + 0.05);
+      if (kind === 'flute') { // 숨결 비브라토
+        const lfo = oc.createOscillator(), lg = oc.createGain(); lfo.frequency.value = 5.2; lg.gain.value = f * mul * 0.006; lfo.connect(lg); lg.connect(o.frequency); lfo.start(0.25); lfo.stop(dur);
+      }
+      g.gain.exponentialRampToValueAtTime(0.0008, dur * (sus ? 1 : 1 / decay) + atk + 0.05);
       o.connect(g); g.connect(out); o.start(0); o.stop(dur);
     }
     return oc.startRendering();
@@ -45,7 +52,7 @@
     }
     AU.applyVolumes();
     // 굽기 (병렬)
-    Promise.all(['kalimba', 'marimba', 'pluck', 'pad'].map((k) => bake(k).then((b) => { bank[k] = b; }))).then(() => { AU.ready = true; });
+    Promise.all(['kalimba', 'marimba', 'pluck', 'pad', 'piano', 'musicbox', 'flute'].map((k) => bake(k).then((b) => { bank[k] = b; }))).then(() => { AU.ready = true; });
     if (ac.state === 'suspended') ac.resume();
     // 아주 짧은 무음으로 iOS 잠금 해제
     const b = ac.createBuffer(1, 1, 22050), s = ac.createBufferSource(); s.buffer = b; s.connect(ac.destination); s.start(0);
@@ -87,6 +94,8 @@
     s.connect(f); f.connect(g); g.connect(bus[b]); s.start(t);
   }
 
+  // 배경음 엔진(music.js)이 쓰는 저수준 함수
+  AU._ctx = () => ac; AU._note = (...a) => note(...a); AU._noise = (...a) => noise(...a); AU._tone = (...a) => tone(...a); AU._bus = (b) => bus[b]; AU._has = (k) => !!bank[k];
   // ---------- 효과음 15+ ----------
   const SFX = {
     tap: () => note('marimba', 84, ac.currentTime, 0.35, 'sfx'),
