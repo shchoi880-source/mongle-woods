@@ -172,7 +172,7 @@
       if (o.kind === 'board') return { kind: 'board', ref: o, icon: '📌', label: '보기', name: '게시판' };
       if (o.kind === 'tent') return { kind: 'tent', ref: o, icon: '🏠', label: '들어가기', name: '내 ' + G.nest.cur().name };
       if (o.kind === 'mailbox') return { kind: 'mailbox', ref: o, icon: '📮', label: '열기', name: '우체통' };
-      if (o.kind === 'house') return { kind: 'house', ref: o, icon: '🚪', label: '두드리기', name: '딸랑의 집' };
+      if (o.kind === 'house') { const v = G.npc.VILLAGERS[o.owner || 'ddalang']; return { kind: 'house', ref: o, icon: '🚪', label: '두드리기', name: `${v ? v.name : '이웃'}의 집` }; }
       if (o.kind === 'post') return { kind: 'postoffice', ref: o, icon: '🚪', label: '두드리기', name: '우체국' };
       if (o.kind === 'stall') return { kind: 'stall', ref: o, icon: '🏪', label: '가판대', name: '땅굴상점' };
       if (o.kind === 'rock') return { kind: 'rock', ref: o, icon: '🪨', label: '살펴보기', name: '바위' };
@@ -305,7 +305,7 @@
       }
       case 'tent': G.house.enter(); break;
       case 'mailbox': await G.mail.open(); break;
-      case 'house': await G.ui.say([{ who: 'sys', text: G.npc.get('ddalang').vis ? '똑똑… 대답이 없어요. 딸랑은 밖에서 놀고 있나 봐요.' : '안에서 쌔근쌔근 소리가 나요. 딸랑이 자고 있어요.' }]); break;
+      case 'house': if (G.villaHome && tg.ref.owner && G.npc.isResident(tg.ref.owner)) await G.villaHome.enter(tg.ref.owner); else await G.ui.say([{ who: 'sys', text: '아직 아무도 살지 않는 집이에요. 곧 새 이웃이 이사 올 것 같아요.' }]); break;
       case 'postoffice': await G.ui.say([{ who: 'sys', text: '우체국 문이 잠겨 있어요. 보리 할멈은 문 앞에서 기다리고 있어요.' }]); break;
       case 'stall': await GM.openShop(); break;
       case 'rock': await G.ui.say([{ who: 'sys', text: '동글동글한 바위예요. 밑에서 뭔가 데굴데굴 굴러다니는 소리가 나요.' }]); break;
