@@ -383,6 +383,7 @@
     else if (stage >= 3) { const c = stage === 3 ? '#f0c8a8' : '#d8c8ff'; for (let x = -8; x < RW + 16; x += 20) { ctx.fillStyle = c; ctx.fillRect(x, -6, 8, wallH); } ctx.fillStyle = stage === 3 ? '#c98e5a' : '#a88ad8'; ctx.fillRect(-8, wallH - 14, RW + 16, 14); }
     else { for (let y = 0; y < wallH; y += 16) for (let x = (y / 16) % 2 * 16; x < RW + 16; x += 32) P.blob(ctx, x, y + 6, 3, 3, '#ffc2d6'); ctx.fillStyle = '#e8c494'; ctx.fillRect(-8, wallH - 14, RW + 16, 14); }
     if (st.wall && WALLS[st.wall]) paintPattern(ctx, P, WALLS[st.wall], -8, -50, RW + 16, wallH + 50, t); // 고른 벽지
+    G.scenery?.material(ctx, 'paper', [-8, -48, RW + 16, wallH + 48], 0.5, 'multiply');
     if (stage > 0) { P.rrect(ctx, RW / 2 - 26, 4, 52, 30, 6, '#bfe6f5', L, 1.6); ctx.fillStyle = L; ctx.fillRect(RW / 2 - 1, 4, 2, 30); ctx.fillRect(RW / 2 - 26, 18, 52, 2); }
     ctx.fillStyle = 'rgba(91,70,54,0.12)'; ctx.fillRect(-8, wallH - 10, RW + 16, 10);
     ctx.restore();
@@ -391,6 +392,7 @@
     ctx.save(); ctx.beginPath(); ctx.rect(-6, wallH, RW + 12, RH - wallH + 6); ctx.clip();
     for (let y = wallH; y < RH + 8; y += 16) { ctx.fillStyle = (y / 16) % 2 ? '#e2bb88' : '#ecca9c'; ctx.fillRect(-8, y, RW + 16, 15); ctx.fillStyle = 'rgba(156,106,64,0.35)'; for (let x = ((y / 16) % 2) * 40; x < RW + 16; x += 80) ctx.fillRect(x - 8, y, 2, 15); }
     if (st.floor && FLOORS[st.floor]) paintPattern(ctx, P, FLOORS[st.floor], -8, wallH, RW + 16, RH - wallH + 8, t); // 고른 바닥
+    G.scenery?.material(ctx, 'paper', [-8, wallH, RW + 16, RH - wallH + 8], 0.5, 'multiply');
     ctx.restore();
     // 문 깔판
     P.rrect(ctx, ROOM.door * TILE + 2, RH - 4, TILE - 4, 14, 5, '#9fd0a8', L, 1.3);

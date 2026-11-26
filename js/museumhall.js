@@ -134,6 +134,7 @@
     // 벽
     P.rrect(ctx, -10, -14, RW + 20, wallH + 14, [14, 14, 0, 0], H.wall, L, 2);
     for (let x = 0; x < RW; x += 32) { ctx.fillStyle = H.wall2; ctx.fillRect(x + 4, -8, 24, wallH - 4); }
+    G.scenery?.material(ctx, 'paper', [0, -8, RW, wallH + 8], 0.44, 'multiply');
     if (MH.hall === 'fish') { // 큰 벽 수조
       const gr = ctx.createLinearGradient(0, -8, 0, wallH); gr.addColorStop(0, '#5ab4e0'); gr.addColorStop(1, '#2a6f9a'); P.rrect(ctx, 20, -6, RW - 40, wallH - 6, 10, gr, '#1f4a6a', 2);
       for (let k = 0; k < 7; k++) { const x = 30 + ((t * 18 + k * 73) % (RW - 60)), y = 10 + (k * 13) % 34; ctx.globalAlpha = 0.5; P.blob(ctx, x, y, 7, 3, '#cfe8ff'); ctx.beginPath(); ctx.moveTo(x - 7, y); ctx.lineTo(x - 12, y - 3); ctx.lineTo(x - 12, y + 3); ctx.closePath(); ctx.fill(); ctx.globalAlpha = 1; }
@@ -144,6 +145,7 @@
     // 바닥
     ctx.save(); ctx.beginPath(); ctx.rect(-10, wallH, RW + 20, RH - wallH + 10); ctx.clip();
     for (let y = wallH; y < RH + 10; y += 32) for (let x = -32; x < RW + 32; x += 32) { ctx.fillStyle = ((x + y) / 32) % 2 ? H.floor[0] : H.floor[1]; ctx.fillRect(x, y, 32, 32); }
+    G.scenery?.material(ctx, 'stone', [-10, wallH, RW + 20, RH - wallH + 10], 0.43, 'soft-light');
     ctx.restore();
     ctx.fillStyle = 'rgba(40,30,50,0.15)'; ctx.fillRect(-10, wallH, RW + 20, 8);
     // 문

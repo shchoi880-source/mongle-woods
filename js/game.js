@@ -895,6 +895,7 @@
   function drawTitleBg(t) {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     const w = cv.width, h = cv.height;
+    if (G.scenery?.title(ctx, w, h)) return;
     const g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#bfe7ff'); g.addColorStop(1, '#ffe9f2');
     ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
     // 큰솜이 언덕 (숨 쉬는 구름양)
@@ -966,7 +967,7 @@
       const m = G.world.generateValid((base + k * 104729) >>> 0);
       const c = document.createElement('canvas'); c.width = m.w * 2; c.height = (m.h - 20) * 2;
       const g = c.getContext('2d');
-      const col = ['#a5d873', '#e2c99d', '#f5e2b4', '#86d7ea', '#5cbde2', '#94c968', '#c29a74', '#c98e5a', '#ecdcbc', '#c9d3da'];
+      const col = A.mapColors(G.time.season());
       for (let y = 20; y < m.h; y++) for (let x = 0; x < m.w; x++) { g.fillStyle = col[m.terr[y * m.w + x]]; g.fillRect(x * 2, (y - 20) * 2, 2, 2); }
       for (const o of m.objs) {
         if (o.ty < 20) continue;
