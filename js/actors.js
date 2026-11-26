@@ -793,7 +793,7 @@
     // 황금·희귀 변이 반짝
     if (b.v === 4 || b.v === 2) { const k = (t * 1.2 + b.seed) % 1; ctx.fillStyle = b.v === 4 ? `rgba(255,220,90,${1 - k})` : `rgba(255,255,255,${1 - k})`; ctx.beginPath(); ctx.arc(b.x + Math.cos(b.seed * 7) * 7, b.y - (b.alt || 0) - 6 - k * 6, 1.5, 0, 6.28); ctx.fill(); }
     // ★4+ 반짝 링
-    if (sp.tier >= 3) { const k = (t * 0.8 + b.seed) % 1; ctx.strokeStyle = `rgba(255,240,150,${0.6 * (1 - k)})`; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(b.x, b.y - (b.alt || 0), 6 + k * 8, 0, Math.PI * 2); ctx.stroke(); }
+    if (sp.tier >= 3 && !b.noRing) { const k = (t * 0.8 + b.seed) % 1; ctx.strokeStyle = `rgba(255,240,150,${0.6 * (1 - k)})`; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(b.x, b.y - (b.alt || 0), 6 + k * 8, 0, Math.PI * 2); ctx.stroke(); }
   };
 
   // 변이 색: 2 새하얀 / 4 황금 / 5 계절빛 (나머지는 원래 색)

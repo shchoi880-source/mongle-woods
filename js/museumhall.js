@@ -82,17 +82,45 @@
     const fx = pl.x + dx * 24, fy = pl.y + dy * 24 - 6;
     for (const s of slots) if (fx > s.x * TILE - 4 && fx < (s.x + 1) * TILE + 4 && fy > s.y * TILE - 6 && fy < (s.y + 1) * TILE + 10) return { s };
     if (MH.hall === 'lobby' && Math.abs(pl.x - RW / 2) < TILE * 1.6 && pl.y < 4.2 * TILE) return { doc: true };
+    if ((MH.hall === 'fish' || MH.hall === 'bug') && pl.y < 3 * TILE + 4 && pl.dir === 2) return { view: true };
     return null;
+  }
+  // 도감 카드 (오너: 눌러도 볼 게 없다 — 큰 그림·희귀도·계절·장소·크기 기록·값)
+  const TIER = ['', '흔해요', '조금 드물어요', '드물어요', '아주 드물어요', '전설이에요'];
+  const hours = (h) => !h || (h.length === 1 && h[0][0] === 0 && h[0][1] === 24) ? '하루 종일' : h.map(([a, b]) => `${a}~${b}시`).join(', ');
+  function showCard(s, where, when) {
+    const r = s.r, has = donated(s), id = iconId(s), fossil = s.kind === 'fossil';
+    const caught = fossil ? has : G.collect.has(s.kind, r.ix);
+    const best = !fossil && G.collect.best(s.kind, r.ix), unit = s.kind === 'bug' ? 'mm' : 'cm';
+    G.audio.sfx(has ? 'chime' : 'tap');
+    G.ui.modal(has ? r.name : caught ? `${r.name} (기증 전)` : '빈 자리', (body) => {
+      const card = document.createElement('div'); card.className = 'dexcard' + (has ? '' : ' empty');
+      const big = document.createElement('div'); big.className = 'dexart'; const im = new Image(); im.src = A.iconURL(id, 160); im.alt = ''; big.append(im);
+      if (!has) big.append(Object.assign(document.createElement('span'), { className: 'dexq', textContent: '?' }));
+      const info = document.createElement('div'); info.className = 'dexinfo';
+      const row = (k, v) => { const d = document.createElement('div'); d.className = 'dexrow'; d.innerHTML = `<b></b><span></span>`; d.querySelector('b').textContent = k; d.querySelector('span').textContent = v; info.append(d); };
+      if (!fossil) {
+        row('희귀도', '★'.repeat(r.tier || 1) + '☆'.repeat(Math.max(0, 5 - (r.tier || 1))) + ' ' + (TIER[r.tier] || ''));
+        row('만나는 때', r.cloud ? '언제나 (구름섬에서만)' : `${when}${r.hours ? ' · ' + hours(r.hours) : ''}`);
+        row('만나는 곳', r.cloud ? '☁️ 구름섬' : r.high ? `북쪽 고지대 ${where}` : where);
+        if (has || caught) row('크기 기록', best ? `${best}${unit}` : '아직 재 보지 않았어요');
+      } else row('찾는 곳', '삽으로 땅의 금 간 자국을 파요');
+      if (has || caught) row('팔면', G.fmt.money(r.val));
+      const say = document.createElement('div'); say.className = 'dexsay';
+      say.textContent = has ? (fossil ? '🐢 「아주… 오래전… 몽글숲에… 살던… 친구라네….」' : `🐢 「${r.name}…. ${TIER[r.tier] === '전설이에요' ? '이걸… 보게 될 줄이야…!' : '고맙네…. 손님들이… 아주… 좋아한다네….'}」`)
+        : caught ? '🐢 「오오…, 잡았구먼…! 로비에서… 나에게… 기증해 주게나….」' : `🐢 「아직… 비어 있는… 자리라네…. ${fossil ? '삽으로… 파 보게나….' : '그림자를… 잘 보게나….'}」`;
+      card.append(big, info); body.append(card, say);
+    });
   }
   async function act() {
     const tg = target(), pl = G.player;
     if (!tg) { if (pl.y > RH - 30) { if (MH.hall === 'lobby') MH.exit(); else MH.enter('lobby', MH.hall); } else { pl.squash = 0.12; G.audio.sfx('bump'); } return; }
     if (tg.doc) { await G.museum.talk(); slots = buildSlots(MH.hall); return; }
+    if (tg.view) { G.museumView.open(MH.hall); return; }
     const s = tg.s, r = s.r, say = (text) => ({ who: 'slowpoke', text });
     const months = (m) => !m || m.length >= 12 ? '1년 내내' : m.length ? `${m[0]}~${m[m.length - 1]}월` : '';
     const where = LOC[r.loc] || (s.kind === 'sea' ? '썰물 때 바닷가 웅덩이' : s.kind === 'fossil' ? '땅의 금 간 자국' : '');
-    if (donated(s)) { G.audio.sfx('chime'); await G.ui.say([say(`${r.name}…. ${s.kind === 'fossil' ? '아주… 오래전… 몽글숲에… 살던… 친구라네….' : `${months(r.months)}에… ${where}에서… 만날 수… 있지….`} 자네가… 기증해… 주었지….`)]); }
-    else { G.audio.sfx('tap'); await G.ui.say([say(`아직… 비어 있는… 자리라네…. ${s.kind === 'fossil' ? '삽으로… 땅의 금 간 자국을… 파 보게나….' : `${months(r.months)}…, ${where}…를… 살펴보게나….`}`)]); }
+    showCard(s, where, months(r.months));
   }
 
   // ---------- 장면 ----------
@@ -109,16 +137,25 @@
       const tg = target();
       if (G.ui.dialogOpen() || G.ui.open) G.ui.setAction('✋', '', '');
       else if (tg && tg.doc) G.ui.setAction('🐢', '말 걸기', '느림보 박사');
+      else if (tg && tg.view) G.ui.setAction('👀', '크게 보기', MH.hall === 'fish' ? '큰 수족관' : '곤충 정원');
       else if (tg) G.ui.setAction('🔍', '보기', donated(tg.s) ? tg.s.r.name : '빈 자리');
       else G.ui.setAction('🚪', G.player.y > RH - 30 ? '나가기' : '', '');
     },
     draw(ctx) { draw(ctx, G.game.t); },
     input(ev) {
+      if (G.museumView && G.museumView.el) { if (ev.type === 'back' || ev.type === 'act') G.museumView.close && G.museumView.close(); return true; } // 관람창이 열려 있으면 닫기만
       if (G.ui.modalInput(ev)) return true;
       if (G.ui.dialogInput(ev)) return true;
       if (ev.type === 'menu') { G.ui.notebook(); return true; }
       if (ev.type === 'map') { G.map.open(); return true; }
       if (ev.type === 'act') { act(); return true; }
+      if (ev.type === 'tapWorld') { // 전시칸을 손가락·마우스로 톡
+        const dpr = Math.min(globalThis.devicePixelRatio || 1, 2), x = ev.cx * dpr / PXr - ox, y = ev.cy * dpr / PXr - oy;
+        const s = slots.find((q) => x > q.x * TILE - 2 && x < (q.x + 1) * TILE + 2 && y > q.y * TILE - 8 && y < (q.y + 1) * TILE + 6);
+        if ((MH.hall === 'fish' || MH.hall === 'bug') && y < 2 * TILE && y > -10 && x > 0 && x < RW) { G.museumView.open(MH.hall); return true; }
+        if (s) { const r = s.r; showCard(s, LOC[r.loc] || (s.kind === 'sea' ? '썰물 때 바닷가 웅덩이' : ''), !r.months || r.months.length >= 12 ? '1년 내내' : `${r.months[0]}~${r.months[r.months.length - 1]}월`); return true; }
+        return false;
+      }
       if (ev.type === 'back') { MH.exit(); return true; }
       return false;
     },
