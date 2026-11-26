@@ -22,6 +22,7 @@
       if (x && x.v) p *= G.VARIANTS[x.v].mul;
       const tr = G.market.trend();
       if (tr && tr.test(it)) p *= 1.2;
+      if (it.cat === 'dish' && G.skills) p *= G.skills.cookMul();
       return Math.round(p);
     },
   };
