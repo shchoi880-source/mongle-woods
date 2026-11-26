@@ -96,6 +96,7 @@
         n.spots.far = sec.length >= 3 ? sec : far.length ? far : spots.walk;
         // 처음 놓일 때 지금 활동 장소 근처로
         const a = N.activity(n); if (a && a.ax) { const p = standNear(a.ax, a.ay, n.r); if (p) { n.x = p.x; n.y = p.y; n.tx = n.x; n.ty = n.y; } }
+        n.awake = !(a && a.act === 'sleep');
         list.push(n);
       }
     },
@@ -130,8 +131,17 @@
         if (n.hopT > 0) { n.hopT -= dt; n.hop = Math.sin((1 - n.hopT / 0.35) * Math.PI) * 6; } else n.hop = 0;
         if (n.emote) { n.emoteT += dt; if (n.emoteT > 1.6) n.emote = null; }
         const d = u.dist(n.x, n.y, p.x, p.y);
-        const act = N.activity(n);
+        let act = N.activity(n);
+        // 잘 시간: 그 자리에서 사라지지 않고 집까지 걸어가 문으로 들어간다 (오너: 이웃이 순간이동한다)
+        if (n.villager && act && act.act === 'sleep' && n.awake && n.spots && n.spots.home) {
+          const h = n.spots.home;
+          if (d > TILE * 2.5) n.homeT = (n.homeT || 0) + dt; // 길에 걸려 못 가도 12초 뒤엔 들어간 걸로 (내 옆에 서 있을 땐 기다려 줌)
+          if (n.homeT < 12 && u.dist(n.x, n.y, h.x, h.y) > TILE * 1.1 && !(offscreen(n.x, n.y) && offscreen(h.x, h.y))) { const q = n.homeQ || (n.homeQ = standNear(h.x, h.y, n.r) || h); act = { act: 'gohome', ax: q.x, ay: q.y, r: 0.6 }; }
+        }
         n.vis = n.visFn ? n.visFn() : !(act && act.act === 'sleep') && (!n.villager || N.isResident(n.id));
+        // 일어나면 자기 집 문에서 나온다
+        if (n.villager && n.vis && n.awake === false && n.spots && n.spots.home) { n.x = n.spots.home.x; n.y = n.spots.home.y; n.tx = n.x; n.ty = n.y; n.path = null; n.wait = 0.5; }
+        if (n.villager) { n.awake = n.vis; if (!(act && act.act === 'gohome')) n.homeT = 0; }
         if (!n.vis) continue;
         if (n.id === 'danpung') { N.foxUpdate(n, p, dt); continue; }
         // 플레이어가 1.5타일 안: 바라보기, 3초 머물면 감정 팝 + 깡충
@@ -158,7 +168,7 @@
           const far = u.dist(n.x, n.y, act.ax, act.ay);
           // 활동 장소가 멀면 그쪽으로 (길이 있으면 걸어서). 화면 밖이고 멀면 순간이동으로 따라잡는다
           if (far > act.r * TILE * 1.6) {
-            if (d > TILE * 14 && far > TILE * 6) { const q = standNear(act.ax, act.ay, n.r); if (q) { n.x = q.x; n.y = q.y; } }
+            if (far > TILE * 6 && offscreen(n.x, n.y)) { const q = standNear(act.ax, act.ay, n.r); if (q && offscreen(q.x, q.y)) { n.x = q.x; n.y = q.y; } else if (!pick(act.ax, act.ay)) n.wait = 1; }
             else if (pick(act.ax, act.ay)) n.wait = 0;
           }
           // 활동 장소 안에서 걸어갈 수 있는 곳 고르기 (안 되면 지금 자리 근처라도)
@@ -181,7 +191,7 @@
           if (moved < sp * 0.3) n.stuck = (n.stuck || 0) + dt; else n.stuck = 0;
           // 막히면 0.5초 뒤 길을 다시 찾고, 그래도 막히면 다른 곳으로 (화면 밖이면 조용히 옮기기)
           if (n.stuck > 0.5 && !n.repath) { n.repath = true; n.stuck = 0; if (!pick(n.tx, n.ty)) n.stuck = 9; }
-          if (n.stuck > 1.1 && d > TILE * 10) { const q = standNear(act.ax, act.ay, n.r); if (q) { n.x = q.x; n.y = q.y; n.stuck = 9; } }
+          if (n.stuck > 1.1 && offscreen(n.x, n.y)) { const q = standNear(act.ax, act.ay, n.r); if (q && offscreen(q.x, q.y)) { n.x = q.x; n.y = q.y; n.stuck = 9; } }
           if (moved > 1) n.repath = false;
           n.moving = moved > 0.01; n.dir = faceDir(wx, wy);
           n.walk = (n.walk + dt / 0.5) % 1;
@@ -348,6 +358,8 @@
     return dy < 0 ? 2 : 0;
   }
   N.faceDir = faceDir;
+  // 화면 밖인가 (오너 제보: 이웃이 막 순간이동한다 — 따라잡기 순간이동은 보이지 않는 곳에서만)
+  function offscreen(x, y) { const c = G.cam; if (!c || !c.w) return true; const m = TILE * 2; return x < c.x - m || x > c.x + c.w + m || y < c.y - m * 1.5 || y > c.y + c.h + m; }
   function standNear(x, y, r) {
     for (let k = 0; k < 40; k++) {
       const a = k * 2.4, d = (k / 40) * TILE * 4;

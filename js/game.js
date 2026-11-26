@@ -140,6 +140,9 @@
     // 2.5) 썰물 때 조수 웅덩이 생물 (맨손으로 잡는다 — 어떤 도구를 들고 있어도)
     const tp = G.tide.near(f.x, f.y, 26) || G.tide.near(pl.x, pl.y, 22);
     if (tp) return { kind: 'pool', ref: tp, icon: '🦀', label: '잡기', name: '조수 웅덩이' };
+    // 2.6) 건물·등불 기둥·게시판: 도구를 들고 있어도 먼저 (오너 제보: 등불 앞인데 원이 안 생긴다 — 잠자리채를 들고 있으면 등불을 못 봤다)
+    const so = objAhead();
+    if (so && STRUCT.has(so.kind)) { const r = objTarget(so); if (r) return r; }
     // 3) 도구별
     if (pl.tool === 'net') { const b = G.eco.nearest('bug', f.x, f.y, 56); return { kind: 'net', ref: b, icon: 'tool:net', label: '휘두르기', name: b && b.fade > 0.5 ? b.sp.name : '' }; }
     if (pl.tool === 'rod') {
@@ -164,28 +167,39 @@
     if (sm && u.dist(sm.x, sm.y, f.x, f.y) < 30) return { kind: 'snowman', icon: '⛄', label: G.events.st.snowman ? '보기' : '눈덩이 올리기', name: '광장 눈사람' };
     // 4) 사물: 나무·표지판·텐트·건물
     const o = objAhead();
-    if (o) {
-      if (o.kind === 'tree' || o.kind === 'fruit' || o.kind === 'pine' || o.kind === 'bigoak') return { kind: 'shake', ref: o, icon: '🌳', label: '흔들기', name: o.kind === 'bigoak' ? '할아버지 참나무' : '나무' };
-      if (o.kind === 'lantern') return { kind: 'lantern', ref: o, icon: '🏮', label: G.lantern.ready(o.n) ? '불 켜기' : '살펴보기', name: `${o.n}번 등불 기둥` };
-      if (o.kind === 'museum') return { kind: 'museum', ref: o, icon: '🦴', label: G.museum.isOpen() ? '들어가기' : '살펴보기', name: '조약돌 박물관' };
-      if (o.kind === 'signboard') return { kind: 'read', ref: o, icon: '📜', label: '읽기', name: '표지판' };
-      if (o.kind === 'board') return { kind: 'board', ref: o, icon: '📋', label: '의뢰 보기', name: '의뢰판' };
-      if (o.kind === 'tent') return { kind: 'tent', ref: o, icon: '🏠', label: '들어가기', name: '내 ' + G.nest.cur().name };
-      if (o.kind === 'mailbox') return { kind: 'mailbox', ref: o, icon: '📮', label: '열기', name: '우체통' };
-      if (o.kind === 'house') { const v = G.npc.VILLAGERS[o.owner || 'ddalang']; return { kind: 'house', ref: o, icon: '🚪', label: '두드리기', name: `${v ? v.name : '이웃'}의 집` }; }
-      if (o.kind === 'post') return { kind: 'postoffice', ref: o, icon: '🚪', label: '두드리기', name: '우체국' };
-      if (o.kind === 'stall') return { kind: 'stall', ref: o, icon: '🏪', label: '가판대', name: '땅굴상점' };
-      if (o.kind === 'rock') return { kind: 'rock', ref: o, icon: '🪨', label: '살펴보기', name: '바위' };
-      if (o.kind === 'lamp' || o.kind === 'bench') return { kind: 'poke', ref: o, icon: '✋', label: '만지기', name: o.kind === 'lamp' ? '가로등' : '벤치' };
-    }
+    if (o) { const r = objTarget(o); if (r) return r; }
     if (G.ranch.st.riding) return { kind: 'none', icon: '🐴', label: '내리기', name: '' };
     return { kind: 'none', icon: '✋', label: '', name: '' };
+  }
+  // 사물 → 행동 (도구와 상관없이 쓰는 건물·기둥·게시판은 도구 확인보다 먼저 본다)
+  const STRUCT = new Set(['lantern', 'museum', 'signboard', 'board', 'tent', 'mailbox', 'house', 'post', 'stall']);
+  function objTarget(o) {
+    if (o.kind === 'tree' || o.kind === 'fruit' || o.kind === 'pine' || o.kind === 'bigoak') return { kind: 'shake', ref: o, icon: '🌳', label: '흔들기', name: o.kind === 'bigoak' ? '할아버지 참나무' : '나무' };
+    if (o.kind === 'lantern') return { kind: 'lantern', ref: o, icon: '🏮', label: G.lantern.ready(o.n) ? '불 켜기' : '살펴보기', name: `${o.n}번 등불 기둥` };
+    if (o.kind === 'museum') return { kind: 'museum', ref: o, icon: '🦴', label: G.museum.isOpen() ? '들어가기' : '살펴보기', name: '조약돌 박물관' };
+    if (o.kind === 'signboard') return { kind: 'read', ref: o, icon: '📜', label: '읽기', name: '표지판' };
+    if (o.kind === 'board') return { kind: 'board', ref: o, icon: '📋', label: '의뢰 보기', name: '의뢰판' };
+    if (o.kind === 'tent') return { kind: 'tent', ref: o, icon: '🏠', label: '들어가기', name: '내 ' + G.nest.cur().name };
+    if (o.kind === 'mailbox') return { kind: 'mailbox', ref: o, icon: '📮', label: '열기', name: '우체통' };
+    if (o.kind === 'house') { const v = G.npc.VILLAGERS[o.owner || 'ddalang']; return { kind: 'house', ref: o, icon: '🚪', label: '두드리기', name: `${v ? v.name : '이웃'}의 집` }; }
+    if (o.kind === 'post') return { kind: 'postoffice', ref: o, icon: '🚪', label: '두드리기', name: '우체국' };
+    if (o.kind === 'stall') return { kind: 'stall', ref: o, icon: '🏪', label: '가판대', name: '땅굴상점' };
+    if (o.kind === 'rock') return { kind: 'rock', ref: o, icon: '🪨', label: '살펴보기', name: '바위' };
+    if (o.kind === 'lamp' || o.kind === 'bench') return { kind: 'poke', ref: o, icon: '✋', label: '만지기', name: o.kind === 'lamp' ? '가로등' : '벤치' };
+    return null;
   }
   function objAhead() {
     for (const d of [18, 30]) {
       const f = front(d);
       const o = G.world.objAtTile(Math.floor(f.x / TILE), Math.floor(f.y / TILE));
       if (o && !o.deco) return o;
+    }
+    // 칸 가운데에서 조금 비켜 서 있어도 기둥·건물은 알아보게 (좌우 10px)
+    const [dx, dy] = DIRS[pl.dir];
+    for (const side of [-10, 10]) {
+      const f = front(22), x = f.x + dy * side, y = f.y + dx * side;
+      const o = G.world.objAtTile(Math.floor(x / TILE), Math.floor(y / TILE));
+      if (o && !o.deco && STRUCT.has(o.kind)) return o;
     }
     return null;
   }
@@ -415,6 +429,9 @@
     const path = []; for (let c = end; c !== start; c = prev[c]) path.push({ x: (c % w) * TILE + 16, y: ((c / w) | 0) * TILE + 18 });
     path.reverse();
     GM.auto = { path, i: 0, tx, ty, name: name || '', stuck: 0 };
+    // 이웃에게 가기 (오너 제보: 가 보니 거기 없대): 목적지 근처 이웃을 따라가고, 그 이웃은 기다려 준다
+    const nn = G.npc && G.npc.list.find((n) => n.vis && !n.static && Math.hypot(n.x / TILE - tx, n.y / TILE - ty) < 2.5);
+    if (nn) { GM.auto.npc = nn.id; GM.auto.npcRe = 1; }
     if (G.fishing.state !== 'idle') G.fishing.cancel(true);
     return true;
   };
@@ -437,8 +454,19 @@
     if (GM.auto) {
       if (mv0.mag > 0) GM.autoStop('manual');
       else if (!G.ui.dialogOpen() && !G.ui.open && pl.busy <= 0 && !pl.hold) {
-        const a = GM.auto, wp = a.path[a.i];
-        if (!wp) GM.autoStop('arrive');
+        let a = GM.auto;
+        if (a.npc) {
+          const n = G.npc.get(a.npc);
+          if (n && n.vis) {
+            n.wait = Math.max(n.wait || 0, 0.6); n.moving = false; // 찾아가는 동안 멈춰서 기다리기
+            a.npcRe -= dt;
+            const ntx = n.x / TILE, nty = n.y / TILE;
+            if (a.npcRe <= 0 && Math.hypot(ntx - a.tx, nty - a.ty) > 1.6) { a.npcRe = 1; const id = a.npc; if (GM.autoGo(ntx, nty, a.name) && GM.auto) GM.auto.npc = id; }
+            if (GM.auto && Math.hypot(n.x - pl.x, n.y - pl.y) < TILE * 1.4) { GM.autoStop('arrive'); pl.dir = G.npc.faceDir(n.x - pl.x, n.y - pl.y); }
+          }
+        }
+        a = GM.auto || a; const wp = GM.auto && GM.auto.path[GM.auto.i];
+        if (!GM.auto) { /* 이웃 앞에 도착 */ } else if (!wp) GM.autoStop('arrive');
         else {
           const dx = wp.x - pl.x, dy = wp.y - pl.y, d = Math.hypot(dx, dy);
           a.noProg = (a.noProg || 0) + dt; // 다음 칸까지 너무 오래 걸리면(왔다 갔다) 막힌 것으로 본다
