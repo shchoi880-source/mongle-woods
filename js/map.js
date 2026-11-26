@@ -3,7 +3,13 @@
 (function (G) {
   'use strict';
   const TILE = G.C.TILE;
-  let terrCache = null, terrSeed = -1;
+  const MAP_TILE = 8;
+  const EDGES = [[0, 0], [0.5, 0], [1, 0], [1, 0.5], [1, 1], [0.5, 1], [0, 1], [0, 0.5]];
+  const CONTOURS = [[], [0, 1, 7], [1, 2, 3], [0, 2, 3, 7],
+    [3, 4, 5], [0, 1, 3, 4, 5, 7], [1, 2, 4, 5], [0, 2, 4, 5, 7],
+    [5, 6, 7], [0, 1, 5, 6], [1, 2, 3, 5, 6, 7], [0, 2, 3, 5, 6],
+    [3, 4, 6, 7], [0, 1, 3, 4, 6], [1, 2, 4, 6, 7]];
+  let paperMap;
 
   const MP = G.map = {};
 
@@ -91,28 +97,130 @@
   };
 
   // ---------- 지도 그리기 ----------
-  function terrain() {
-    const m = G.world.map;
-    if (terrCache && terrSeed === m.seed + ':' + G.art.season) return terrCache;
-    const c = document.createElement('canvas'); c.width = m.w * 4; c.height = m.h * 4;
+  MP.clearArtwork = () => { paperMap = null; };
+  MP.paintMap = (m, y0, season, showPlaces = false) => {
+    const S = MAP_TILE, T = G.TERR, A = G.art, scenery = G.scenery;
+    const c = document.createElement('canvas');
+    c.width = m.w * S; c.height = (m.h - y0) * S;
     const g = c.getContext('2d');
-    const col = G.art.mapColors(G.art.season);
-    for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) { g.fillStyle = col[m.terr[y * m.w + x]]; g.fillRect(x * 4, y * 4, 4, 4); }
-    for (const o of m.objs) if (!o.gone && (o.kind === 'tree' || o.kind === 'pine' || o.kind === 'fruit')) { g.fillStyle = o.kind === 'pine' ? '#4f8f5a' : '#6aa84f'; g.beginPath(); g.arc(o.tx * 4 + 2, o.ty * 4 + 2, 2.2, 0, 6.3); g.fill(); }
-    terrCache = c; terrSeed = m.seed + ':' + G.art.season;
+    const pal = A.mapColors(season), rect = [0, 0, c.width, c.height];
+    const tile = (x, y) => x < 0 || y < 0 || x >= m.w || y >= m.h ? T.SEA : m.terr[y * m.w + x];
+    const isLand = (v) => v !== T.SEA && v !== T.WATER && v !== T.BRIDGE && v !== T.STONE;
+    const region = (test) => {
+      const path = new Path2D();
+      // Trace between tile centers so a diagonal river is continuous at every zoom.
+      for (let y = y0 - 1; y < m.h; y++) for (let x = -1; x < m.w; x++) {
+        const flags = +test(tile(x, y)) | (test(tile(x + 1, y)) << 1) |
+          (test(tile(x + 1, y + 1)) << 2) | (test(tile(x, y + 1)) << 3);
+        const px = (x + 0.5) * S, py = (y - y0 + 0.5) * S;
+        if (flags === 15) { path.rect(px, py, S, S); continue; }
+        if (!flags) continue;
+        for (const [i, point] of CONTOURS[flags].entries()) {
+          const [dx, dy] = EDGES[point];
+          if (i === 0) path.moveTo(px + dx * S, py + dy * S);
+          else path.lineTo(px + dx * S, py + dy * S);
+        }
+        path.closePath();
+      }
+      return path;
+    };
+    const paint = (path, color, material, a) => {
+      g.fillStyle = color; g.fill(path);
+      if (!material) return;
+      g.save(); g.clip(path);
+      scenery?.material(g, material, rect, a, 'soft-light');
+      g.restore();
+    };
+    const wash = g.createLinearGradient(0, 0, c.width, c.height);
+    wash.addColorStop(0, '#aec9c7'); wash.addColorStop(1, '#7ba5aa');
+    g.fillStyle = wash; g.fillRect(...rect);
+    paint(region((v) => v === T.WATER || v === T.BRIDGE || v === T.STONE), '#a9ccca');
+    scenery?.material(g, 'water', rect, 0.55, 'soft-light');
+    // 바닷가에는 파도 자국, 육지는 얇게 겹친 물가 띠를 그린다.
+    g.strokeStyle = 'rgba(250,244,219,0.32)'; g.lineWidth = 0.9; g.lineCap = 'round';
+    g.beginPath();
+    for (let y = y0; y < m.h; y++) for (let x = 0; x < m.w; x++) {
+      const v = tile(x, y), hash = G.u.hash32(m.seed, x, y, 71);
+      if ((v !== T.SEA && v !== T.WATER) || (hash & 15) !== 5) continue;
+      const px = x * S + 2, py = (y - y0) * S + (hash >> 5 & 7);
+      g.moveTo(px - 3, py); g.quadraticCurveTo(px, py - 1.7, px + 3, py);
+    }
+    g.stroke();
+    const coast = region(isLand);
+    g.save(); g.translate(0, 1.7); paint(coast, '#d2c19d'); g.restore();
+    paint(coast, pal[T.GRASS], 'grass', season === 'winter' ? 0.16 : 0.6);
+    g.save(); g.clip(coast);
+    for (let y = y0; y < m.h; y += 13) for (let x = 0; x < m.w; x += 13) {
+      if (!isLand(tile(x, y))) continue;
+      const hash = G.u.hash32(m.seed, x, y, 73), radius = 51 + (hash & 31);
+      const px = x * S + (hash >> 8 & 31), py = (y - y0) * S + (hash >> 14 & 31);
+      const pigment = g.createRadialGradient(px, py, 3, px, py, radius);
+      pigment.addColorStop(0, hash & 1 ? 'rgba(108,131,79,0.31)' : 'rgba(242,225,171,0.32)');
+      pigment.addColorStop(1, 'rgba(195,191,133,0)');
+      g.fillStyle = pigment; g.fillRect(px - radius, py - radius, radius * 2, radius * 2);
+    }
+    g.restore();
+    paint(region((v) => v === T.SAND), '#e7d5b0', 'dirt', 0.52);
+    paint(region((v) => v === T.HIGH), pal[T.HIGH], 'grass', 0.31);
+    paint(region((v) => v === T.CLIFF), '#b18e72', 'cliff', 0.4);
+    paint(region((v) => v === T.PATH), '#dec099', 'dirt', 0.29);
+    paint(region((v) => v === T.PLAZA), '#e6d7bd', 'stone', 0.45);
+    paint(region((v) => v === T.BRIDGE), '#ac8056', 'wood', 0.43);
+    paint(region((v) => v === T.STONE), '#d5d7be');
+    scenery?.material(g, 'paper', rect, 0.16, 'multiply');
+    const markerArt = { post: 'post', tent: 'tent', house: 'house', museum: 'museum', stall: 'stall' };
+    for (const o of m.objs) {
+      if (o.gone || o.ty < y0) continue;
+      const x = (o.tx + o.w / 2) * S, y = (o.ty + o.h / 2 - y0) * S;
+      if (o.kind === 'tree' || o.kind === 'pine' || o.kind === 'fruit' || (o.kind === 'bigoak' && showPlaces)) {
+        const size = o.kind === 'bigoak' ? 7.5 : 3.4 + (G.u.hash32(m.seed, o.tx, o.ty, 82) & 3) * 0.42;
+        g.strokeStyle = '#897352'; g.lineWidth = 1.2;
+        g.beginPath(); g.moveTo(x, y + size * 0.6); g.lineTo(x, y + size * 1.25); g.stroke();
+        g.fillStyle = o.kind === 'pine' ? '#667f5f' : season === 'autumn' ? '#aa8657' : season === 'winter' ? '#a9b4a2' : '#748c62';
+        g.beginPath();
+        if (o.kind === 'pine') {
+          g.moveTo(x, y - size); g.lineTo(x + size * 0.86, y + size * 0.62);
+          g.lineTo(x - size * 0.86, y + size * 0.62); g.closePath();
+        } else g.ellipse(x, y - size * 0.13, size, size * 0.77, -0.22, 0, Math.PI * 2);
+        g.fill();
+        g.fillStyle = 'rgba(244,238,190,0.36)';
+        g.beginPath(); g.ellipse(x - size * 0.22, y - size * 0.43, size * 0.46, size * 0.22, -0.22, 0, Math.PI * 2); g.fill();
+      } else if (showPlaces && markerArt[o.kind]) {
+        const wide = o.kind === 'house' ? 20 : 27;
+        g.drawImage(A.building(markerArt[o.kind], season, false), x - wide / 2, y - wide * 0.66, wide, wide * 0.88);
+      }
+    }
     return c;
+  };
+  function terrain(m, y0) {
+    const season = G.art.season;
+    if (!paperMap || paperMap.map !== m || paperMap.season !== season || paperMap.y0 !== y0) {
+      paperMap = { map: m, season, y0, canvas: MP.paintMap(m, y0, season) };
+    }
+    return paperMap.canvas;
   }
   function markers() {
     const m = G.world.map, out = [];
     const P = (k) => m.plots[k];
     const add = (tx, ty, icon, name, kind) => out.push({ tx, ty, icon, name, kind });
-    const b = (k, icon, name) => { const p = P(k); if (p) add(p.x + p.w / 2, p.y + p.h / 2, icon, name, 'bld'); };
-    b('shop', '🏪', '땅굴상점');
+    const b = (k, icon, name, art) => {
+      const p = P(k);
+      if (p) out.push({ tx: p.x + p.w / 2, ty: p.y + p.h / 2, icon, name, kind: 'bld', art });
+    };
+    b('shop', '🏪', '땅굴상점', 'stall');
     if (G.ranch.st.pen) add(G.ranch.st.pen.x + G.ranch.st.pen.w / 2, G.ranch.st.pen.y + G.ranch.st.pen.h / 2, '🐮', '내 목장', 'bld');
-    if (G.farm.st.plots[0]) add(G.farm.st.plots[0].tx + 1.5, G.farm.st.plots[0].ty + 0.5, '🥕', '내 텃밭', 'bld'); b('post', '📮', '우체국 (보리 할멈)'); b('tent', '🏠', '내 ' + G.nest.cur().name);
-    if (P('museum2')) b('museum2', '🦴', G.museum.isOpen() ? '조약돌 박물관' : '박물관 (내일 개관)');
-    if (P('oak')) add(P('oak').x + 1, P('oak').y + 1, '🌳', '할아버지 참나무 (광장)', 'bld');
-    for (const [id, v] of Object.entries(G.npc.VILLAGERS)) { const p = P(v.plot); if (p && G.npc.isResident(id)) add(p.x + p.w / 2, p.y + p.h / 2, '🏡', `${G.npc.st[id].met ? v.name : '???'}의 집`, 'home'); }
+    if (G.farm.st.plots[0]) {
+      const p = G.farm.st.plots[0];
+      out.push({ tx: p.tx + 1.5, ty: p.ty + 0.5, name: '내 텃밭', kind: 'bld', item: 'crop:carrot' });
+    }
+    b('post', '📮', '우체국 (보리 할멈)', 'post');
+    b('tent', '🏠', '내 ' + G.nest.cur().name, ['tent', 'cabin', 'smallhouse', 'bighouse', 'dreamhouse'][G.nest.st.stage]);
+    if (P('museum2')) b('museum2', '🦴', G.museum.isOpen() ? '조약돌 박물관' : '박물관 (내일 개관)', 'museum');
+    if (P('oak')) b('oak', '🌳', '할아버지 참나무 (광장)', 'bigoak');
+    for (const [id, v] of Object.entries(G.npc.VILLAGERS)) {
+      const p = P(v.plot);
+      if (p && G.npc.isResident(id)) out.push({ tx: p.x + p.w / 2, ty: p.y + p.h / 2, icon: '🏡', name: `${G.npc.st[id].met ? v.name : '???'}의 집`, kind: 'home', art: 'house' });
+    }
     // 고지대 계단·고지대 (2026-11)
     if (m.stairs) for (const s of m.stairs) add(s.x + 0.5, s.y + 0.5, G.world.highOpen() ? '🪜' : '⛔', G.world.highOpen() ? '고지대 계단' : '고지대 계단 (아직 닫힘)', 'stairs');
     if (G.world.highOpen() && m.stairs && m.stairs[1]) add(m.stairs[1].x + 0.5, Math.max(4, m.stairs[1].y - 8), '⛰️', '북쪽 고지대', 'bld');
@@ -207,17 +315,20 @@
       const draw = () => {
         if (!cv.isConnected && raf) return;
         const t = (performance.now() - t0) / 1000;
-        g.imageSmoothingEnabled = false;
-        g.drawImage(terrain(), 0, y0 * 4, W * 4, H * 4, 0, 0, W * S, H * S);
-        g.imageSmoothingEnabled = true;
+        g.drawImage(terrain(m, y0), 0, 0, W * S, H * S);
         g.textAlign = 'center'; g.textBaseline = 'middle';
         for (const k of mk) {
           const x = k.tx * S, y = (k.ty - y0) * S;
           if (k.kind === 'npc') { g.fillStyle = k.col; g.beginPath(); g.arc(x, y, 12, 0, 6.3); g.fill(); g.lineWidth = 2.5; g.strokeStyle = '#5b4636'; g.stroke(); g.fillStyle = '#fff'; g.font = G.fontPx(12); g.fillText(k.label, x, y + 0.5); continue; }
           if (k.icon === '•') { g.fillStyle = '#8a7a9a'; g.beginPath(); g.arc(x, y, 5, 0, 6.3); g.fill(); continue; }
           const on = sel && sel.tx === k.tx && sel.ty === k.ty;
-          g.fillStyle = on ? '#ffe08a' : 'rgba(255,250,241,0.9)'; g.beginPath(); g.arc(x, y, on ? 22 : 19, 0, 6.3); g.fill();
-          g.font = '28px sans-serif'; g.fillText(k.icon, x, y + 1);
+          g.fillStyle = on ? '#fae2a9' : '#faf1da'; g.strokeStyle = on ? '#9a6d37' : '#927a58';
+          g.lineWidth = on ? 2.25 : 1.2;
+          g.beginPath(); g.arc(x, y, on ? 22 : 19, 0, 6.3); g.fill(); g.stroke();
+          if (k.art === 'bigoak') g.drawImage(G.art.bigOak(G.art.season), x - 15, y - 17, 30, 32);
+          else if (k.art) g.drawImage(G.art.building(k.art, G.art.season, false), x - 17, y - 17, 34, 30);
+          else if (k.item) { g.save(); g.translate(x - 12, y - 12); g.scale(0.75, 0.75); G.art.drawIcon(g, k.item); g.restore(); }
+          else { g.font = '24px sans-serif'; g.fillText(k.icon, x, y + 1); }
         }
         if (obj && obj.pos) { const x = obj.pos.x / TILE * S, y = (obj.pos.y / TILE - y0) * S, s2 = 1 + Math.sin(t * 4) * 0.12; g.save(); g.translate(x, y - 30); g.scale(s2, s2); g.font = '34px sans-serif'; g.fillText('⭐', 0, 0); g.restore(); }
         if (G.game.auto) { const a = G.game.auto; g.strokeStyle = 'rgba(255,107,139,0.7)'; g.lineWidth = 4; g.setLineDash([8, 8]); g.beginPath(); g.moveTo(G.player.x / TILE * S, (G.player.y / TILE - y0) * S); for (let i = a.i; i < a.path.length; i++) g.lineTo(a.path[i].x / TILE * S, (a.path[i].y / TILE - y0) * S); g.stroke(); g.setLineDash([]); }
@@ -262,7 +373,7 @@
       ctr.append(mkb('＋', () => zoomAt(view.z * 1.4, wrap.clientWidth / 2, wrap.clientHeight / 2), '확대'), mkb('－', () => zoomAt(view.z / 1.4, wrap.clientWidth / 2, wrap.clientHeight / 2), '축소'), mkb('📍', () => { const p = meXY(); centerOn(p.x, p.y, Math.max(view.z, fitZ() * 2.5)); }, '내 위치'), mkb('🗺️', () => { view.z = fitZ(); clamp(); }, '전체 보기'));
       wrap.append(cv, ctr);
       const legend = document.createElement('div'); legend.className = 'muted small maplegend';
-      legend.textContent = (G.input.isTouch() || (globalThis.matchMedia && matchMedia('(pointer: coarse)').matches) ? '두 손가락으로 확대·축소, 끌어서 이동' : '휠·＋－로 확대·축소, 끌어서 이동') + ' · 표시나 땅을 누르고 「여기로 가기」 · 🏪 상점 · 📮 우체국 · 🏠 내 집 · 🦴 박물관 · 🏡 이웃 집 · 🌳 광장 · 🏮 등불 · 💧 웅덩이 · 🪜 고지대 계단 · 건물·장소는 ✨ 순간이동 · 분홍 = 나';
+      legend.textContent = (G.input.isTouch() || (globalThis.matchMedia && matchMedia('(pointer: coarse)').matches) ? '두 손가락으로 확대·축소, 끌어서 이동' : '휠·＋－로 확대·축소, 끌어서 이동') + ' · 표시를 누르면 이름과 길 안내 · 장소는 순간이동 가능 · 분홍 점은 내 위치';
       body.append(wrap, info, legend);
     }, { wide: true });
   };

@@ -20,13 +20,17 @@ const ok = (name, cond, detail) => { console.log(`${cond ? '✔' : '✘'} ${name
     complete = true;
     naturalWidth = 432;
   }
-  const art = { C: {}, paint: { shadow() {} } };
-  const moduleG = { art, modules: new Set(), settings: { get() {} } };
+  const art = { C: {}, paint: { shadow() {}, blob() {} } };
+  const moduleG = { art, u: G.u, modules: new Set(), settings: { get() {} } };
   vm.runInNewContext(fs.readFileSync(path.join(ROOT, 'js', 'actors.js'), 'utf8'), { G: moduleG, Image: PreviewImage });
-  let sample, flip;
+  let sample, flip, toolAngle;
   const ctx = {
     save() {}, restore() {}, translate() {},
     scale(x) { flip = x; },
+    rotate(angle) { toolAngle = angle; },
+    transform() {}, beginPath() {}, moveTo() {}, lineTo() {}, quadraticCurveTo() {},
+    stroke() {}, clip() {}, arc() {}, closePath() {}, fill() {},
+    createLinearGradient() { return { addColorStop() {} }; },
     drawImage(im, x, y) { sample = [path.basename(im.src), x, y, flip < 0]; },
   };
   const render = (look, dir, moving = false, walk = 0) => {
@@ -39,6 +43,15 @@ const ok = (name, cond, detail) => { console.log(`${cond ? '✔' : '✘'} ${name
     render(male, 1) === 'postkeeper-male-walk.png/0/144/true' && render(male, 2) === 'postkeeper-male-walk.png/0/288/false');
   ok('우편지기: 걸음마다 두 자세를 교대로 사용', render(male, 2, true, 0.1) === 'postkeeper-male-walk.png/144/288/false' &&
     render(male, 2, true, 0.6) === 'postkeeper-male-walk.png/288/288/false');
+  const swing = (tool, actionPhase) => {
+    art.actor.draw(ctx, { species: 'human', look: male, x: 0, y: 0, dir: 3, tool, actionPhase }, 0);
+    return [sample[1], toolAngle];
+  };
+  const [windupFrame, windupAngle] = swing('net', 0.23);
+  const [strikeFrame, strikeAngle] = swing('net', 0.46);
+  const [, axeAngle] = swing('axe', 0.46);
+  ok('우편지기: 도구 준비와 타격의 발·손 자세가 바뀜', windupFrame !== strikeFrame && windupAngle < 0 && strikeAngle > 1);
+  ok('우편지기: 채와 도끼의 타격 궤적이 다름', Math.abs(strikeAngle - axeAngle) > 0.5);
   for (const name of ['postkeeper-walk.png', 'postkeeper-male-walk.png']) {
     const data = fs.readFileSync(path.join(ROOT, 'assets', 'chars', 's', name));
     ok('우편지기: 투명 3×3 그림 파일 ' + name, data.toString('ascii', 12, 16) === 'IHDR' &&

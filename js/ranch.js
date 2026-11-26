@@ -189,16 +189,17 @@
     }
   };
   RC.drawAnimal = (ctx, a, t, riding) => {
-    const P = G.art.paint, L = '#5b4636', k = KINDS[a.kind], c = k.col, s = RC.adult(a) ? 1 : 0.65;
+    const P = G.art.paint, L = '#5b4636', k = KINDS[a.kind], c = k.col, young = !RC.adult(a), s = young ? 0.65 : 1;
     const bob = a.moving ? Math.abs(Math.sin(t * 9 + a.id)) * -1.5 : Math.sin(t * 2 + a.id) * 0.5;
     const hop = a.hop > 0 ? Math.sin((1 - a.hop / 0.35) * Math.PI) * 5 : 0;
     ctx.save(); ctx.translate(a.x, a.y); P.shadow(ctx, 0, 0, 22 * s, 0.2); ctx.translate(0, bob - hop); ctx.scale((a.face || 1) * s, s);
     const blink = Math.sin(t * 0.7 + a.id * 3) > 0.97 ? 0.2 : 1;
-    if (a.kind === 'chicken') {
+    const painted = G.itemArt?.ranch(ctx, a.kind, young);
+    if (!painted && a.kind === 'chicken') {
       P.blob(ctx, 0, -9, 8, 7, c[0], L, 1.4); P.blob(ctx, 6, -16, 4.5, 4.5, c[0], L, 1.3); P.blob(ctx, 7, -21, 2.4, 2, c[1]); P.blob(ctx, 10.5, -15.5, 2, 1.2, '#ffb04a');
       P.blob(ctx, -7, -11, 3, 4, c[0], L, 1); P.blob(ctx, 7.5, -16.5, 0.9, 0.9 * blink, '#2d2430');
       ctx.strokeStyle = '#ffb04a'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(-2, -2); ctx.lineTo(-2, 1); ctx.moveTo(2, -2); ctx.lineTo(2, 1); ctx.stroke();
-    } else {
+    } else if (!painted) {
       // 네발 동물 공통: 몸통·다리·머리
       const big = a.kind === 'cow' || a.kind === 'pony';
       const bw = big ? 13 : 11, bh = big ? 8.5 : 8;
@@ -230,6 +231,8 @@
     const base = G.art.drawIcon;
     G.art.drawIcon = (g, id, t) => {
       const P = G.art.paint, L = '#5b4636';
+      if (G.itemArt?.icon(g, id)) return;
+      if (id.startsWith('animal:') && G.itemArt?.ranchIcon(g, id.slice(7))) return;
       if (id.startsWith('animal:')) { const kind = id.slice(7); g.save(); g.translate(16, 27); g.scale(1.05, 1.05); RC.drawAnimal(g, { id: 1, kind, x: 0, y: 0, born: -99, face: 1 }, 0, true); g.restore(); return; }
       if (id === 'egg' || id === 'gold_egg') { P.blob(g, 16, 18, 8, 10, id === 'egg' ? '#fff8ec' : '#ffd24d', L, 1.4); P.blob(g, 13, 13, 2.5, 3.5, 'rgba(255,255,255,0.7)'); return; }
       if (id === 'milk') { P.rrect(g, 10, 8, 12, 20, 3, '#ffffff', L, 1.4); P.rrect(g, 10, 14, 12, 8, 1, '#8fd3ff'); P.rrect(g, 12, 4, 8, 5, 2, '#8fd3ff', L, 1); return; }

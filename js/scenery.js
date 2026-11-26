@@ -13,7 +13,7 @@
   const patterns = new WeakMap();
   for (const name of ['materials', 'details', 'buildings', 'trees', 'props', 'title']) {
     const image = new Image();
-    image.onload = () => G.art?.clearCache();
+    image.onload = () => { G.art?.clearCache(); G.map?.clearArtwork(); };
     image.src = 'assets/scenery/' + name + (name === 'title' ? '.jpg' : '.webp');
     images[name] = image;
   }
@@ -39,11 +39,7 @@
     board: [4, 48, 76, 60, 50],
   };
   function sprite(g, sheet, index, center, foot, w, h) {
-    const image = images[sheet];
-    const cell = image.naturalWidth / 3;
-    const x = (index % 3) * cell + 4;
-    const y = Math.floor(index / 3) * cell + 4;
-    g.drawImage(image, x, y, cell - 8, cell - 8, center - w / 2, foot - h, w, h);
+    G.art.atlasFrame(g, images[sheet], index, center - w / 2, foot - h, w, h);
   }
 
   function groundShadow(g, center, foot, width) {
@@ -101,6 +97,7 @@
       const i = kind === 'pine' ? (season === 'winter' ? 5 : 1) : kind === 'fruit' ? 2 :
         season === 'winter' ? 4 : season === 'autumn' ? 3 : 0;
       groundShadow(g, 32, 74, 49);
+      if (kind === 'fruit' && G.itemArt?.acornTree(g)) return true;
       sprite(g, 'trees', i, 32, 74, i === 1 || i === 5 ? 52 : 62, 71);
     }
     return true;

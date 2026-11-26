@@ -268,14 +268,16 @@
       case 'ranch': await G.ranch.act(tg); break;
       case 'pool': { pl.busy = 0.3; pl.squash = 0.12; G.audio.sfx('plop'); if (G.tide.catch(tg.ref)) { kongalReact('jump'); fxSplash(tg.ref.tx * TILE + 16, tg.ref.ty * TILE + 22); } break; }
       case 'chop': case 'rockhit': {
-        const o = tg.ref; o.shakeT = 0.4; pl.busy = 0.45; pl.swing = 0.001;
-        G.audio.sfx(tg.kind === 'chop' ? 'shake' : 'dig');
+        const o = tg.ref, chop = tg.kind === 'chop';
+        pl.busy = 0.45; pl.swing = 0.001;
         setTimeout(() => {
-          const r = G.nest.gather(o, tg.kind === 'chop' ? 'axe' : 'shovel');
+          o.shakeT = 0.4;
+          G.audio.sfx(chop ? 'shake' : 'dig');
+          const r = G.nest.gather(o, chop ? 'axe' : 'shovel');
           if (r.none) { G.audio.sfx('bump'); G.ui.toast(tg.kind === 'chop' ? `이 나무는 오늘 많이 내줬어요. 다음 아침(약 ${G.time.minsToMorning()}분 뒤)에 또 와요.` : `이 바위는 오늘 다 두드렸어요. 다음 아침(약 ${G.time.minsToMorning()}분 뒤)에 또 와요.`, { icon: tg.kind === 'chop' ? '🌳' : '🪨', ms: 1500 }); return; }
           dropItem(r.id, o.tx * TILE + 16 + (pl.x < o.tx * TILE + 16 ? -18 : 18), o.ty * TILE + 28, 1);
-          G.audio.sfx('drop'); if (tg.kind === 'chop') leafFx(o);
-        }, 180);
+          G.audio.sfx('drop'); if (chop) leafFx(o);
+        }, chop ? 180 : 220);
         break;
       }
       case 'swingtool': pl.swing = 0.001; pl.busy = 0.3; G.audio.sfx('whiff'); break;
@@ -611,7 +613,7 @@
     }
     // 이웃 말풍선 (이웃끼리 수다 — 11차 회의)
     for (const n of G.npc.list) if (n.vis && n.sayT > 0 && n.sayText) bubble(n.x, n.y - 70 - (n.species === 'rabbit' ? 10 : 0), n.sayText, Math.min(1, n.sayT * 3));
-    if (pl.hold) drawHeld(t);
+    if (pl.hold && !pl.swing) drawHeld(t);
     if (kg.sayT > 0 && !G.ui.dialogOpen()) bubble(pl.x, pl.y - 74 - kg.jump, kg.say, Math.min(1, kg.sayT * 3));
     G.fishing.drawPost(ctx, pl);
     G.events.drawMeteors(ctx);
@@ -707,15 +709,16 @@
     A.paint.shadow(c, d.x, d.y + 2, 14, 0.2);
     c.save(); c.translate(d.x - 9, d.y - 18 - d.h + Math.sin(d.t * 3) * (d.h ? 0 : 0.8)); c.scale(0.56, 0.56); A.drawIcon(c, d.id); c.restore();
   }
+  const playerPose = {};
   function drawPlayer(c, t) {
-    pl.t = t;
-    const a = pl;
     // 조랑말 타기: 말을 먼저 그리고 사람을 조금 올린다
     const pony = !G.house.inside && G.ranch.ridingAnimal();
     if (pony) { pony.face = pl.dir === 1 ? -1 : pl.dir === 3 ? 1 : (pony.face || 1); pony.moving = pl.moving; pony.x = pl.x; pony.y = pl.y + 2; G.ranch.drawAnimal(c, pony, t, true); }
-    a.hop = pony ? 13 : 0;
-    a.tool = pl.tool; a.swing = pl.swing > 0 ? Math.sin(pl.swing * Math.PI) : 0;
-    if (pl.hold) { a.tool = 'hand'; }
+    // The paint pose must never change the elapsed action or equipped tool on the saved player.
+    const a = Object.assign(playerPose, pl, {
+      t, hop: pony ? 13 : 0, tool: pl.hold && !pl.swing ? 'hand' : pl.tool,
+      actionPhase: pl.swing, swing: pl.swing > 0 ? Math.sin(pl.swing * Math.PI) : 0,
+    });
     A.actor.draw(c, a, t);
     // 콩알: 머리 위
     const breath = Math.sin(t * 2.6) * 0.6;
@@ -965,15 +968,7 @@
     const base = (Date.now() ^ Math.floor(Math.random() * 1e9)) >>> 0;
     for (let k = 0; k < 3; k++) {
       const m = G.world.generateValid((base + k * 104729) >>> 0);
-      const c = document.createElement('canvas'); c.width = m.w * 2; c.height = (m.h - 20) * 2;
-      const g = c.getContext('2d');
-      const col = A.mapColors(G.time.season());
-      for (let y = 20; y < m.h; y++) for (let x = 0; x < m.w; x++) { g.fillStyle = col[m.terr[y * m.w + x]]; g.fillRect(x * 2, (y - 20) * 2, 2, 2); }
-      for (const o of m.objs) {
-        if (o.ty < 20) continue;
-        g.fillStyle = o.kind === 'tree' || o.kind === 'pine' || o.kind === 'fruit' ? '#5aa548' : o.kind === 'flower' ? '#ff9fbf' : o.kind === 'rock' ? '#9aa5b0' : o.kind === 'bigoak' ? '#3f8a3a' : ['stall', 'post', 'tent', 'house'].includes(o.kind) ? '#ff7a6a' : null;
-        if (g.fillStyle && o.kind !== 'lamp') g.fillRect(o.tx * 2, (o.ty - 20) * 2, o.w * 2, o.h * 2);
-      }
+      const c = G.map.paintMap(m, G.world.HIGH_ROWS - 4, G.time.season(), true);
       const b = document.createElement('button'); b.className = 'mapcard'; b.append(c);
       const lbl = document.createElement('span'); lbl.textContent = ['첫 번째 지도', '두 번째 지도', '세 번째 지도'][k]; b.append(lbl);
       b.onclick = () => { G.audio.sfx('stamp'); newGame(m.seed); };
