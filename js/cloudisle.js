@@ -53,8 +53,12 @@
   // ---------- 생물 ----------
   const TIER_W = [0, 10, 5, 2, 0.7, 0.25];
   function pickSp(list, kind) {
-    const w = list.map((s) => TIER_W[s.tier] * (s.rare || 1) * (s.tier >= 3 ? 3 : 1) * (s.cloud ? 4 : 1) * (G.skills ? G.skills.rareMul(kind, s.tier) : 1)); // 구름섬 전용은 4배 더
-    let r = Math.random() * w.reduce((a, b) => a + b, 0); for (let i = 0; i < list.length; i++) { r -= w[i]; if (r <= 0) return list[i]; } return list[0];
+    const weighted = list.map((s) => {
+      const skill = G.skills ? G.skills.rareMul(kind, s.tier) : 1;
+      const w = TIER_W[s.tier] * (s.rare || 1) * (s.tier >= 3 ? 3 : 1) * (s.cloud ? 4 : 1) * skill;
+      return { s, w };
+    });
+    return G.u.pickW(kind === 'fish' ? G.fishing.rodWeights(weighted) : weighted, Math.random()).s;
   }
   function spawnBug() {
     const m = G.time.month(), list = G.data.all('bugs').filter((s) => (s.cloud || s.months.includes(m)) && !s.high && s.loc !== 'water' && s.loc !== 'surface' && s.beh !== 'G');
@@ -245,7 +249,7 @@
       if (F) {
         F.t += dt;
         if (F.state === 'wait' && F.t > F.bite) { F.state = 'bite'; F.t = 0; G.audio.sfx('bite'); }
-        else if (F.state === 'bite' && F.t > 0.9) { F = null; G.audio.sfx('miss'); G.ui.toast('앗, 놓쳤다! 찌가 들어가면 바로 당겨요.', { icon: '🎣' }); }
+        else if (F.state === 'bite' && F.t >= G.C.FISH_BITE_SECONDS) { F = null; G.audio.sfx('miss'); G.ui.toast('앗, 놓쳤다! 찌가 들어가면 바로 당겨요.', { icon: '🎣' }); }
         if (G.input.move.mag > 0 && F && F.state === 'wait') F = null;
       }
       // 섬 아래로 걸어 나가면(선착장) 돌아가기 물어보기는 행동 버튼으로

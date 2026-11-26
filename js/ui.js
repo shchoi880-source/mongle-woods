@@ -103,6 +103,7 @@
   function bump(el) { el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); }
   // 도구 아이콘 HTML (맨손만 이모지)
   UI.toolIcon = (t, cls = 'ti-img') => t === 'hand' ? '✋' : `<img class="${cls}" src="${G.art.iconURL('tool:' + t, 64)}" alt="">`;
+  const toolName = (t) => t === 'rod' ? G.fishing.RODS[G.fishing.rodLevel()].name : G.TOOLS[t].name;
   UI.hud = (on) => { UI.root.classList.toggle('hud-on', !!on); };
   let lastGoal = '';
   UI.refreshGoal = () => {
@@ -138,7 +139,7 @@
     hud.money.innerHTML = `<i class="coin"></i>${G.fmt.num(G.wallet.get())}`;
     const tool = G.player ? G.player.tool : 'hand';
     if (G.house && G.house.inside) hud.tool.innerHTML = '<span>🛋️</span><small>꾸미기</small>';
-    else hud.tool.innerHTML = `<span>${UI.toolIcon(tool, 'tool-img')}</span><small>${G.TOOLS[tool].name}</small>`;
+    else hud.tool.innerHTML = `<span>${UI.toolIcon(tool, 'tool-img')}</span><small>${toolName(tool)}</small>`;
   };
   // 액션 버튼 라벨 (대상 미리보기)
   let lastAct = '';
@@ -697,7 +698,7 @@
       boxB.onclick = () => { if (!UI.storageOk()) { UI.toast('보관함은 집 안이나 집 앞에서 열 수 있어요.', { icon: '📦' }); return; } G.audio.sfx('open'); storagePane(pane); };
       head.append(sortB, boxB);
       const tools = $('div', 'toolrow');
-      for (const t of G.player.tools) { const b = $('button', 'chip' + (G.player.tool === t ? ' on' : ''), `${UI.toolIcon(t)} ${G.TOOLS[t].name}`); b.onclick = () => { G.player.setTool(t); render(); }; tools.append(b); }
+      for (const t of G.player.tools) { const b = $('button', 'chip' + (G.player.tool === t ? ' on' : ''), `${UI.toolIcon(t)} ${toolName(t)}`); b.onclick = () => { G.player.setTool(t); render(); }; tools.append(b); }
       pane.append(head, tools, slotGrid((i, s) => {
         const it = G.items.get(s.id);
         const p = G.items.sellPrice(s.id, s.x);
@@ -1060,7 +1061,8 @@
           else if (e.kind === 'look') tip(`「${e.name}」을 샀어요! 잎첩 🪞 나에서 입어 봐요.`, '👕', 3600);
           else if (e.kind === 'bag') tip(`가방이 ${G.inv.size}칸이 됐어요!`, '🎒');
           else if (e.kind === 'plot') tip(`텃밭이 ${r.n}칸 넓어졌어요! (모두 ${G.farm.st.plots.length}칸)`, '🥕');
-          else if (e.kind === 'up') tip({ net: '튼튼 잠자리채! 채가 더 넓게 닿아요.', rod: '튼튼 낚싯대! 물고기가 더 멀리서 오고, 당기기가 넉넉해져요.', can: '큰 물뿌리개! 주변 5×3 칸에 한 번에 물을 줘요.' }[e.id], '⬆️', 3600);
+          else if (e.kind === 'up' && e.id === 'rod') { UI.refreshHud(); tip(`${e.name}! 희귀 물고기가 더 자주 나와요.`, '🎣', 3600); }
+          else if (e.kind === 'up') tip({ net: '튼튼 잠자리채! 채가 더 넓게 닿아요.', can: '큰 물뿌리개! 주변 5×3 칸에 한 번에 물을 줘요.' }[e.id], '⬆️', 3600);
           else if (e.kind === 'seed') tip(`${e.name}를 샀어요! 집 옆 텃밭에 심어요.`, '🌱');
           else tip(`${e.name}을(를) 샀어요! 집에서 꾸미기로 놓아 보세요.`, '🛋️');
           render();

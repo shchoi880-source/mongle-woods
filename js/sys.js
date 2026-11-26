@@ -143,8 +143,12 @@
       // 가방 늘리기 (오너 요청: 30칸은 좁다) 30 → 80칸, 10칸씩
       if (G.inv.size < G.inv.MAX) list.push({ kind: 'bag', id: 'bag', name: `가방 10칸 늘리기 (지금 ${G.inv.size}칸)`, price: G.inv.growPrice(), key: 'bag' });
       // 도구 업그레이드 (한 번 사면 영구)
-      for (const [t, nm, pr] of [['net', '튼튼 잠자리채', 3000], ['rod', '튼튼 낚싯대', 3000], ['can', '큰 물뿌리개', 2500]]) {
+      for (const [t, nm, pr] of [['net', '튼튼 잠자리채', 3000], ['can', '큰 물뿌리개', 2500]]) {
         if (G.player.hasTool(t) && !(G.player.up && G.player.up[t])) list.push({ kind: 'up', id: t, name: nm, price: pr, key: 'up_' + t });
+      }
+      if (G.player.hasTool('rod')) {
+        const level = G.fishing.rodLevel() + 1, rod = G.fishing.RODS[level];
+        if (rod) list.push({ kind: 'up', id: 'rod', name: rod.name, price: rod.price, key: 'up_rod_' + level, level });
       }
       // 👕 옷 코너 (되살림): 아직 없는 옷·모자·머리 중 날마다 4개 (GPT 부품 그림)
       if (G.art && G.art.PK) {
@@ -198,10 +202,16 @@
         G.inv.grow(); G.emit('shop:buy', { id: 'bag', price: entry.price }); return { ok: true };
       }
       if (entry.kind === 'up') {
-        if (G.player.up && G.player.up[entry.id]) return { ok: false, why: '이미 좋은 걸 가지고 있어요.' };
-        if (!G.wallet.spend(entry.price, 'buy')) return { ok: false, why: '몽이 조금 모자라요.' };
-        G.player.up = Object.assign({}, G.player.up, { [entry.id]: 1 }); G.save.mark('up');
-        G.emit('shop:buy', { id: 'up_' + entry.id, price: entry.price }); return { ok: true };
+        let level = 1, price = entry.price;
+        if (entry.id === 'rod') {
+          level = G.fishing.rodLevel() + 1;
+          const rod = G.fishing.RODS[level];
+          if (!rod || entry.level !== level || !G.player.hasTool('rod')) return { ok: false, why: '상점에서 다음 낚싯대를 골라 주세요.' };
+          price = rod.price;
+        } else if (G.player.up && G.player.up[entry.id]) return { ok: false, why: '이미 좋은 걸 가지고 있어요.' };
+        if (!G.wallet.spend(price, 'buy')) return { ok: false, why: '몽이 조금 모자라요.' };
+        G.player.up = Object.assign({}, G.player.up, { [entry.id]: level }); G.save.mark('up');
+        G.emit('shop:buy', { id: 'up_' + entry.id, price }); return { ok: true };
       }
       if (entry.kind === 'animal') { const r = G.ranch.buy(entry.id); if (r.ok) G.emit('shop:buy', { id: entry.id, price: entry.price }); return r; }
       if (entry.kind === 'seed') {

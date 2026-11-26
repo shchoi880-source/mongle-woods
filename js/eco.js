@@ -75,7 +75,12 @@
       const cands = G.data.all('fish').filter((f) => f.loc === wk && available(f, month, hour) && !f.cloud);
       if (!cands.length) return;
       const dream = G.mail ? G.mail.dreamSpecies() : '';
-      const sp = u.pickW(cands.map((s) => ({ s, w: TIER_W[s.tier] * (s.rare || 1) * (dream === 'fish:' + s.id ? 6 : 1) * (G.skills ? G.skills.rareMul('fish', s.tier) : 1) })), R()).s;
+      const weighted = cands.map((s) => {
+        const skill = G.skills ? G.skills.rareMul('fish', s.tier) : 1;
+        const featured = dream === 'fish:' + s.id ? 6 : 1;
+        return { s, w: TIER_W[s.tier] * (s.rare || 1) * featured * skill };
+      });
+      const sp = u.pickW(F.rodWeights(weighted), R()).s;
       const wx = G.weather.now();
       const v = G.rollVariant(R(), { night: G.time.isNight(), wet: wx.type !== 'clear' && wx.type !== 'cloudy', golden: G.lantern && G.lantern.golden() });
       const giant = v === 1;
@@ -234,8 +239,39 @@
 
   // ---------- 낚시 ----------
   // 상태: idle → flying → wait → (approach) → nibble(툭 0~3회) → bite(덥석, 판정창) → 결과
+  // rare는 별 3~5 가중치, minRare는 후보에 별 4~5가 있을 때 적용할 최소 합산 출현율.
+  const RODS = [
+    { name: '기본 낚싯대', price: 0, rare: [1, 1, 1], minRare: 0 },
+    { name: '튼튼 낚싯대', price: 3000, rare: [1.25, 1.5, 1.75], minRare: 0 },
+    { name: '은물결 낚싯대', price: 10000, rare: [1.35, 1.8, 2.25], minRare: 0.02 },
+    { name: '달빛 낚싯대', price: 25000, rare: [1.5, 2.2, 3], minRare: 0.035 },
+    { name: '별빛 낚싯대', price: 50000, rare: [1.65, 2.5, 3.5], minRare: 0.05 },
+  ];
   const F = G.fishing = {
-    state: 'idle', bob: null, target: null, t: 0, nibbles: 0, nibbleT: 0, window: 0, fake: 0,
+    RODS,
+    state: 'idle', bob: null, target: null, t: 0, nibbles: 0, nibbleT: 0, fake: 0,
+    rodLevel() {
+      const level = Number(G.player?.up?.rod);
+      return Number.isInteger(level) ? u.clamp(level, 0, RODS.length - 1) : 0;
+    },
+    rodWeights(weighted) {
+      const level = F.rodLevel();
+      if (!level) return weighted;
+      const rod = RODS[level];
+      let common = 0, rare = 0;
+      const adjusted = weighted.map(({ s, w }) => {
+        const weight = w * (rod.rare[s.tier - 3] || 1);
+        if (s.tier >= 4) rare += weight;
+        else common += weight;
+        return { s, w: weight };
+      });
+      const target = common * rod.minRare / (1 - rod.minRare);
+      if (rare && rare < target) {
+        const scale = target / rare;
+        for (const entry of adjusted) if (entry.s.tier >= 4) entry.w *= scale;
+      }
+      return adjusted;
+    },
     cast(p) {
       const DIRS = [[0, 1], [-1, 0], [0, -1], [1, 0]];
       const [dx, dy] = DIRS[p.dir];
@@ -317,9 +353,8 @@
             F.nibbles--; F.nibbleT = 0.7 + Math.random() * 0.9;
             b.dip = 2; b.ring.push({ t: 0, big: false }); G.audio.sfx('nibble'); // 툭
           } else {
-            // 덥석! 판정창: ★1 800ms ~ ★5 350ms, 터치 +80ms
+            // 덥석! 이때부터 당기기 판정 시간을 잰다.
             F.state = 'bite'; F.t = 0;
-            F.window = (800 - (f.sp.tier - 1) * 112 + (G.input.lastTouch ? 80 : 0) + (G.player.up && G.player.up.rod ? 160 : 0)) / 1000;
             b.dip = 7; b.ring.push({ t: 0, big: true }, { t: -0.12, big: true });
             G.audio.sfx('bite'); G.emit('fishing:bite', {});
             if (G.settings.get('vibrate') && navigator.vibrate) navigator.vibrate(40);
@@ -337,7 +372,7 @@
       }
       if (F.state === 'bite') {
         b.dip = 7;
-        if (F.t > F.window) { // 놓침
+        if (F.t >= G.C.FISH_BITE_SECONDS) { // 놓침
           f.state = 'flee'; f.t = 0; f.ang += Math.PI;
           F.state = 'idle'; F.bob = null; F.target = null;
           G.emit('eco:miss', { kind: 'fish' });
