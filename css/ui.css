@@ -412,9 +412,7 @@ html.kb .hud-key { display: block; }
 html.kb .hud-target { bottom: calc(138px + var(--safe-b)); }
 .btn-map, .btn-menu { position: relative; }
 .hud-key.mini { position: absolute; left: 50%; bottom: -10px; transform: translateX(-50%); min-width: 0; padding: 2px 5px; font-size: 10px; border-bottom-width: 3px; pointer-events: none; }
-.hud-modes { display: flex; flex-direction: column; gap: 8px; align-self: flex-end; }
-.hud-modes .hud-control { flex-direction: row; gap: 5px; }
-.hud-modes .hud-key { order: -1; }
+.hud-modes { display: flex; flex-direction: column; gap: 14px; align-self: flex-end; }
 .btn-mode { width: 44px; height: 44px; font-size: 20px; transition: transform .15s, background .15s; }
 .btn-mode.on { background: linear-gradient(150deg, #fff1c4, #ffd36b); border-color: #d49a3a; box-shadow: 0 0 0 3px rgba(255,200,90,.45), var(--shadow); transform: scale(1.06); }
 html.kb .dlg-next::before { content: 'Space'; display: inline-block; margin-right: 6px; padding: 1px 6px; border: 2px solid rgba(91,70,54,.22); border-bottom-width: 3px; border-radius: 6px; background: #fffaf1; color: var(--ink2); font: 700 10px/1.2 system-ui, sans-serif; vertical-align: 2px; }
@@ -431,3 +429,8 @@ html.kb .dlg-next::before { content: 'Space'; display: inline-block; margin-righ
   .btn-act { width: 76px; height: 76px; } .btn-tool { width: 54px; height: 54px; } .btn-mode { width: 40px; height: 40px; font-size: 18px; }
   .hud-br { gap: 8px; }
 }
+
+/* 단축키: 지도·잎첩처럼 버튼 아래에 살짝 걸치게 (오너: 옆에 따로 있으면 어색) */
+.hud-br .hud-control { position: relative; gap: 0; }
+.hud-br .hud-control .hud-key { position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%); min-width: 0; padding: 2px 6px; font-size: 10px; border-bottom-width: 3px; pointer-events: none; z-index: 1; white-space: nowrap; }
+.hud-br .hud-control .btn-act + .hud-key { bottom: -8px; }
