@@ -86,10 +86,8 @@
       if (len > STICK_R) { I.stick.ox = I.stick.x - dx / len * STICK_R; I.stick.oy = I.stick.y - dy / len * STICK_R; dx = dx / len * STICK_R; dy = dy / len * STICK_R; }
       mag = Math.min(1, len / STICK_R);
       if (mag > 0.12) { x = dx / (mag * STICK_R); y = dy / (mag * STICK_R); } else mag = 0;
-      // 달리기: 기울기 ≥ 92%를 250ms 유지, < 70%면 복귀
-      if (mag >= 0.92) runHold += dt; else if (mag < 0.7) runHold = 0;
-      mode = runHold >= 0.25 ? 'run' : mag < 0.45 ? 'sneak' : 'walk';
-      if (I.modeLock && mag > 0.12) mode = I.modeLock; // 달리기·살금 버튼을 켜 두면 조이스틱 기울기와 상관없이
+      // 오너: 폰에서 기울기로 달리기·살금이 저절로 바뀌니 헷갈린다 → 버튼으로 고른 것만, 아무것도 안 고르면 보통 걸음
+      mode = I.modeLock && mag > 0.12 ? I.modeLock : 'walk';
     } else {
       const k = I.keys;
       if (k.has('ArrowUp') || k.has('KeyW')) y -= 1;
