@@ -355,7 +355,8 @@
   };
   GM.openShop = async () => {
     const h = G.time.hour();
-    if (h < 8 || h >= 22) { await G.ui.say([{ who: 'tosil', text: '가판대는 아침 8시부터 밤 10시까지예요. 오빠는 벌써 굴에서 자요.' }]); return; }
+    // 24시간 영업 (오너: 가게가 너무 빨리 닫는다) — 밤엔 토실이 혼자 졸린 목소리로
+    if (h >= 22 || h < 6) { await G.ui.say([{ who: 'tosil', text: u.pick(['하암… 밤에도 열어 둬요. 오빠는 굴에서 자고 있으니까 조용히요….', '어서 오세요… 쉿, 오빠 깨면 시끄러워요. 천천히 골라요….', '밤 손님이네요… 별빛 할인은 없지만… 반가워요….'], Math.random()) }]); await G.ui.shop(); return; }
     const first = !G.market.stats.firstSale;
     const hello = [{ who: 'todak', text: u.pick(G.lines('todak', 'hello'), Math.random()).text }, { who: 'tosil', text: u.pick(G.lines('tosil', 'hello'), Math.random()).text }];
     if (first) hello.push({ who: 'tosil', text: G.str(G.lines('tosil', 'trend')[0].text, { trend: G.market.trend().name }) });
