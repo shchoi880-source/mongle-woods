@@ -1,5 +1,5 @@
 // 서비스 워커: 오프라인 실행 (캐시 우선, 버전이 바뀌면 새 캐시)
-const CACHE = 'mongle-0.16.0-storybook-1';
+const CACHE = 'mongle-0.16.1-storybook-1';
 const FILES = [
   './', 'index.html', 'manifest.webmanifest', 'icons/icon.svg', 'css/ui.css', 'fonts/jua-subset.woff2',
   'js/scenery.js', 'assets/scenery/materials.webp', 'assets/scenery/details.webp', 'assets/scenery/buildings.webp', 'assets/scenery/trees.webp', 'assets/scenery/props.webp', 'assets/scenery/title.jpg',
