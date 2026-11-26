@@ -26,7 +26,7 @@
     follow(x, y, dt, snap) {
       const m = G.world.map;
       let tx = x - cam.w / 2, ty = y - cam.h / 2 - 16;
-      tx = u.clamp(tx, 0, m.w * TILE - cam.w); ty = u.clamp(ty, (G.world.HIGH_ROWS - 8) * TILE, m.h * TILE - cam.h);
+      tx = u.clamp(tx, 0, m.w * TILE - cam.w); ty = u.clamp(ty, G.world.highOpen() ? 0 : (G.world.HIGH_ROWS - 8) * TILE, m.h * TILE - cam.h);
       if (snap) { cam.x = tx; cam.y = ty; return; }
       const k = 1 - Math.exp(-dt * 6);
       cam.x += (tx - cam.x) * k; cam.y += (ty - cam.y) * k;
@@ -1011,6 +1011,7 @@
     G.tide.refresh(G.time.day());
     G.farm.ensurePlots(); G.farm.tick(G.time.day()); G.ranch.tick(G.time.day());
     if (!fresh) awayGrow();
+    setTimeout(() => GM.checkHigh(), 2500);
     A.loadPostkeeper(A.postkeeperId(pl.look));
     GM.drops = (G.world.state.drops || []).map((d) => Object.assign({ vy: 0, h: 0, t: 0 }, d));
     G.npc.init();
@@ -1040,6 +1041,21 @@
     }
   }
 
+  // 북쪽 고지대 열기 (2026-11, 오너: 땅덩이가 작다): 마을에 온 지 3일째 또는 박물관 기증 5점이면 계단이 놓인다
+  GM.checkHigh = async (quiet) => {
+    const W = G.world; if (!W.map || W.highOpen() || (G.net && G.net.guest)) return false;
+    if (!(G.time.st.playDays >= 3 || G.museum.total() >= 5)) return false;
+    W.state.high = true; W.state.listsDay = -1; A.dropChunks(); G.save.mark('high');
+    if (quiet) return true;
+    G.audio.sfx('stamp');
+    setTimeout(async () => {
+      if (G.ui.dialogOpen()) return G.ui.toast('⛰️ 북쪽 고지대로 가는 계단이 놓였어요! 지도에서 확인해 보세요.', { icon: '⛰️', ms: 5000 });
+      await G.ui.say([{ who: 'bori', text: '우편지기! 북쪽 절벽에 나무 계단을 놓았단다. 이제 고지대에도 편지를 나를 수 있겠구나. 콕!' }, { who: 'sys', text: '⛰️ 북쪽 고지대가 열렸어요! 고지대에만 사는 곤충과 화석이 있대요. (지도에서 계단 위치를 볼 수 있어요)' }]);
+    }, 1200);
+    return true;
+  };
+  G.on('museum:donate', () => GM.checkHigh());
+
   // 자리 비운 동안 자란 것 반영 + 알림
   function awayGrow() {
     if (G.net && G.net.guest) { G.time.st.realAt = Date.now(); return; }
@@ -1052,6 +1068,7 @@
   // ---------- 이벤트 연결 ----------
   G.on('time:day', (p) => {
     if (!GM.started) return;
+    GM.checkHigh();
     G.world.refresh(p.day);
     A.season = G.time.season(); A.clearCache();
     G.ui.toast('새 아침! 몽글바람이 새 물건을 실어 왔어요. 나무·바위·상점·부탁이 다시 채워졌어요.', { icon: '🌤️', ms: 3600 });

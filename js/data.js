@@ -91,6 +91,12 @@
     { id: 'rainbow_dragonfly', ix: 38, name: '무지개실잠자리', tpl: 'dragonfly', col: ['#ff8fd0', '#8fb4ff'], months: [5, 6, 7, 8, 9, 10], hours: [[10, 15]], loc: 'water', tier: 4, val: 2200, size: [3, 4], beh: 'A', spd: 3, flee: 3.2, rare: 0.4 },
     { id: 'aurora_butterfly', ix: 39, name: '오로라나비', tpl: 'butterfly', col: ['#c9b3ff', '#7fdcc4'], months: [11, 12, 1, 2, 3], hours: [[10, 15]], loc: 'flower', tier: 5, val: 5000, size: [9, 12], beh: 'A', spd: 2.2, flee: 3, rare: 0.3 },
     { id: 'house_cricket', ix: 40, name: '집귀뚜라미', tpl: 'cricket', col: ['#a8845a', '#6b4f30'], months: ALL, hours: [[19, 24], [0, 5]], loc: 'ground', tier: 1, val: 140, size: [1.5, 2.2], beh: 'D', spd: 1.1, flee: 1.6 },
+    // 북쪽 고지대에서만 (high) — 2026-11 고지대 열기
+    { id: 'mountain_swallowtail', ix: 41, name: '산호랑나비', tpl: 'butterfly', col: ['#ffe08a', '#3a3030'], months: [4, 5, 6, 7, 8, 9], hours: [[6, 18]], loc: 'flower', tier: 3, val: 1800, size: [7, 10], beh: 'A', spd: 1.8, flee: 2.4, high: true },
+    { id: 'cloud_dragonfly', ix: 42, name: '구름잠자리', tpl: 'dragonfly', col: ['#e8f4ff', '#8fb4e8'], months: [5, 6, 7, 8, 9, 10], hours: [[8, 18]], loc: 'air', tier: 3, val: 1600, size: [5, 7], beh: 'A', spd: 2.8, flee: 3.0, high: true },
+    { id: 'alpine_longhorn', ix: 43, name: '고산하늘소', tpl: 'beetle', col: ['#4a6a9a', '#1a2a4a'], months: [6, 7, 8, 9], hours: ALLDAY, loc: 'tree', tier: 4, val: 3200, size: [4, 6], beh: 'F', spd: 1.0, flee: 1.6, high: true },
+    { id: 'star_firefly', ix: 44, name: '별반딧불이', tpl: 'firefly', col: ['#b8f0ff', '#2a3a4a'], months: [6, 7, 8, 9], hours: [[20, 24], [0, 3]], loc: 'air', tier: 4, val: 3500, size: [1.2, 1.8], beh: 'A', spd: 0.8, flee: 1.6, high: true },
+    { id: 'snow_moth', ix: 45, name: '눈꽃나방', tpl: 'moth', col: ['#ffffff', '#c8d8f0'], months: [11, 12, 1, 2], hours: [[17, 24], [0, 5]], loc: 'air', tier: 3, val: 2000, size: [5, 7], beh: 'A', spd: 1.2, flee: 2.0, high: true },
   ]);
   D.add('fish', [
     { id: 'mandarin_fish', ix: 10, name: '쏘가리', months: [4, 5, 6, 7, 8, 9, 10], hours: [[16, 24], [0, 6]], loc: 'river', shadow: 3, tier: 3, val: 1200, size: [20, 45] },

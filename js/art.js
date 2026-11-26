@@ -207,6 +207,14 @@
       if (t(x, y) !== TT.CLIFF) continue;
       const px = x * TILE, py = y * TILE;
       const isFall = W.map.fall && W.map.fall.x === x && W.map.fall.y === y;
+      if (W.isStair && W.isStair(x, y)) {
+        // 고지대 계단: 열리면 나무 계단, 닫혀 있으면 계단 앞에 밧줄
+        g.fillStyle = C.cliffD; g.fillRect(px, py, TILE, TILE + 4);
+        for (let k = 0; k < 4; k++) { g.fillStyle = k % 2 ? C.woodL : C.wood; g.fillRect(px + 3, py + k * 8 - 2, TILE - 6, 7); g.fillStyle = 'rgba(90,60,40,0.4)'; g.fillRect(px + 3, py + k * 8 + 4, TILE - 6, 1.5); }
+        g.fillStyle = C.woodD; g.fillRect(px + 1, py - 4, 3, TILE + 6); g.fillRect(px + TILE - 4, py - 4, 3, TILE + 6);
+        if (!W.highOpen()) { g.strokeStyle = '#c84a3a'; g.lineWidth = 2.5; g.beginPath(); g.moveTo(px, py + TILE + 2); g.quadraticCurveTo(px + 16, py + TILE + 8, px + TILE, py + TILE + 2); g.stroke(); P.rrect(g, px + 7, py + TILE - 2, 18, 9, 2, '#fff4dc', C.line, 1); }
+        continue;
+      }
       g.fillStyle = C.cliff; g.fillRect(px, py + 6, TILE, TILE - 2);
       g.fillStyle = C.cliffD; g.fillRect(px, py + 18, TILE, 3); g.fillRect(px, py + 26, TILE, 4);
       g.fillStyle = C.cliffL; g.fillRect(px, py + 10, TILE, 2);
