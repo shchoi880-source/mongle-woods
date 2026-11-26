@@ -1,5 +1,5 @@
 // 서비스 워커: 오프라인 실행 (캐시 우선, 버전이 바뀌면 새 캐시)
-const CACHE = 'mongle-0.15.1-shop24-1';
+const CACHE = 'mongle-0.15.2-sleep-1';
 const FILES = [
   './', 'index.html', 'manifest.webmanifest', 'icons/icon.svg', 'css/ui.css', 'fonts/jua-subset.woff2',
   'assets/chars/s/postkeeper-walk.png', 'assets/chars/s/postkeeper-male-walk.png',
