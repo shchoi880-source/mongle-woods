@@ -1,10 +1,10 @@
-// 마당 꾸미기 (9차 회의): 집 주변(문에서 10칸 안) 풀밭·길에 가방의 가구를 놓는다. 내 앞 칸에 놓고, 앞에 서서 행동 = 치우기
+// 마을 꾸미기 (9차 회의 마당 → 2026-11 마을 어디든): 풀밭·길·모래·광장(열린 고지대 포함)에 가방의 가구를 놓는다. 최대 200개. 내 앞 칸에 놓고, 앞에 서서 행동 = 치우기
 // 깔개·방석은 밟고 지나갈 수 있고, 나머지는 길을 막는다. 친구 마을(손님)에서는 보이지 않는다
 (function (G) {
   'use strict';
   const TILE = G.C.TILE;
   const st = { items: [] }; // {f, tx, ty, c}
-  const YD = G.yard = { st, MAX: 40, RANGE: 10 };
+  const YD = G.yard = { st, MAX: 200, RANGE: 999 }; // 2026-11 오너: 마을 어디든 꾸미기 (예전: 집 문에서 10칸, 40개)
   const form = (id) => G.house && G.house.FORMS.find((f) => f.id === id);
   const active = () => !(G.net && G.net.guest) && !!(G.world && G.world.map);
 
@@ -18,16 +18,18 @@
   // 놓을 수 있나: 집 문에서 RANGE 칸 안, 풀·길, 물체·텃밭·목장·다른 가구 없음, 문 바로 앞 두 칸은 비움
   YD.check = (f, tx, ty) => {
     const W = G.world, m = W.map, door = m.plots.tent.door;
-    if (st.items.length >= YD.MAX) return `마당에는 ${YD.MAX}개까지 놓을 수 있어요.`;
+    if (st.items.length >= YD.MAX) return `마을에는 ${YD.MAX}개까지 놓을 수 있어요.`;
+    const doors = Object.values(m.plots).filter((p) => p && p.door).map((p) => p.door);
     const pen = G.ranch && G.ranch.st.pen;
     for (let y = ty; y < ty + f.h; y++) for (let x = tx; x < tx + f.w; x++) {
-      if (Math.max(Math.abs(x - door.x), Math.abs(y - door.y)) > YD.RANGE) return '집 가까이(문에서 10칸 안)에만 놓을 수 있어요.';
       const t = W.tile(x, y);
-      if (!(t === G.TERR.GRASS || t === G.TERR.PATH) || W.objAtTile(x, y)) return '여기엔 놓을 수 없어요. 빈 풀밭이나 길 위에 놓아요.';
+      const ground = t === G.TERR.GRASS || t === G.TERR.PATH || t === G.TERR.SAND || t === G.TERR.PLAZA || (t === G.TERR.HIGH && W.highOpen());
+      if (!ground || W.objAtTile(x, y)) return '여기엔 놓을 수 없어요. 빈 풀밭·길·모래·광장 위에 놓아요.';
+      if (doors.some((d) => x === d.x && y > d.y && y <= d.y + 2) || doors.some((d) => Math.abs(x - d.x) <= 1 && y === d.y + 1)) return '건물 문 앞은 비워 둬요.';
+      if (W.isStair && (W.isStair(x, y) || W.isStair(x, y - 1))) return '계단 앞은 비워 둬요.';
       if (YD.at(x, y)) return '다른 가구가 있어요.';
       if (G.farm && (G.farm.at(x, y) || G.farm.inField(x, y))) return '밭 구역에는 놓을 수 없어요.';
       if (pen && x >= pen.x - 1 && x <= pen.x + pen.w && y >= pen.y - 1 && y <= pen.y + pen.h) return '목장 울타리 근처에는 놓을 수 없어요.';
-      if (x === door.x && y > door.y && y <= door.y + 2) return '집 문 앞은 비워 둬요.';
       const pt = Math.floor(G.player.x / TILE), pty = Math.floor(G.player.y / TILE);
       if (form(f.id).layer !== 'rug' && x === pt && y === pty) return '내가 서 있는 자리예요.';
     }
@@ -36,7 +38,7 @@
   // 가방 i번 칸의 가구를 내 앞에 놓기
   YD.placeFromBag = (i) => {
     const s = G.inv.slots[i]; if (!s || !s.id.startsWith('furn:')) return false;
-    if (!active() || (G.house && G.house.inside)) { G.ui.toast('마당 꾸미기는 밖에서, 내 마을에서 해요.', { icon: '🏡' }); return false; }
+    if (!active() || (G.house && G.house.inside) || (G.museumHall && G.museumHall.inside) || (G.villaHome && G.villaHome.inside)) { G.ui.toast('마당 꾸미기는 밖에서, 내 마을에서 해요.', { icon: '🏡' }); return false; }
     const f = form(s.id.slice(5)); if (!f) return false;
     const pl = G.player, DIRS = [[0, 1], [-1, 0], [0, -1], [1, 0]], [dx, dy] = DIRS[pl.dir];
     let tx = Math.floor(pl.x / TILE) + dx, ty = Math.floor(pl.y / TILE) + dy;

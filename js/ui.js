@@ -687,7 +687,7 @@
         info.innerHTML = `<b>${esc(G.items.name(s.id, s.x))}</b>${s.x && s.x.size ? ` · ${s.x.size}cm` : ''}${s.n > 1 ? ` × ${s.n}` : ''}<br><span class="muted">${it.nosell ? '팔 수 없는 물건' : '가판대 판매가 ' + G.fmt.money(p)}</span>`;
         // 가구: 밖(내 마을)이면 「마당에 놓기」
         if (s.id.startsWith('furn:') && G.yard && !(G.house && G.house.inside) && !(G.net && G.net.guest)) {
-          const yb = $('button', 'btn small', '🏡 내 앞에 놓기 (마당 꾸미기)');
+          const yb = $('button', 'btn small', '🏡 내 앞에 놓기 (마을 꾸미기)');
           yb.onclick = () => { const close = UI.open && UI.open.close; if (close) close(); setTimeout(() => G.yard.placeFromBag(i), 50); };
           info.append(document.createElement('br'), yb);
         }
