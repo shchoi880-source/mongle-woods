@@ -1149,13 +1149,20 @@
       G.ui.toast('새 버전으로 바꾸는 중이에요…', { icon: '✨', ms: 2000 });
       setTimeout(() => location.reload(), GM.started ? 900 : 200);
     });
-    // 오래 켜 둔 경우에도 새 버전을 확인
-    setInterval(() => navigator.serviceWorker.getRegistration().then((r) => r && r.update()).catch(() => {}), 10 * 60000);
-    navigator.serviceWorker.register('sw.js').then((reg) => {
-      reg.addEventListener('updatefound', () => {
-        const nw = reg.installing; if (!nw) return;
-        nw.addEventListener('statechange', () => { /* skipWaiting → controllerchange에서 처리 */ });
-      });
+    let registration, lastCheck = 0;
+    const checkUpdate = () => {
+      const now = Date.now();
+      if (!registration || reloading || navigator.onLine === false || now - lastCheck < 15000) return;
+      lastCheck = now;
+      registration.update().catch(() => { /* 다음 연결에서 다시 확인 */ });
+    };
+    window.addEventListener('online', checkUpdate);
+    window.addEventListener('pageshow', checkUpdate);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) checkUpdate(); });
+    setInterval(checkUpdate, 2 * 60000);
+    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then((reg) => {
+      registration = reg;
+      checkUpdate();
     }).catch(() => { /* 오프라인 미지원 환경 */ });
   }
 
