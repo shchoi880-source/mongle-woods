@@ -3,7 +3,7 @@
   'use strict';
   const u = G.u;
   const KINDS = [['bug', '곤충', 'bugs'], ['fish', '물고기', 'fish'], ['sea', '바다', 'sea'], ['fossil', '화석', 'fossils']];
-  const st = { bug: new G.Bits(64), fish: new G.Bits(64), sea: new G.Bits(64), fossil: new G.Bits(64), greeted: false, appraised: 0 };
+  const st = { bug: new G.Bits(128), fish: new G.Bits(128), sea: new G.Bits(128), fossil: new G.Bits(64), greeted: false, appraised: 0 };
 
   G.data.add('items', [{ id: 'fossil_raw', name: '수상한 화석', cat: 'fossil', val: 100, stack: 1 }]);
 
@@ -134,7 +134,7 @@
   G.save.section('museum', {
     v: 1, def: () => ({ bug: '', fish: '', fossil: '', greeted: false, appraised: 0 }),
     get: () => ({ bug: st.bug.toStr(), fish: st.fish.toStr(), sea: st.sea.toStr(), fossil: st.fossil.toStr(), greeted: st.greeted, appraised: st.appraised }),
-    set: (d) => { st.bug = G.Bits.from(d.bug, 64); st.fish = G.Bits.from(d.fish, 64); st.fossil = G.Bits.from(d.fossil, 64); st.sea = G.Bits.from(d.sea, 64); st.greeted = !!d.greeted; st.appraised = d.appraised || 0; },
+    set: (d) => { st.bug = G.Bits.from(d.bug, 128); st.fish = G.Bits.from(d.fish, 128); st.fossil = G.Bits.from(d.fossil, 64); st.sea = G.Bits.from(d.sea, 128); st.greeted = !!d.greeted; st.appraised = d.appraised || 0; },
   });
 
   G.modules.add('museum');

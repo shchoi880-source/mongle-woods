@@ -22,7 +22,7 @@
     { id: 'pillbug', ix: 4, name: '공벌레', tpl: 'pillbug', col: ['#8b8fa3', '#5d6175'], months: ALL, hours: [[5, 19]], loc: 'rock', tier: 1, val: 80, size: [1, 1.5], beh: 'E', spd: 0.4, flee: 1.0 },
     { id: 'ant', ix: 5, name: '개미', tpl: 'ant', col: ['#4a3a35', '#2a201d'], months: ALL, hours: [[6, 18]], loc: 'ground', tier: 1, val: 60, size: [0.5, 1], beh: 'B', spd: 0.9, flee: 1.0 },
     { id: 'cricket', ix: 6, name: '귀뚜라미', tpl: 'cricket', col: ['#8a6a3c', '#5b4424'], months: [8, 9, 10, 11], hours: [[17, 24], [0, 5]], loc: 'ground', tier: 2, val: 300, size: [2, 3], beh: 'D', spd: 1.2, flee: 1.8 },
-    { id: 'rhino_beetle', ix: 7, name: '장수풍뎅이', tpl: 'beetle', col: ['#6b3f22', '#3b2213'], months: [6, 7, 8], hours: [[17, 24], [0, 8]], loc: 'tree', tier: 4, val: 3000, size: [5, 8], beh: 'F', spd: 1.0, flee: 1.6 },
+    { id: 'rhino_beetle', ix: 7, name: '장수풍뎅이', tpl: 'beetle', art: 'rhino', col: ['#6b3f22', '#3b2213'], months: [6, 7, 8], hours: [[17, 24], [0, 8]], loc: 'tree', tier: 4, val: 3000, size: [5, 8], beh: 'F', spd: 1.0, flee: 1.6 },
     { id: 'firefly', ix: 8, name: '반딧불이', tpl: 'firefly', col: ['#d9ff6b', '#3a3a2a'], months: [6, 7], hours: [[19, 24], [0, 4]], loc: 'water', tier: 3, val: 1200, size: [1, 1.5], beh: 'A', spd: 0.8, flee: 1.6 },
     { id: 'whirligig', ix: 10, name: '물맴이', tpl: 'whirligig', col: ['#3d4c5e', '#a9c4d8'], months: [4, 5, 6, 7, 8, 9, 10], hours: [[6, 18]], loc: 'surface', tier: 2, val: 350, size: [0.6, 1], beh: 'G', spd: 1.6, flee: 1.6 },
     { id: 'starlight_moth', ix: 9, name: '별빛나방', tpl: 'moth', col: ['#cfd6ff', '#7e86c9'], months: ALL, hours: [[19, 24], [0, 5]], loc: 'lamp', tier: 2, val: 400, size: [5, 7], beh: 'A', spd: 1.2, flee: 2.0 },
@@ -73,16 +73,16 @@
     { id: 'big_cicada', ix: 20, name: '말매미', tpl: 'cicada', col: ['#3a2a20', '#8a6a3c'], months: [7, 8, 9], hours: [[8, 17]], loc: 'tree', tier: 3, val: 650, size: [4.5, 6], beh: 'C', spd: 1.2, flee: 1.8 },
     { id: 'evening_cicada', ix: 21, name: '쓰름매미', tpl: 'cicada', col: ['#9ab86a', '#4e6a3a'], months: [8, 9], hours: [[16, 20]], loc: 'tree', tier: 2, val: 420, size: [3, 4], beh: 'C', spd: 1.2, flee: 1.7 },
     { id: 'mantis', ix: 22, name: '사마귀', tpl: 'mantis', col: ['#7cc35a', '#4e8a3a'], months: [8, 9, 10, 11], hours: [[8, 18]], loc: 'flower', tier: 2, val: 450, size: [6, 9], beh: 'B', spd: 0.6, flee: 1.3 },
-    { id: 'longhorn_grasshopper', ix: 23, name: '방아깨비', tpl: 'cricket', col: ['#9fd36a', '#5a8a3a'], months: [7, 8, 9, 10], hours: [[7, 18]], loc: 'ground', tier: 1, val: 200, size: [6, 9], beh: 'D', spd: 1.3, flee: 1.8 },
-    { id: 'locust', ix: 24, name: '메뚜기', tpl: 'cricket', col: ['#b8b04a', '#7a7430'], months: [7, 8, 9, 10], hours: [[7, 18]], loc: 'ground', tier: 1, val: 180, size: [3, 5], beh: 'D', spd: 1.4, flee: 1.9 },
+    { id: 'longhorn_grasshopper', ix: 23, name: '방아깨비', tpl: 'cricket', art: 'grasshopper', tint: '#9fd36a', col: ['#9fd36a', '#5a8a3a'], months: [7, 8, 9, 10], hours: [[7, 18]], loc: 'ground', tier: 1, val: 200, size: [6, 9], beh: 'D', spd: 1.3, flee: 1.8 },
+    { id: 'locust', ix: 24, name: '메뚜기', tpl: 'cricket', art: 'grasshopper', col: ['#b8b04a', '#7a7430'], months: [7, 8, 9, 10], hours: [[7, 18]], loc: 'ground', tier: 1, val: 180, size: [3, 5], beh: 'D', spd: 1.4, flee: 1.9 },
     { id: 'stag_beetle', ix: 25, name: '사슴벌레', tpl: 'stag', col: ['#5a3a22', '#2b1a10'], months: [6, 7, 8, 9], hours: [[18, 24], [0, 6]], loc: 'tree', tier: 4, val: 2500, size: [4, 7], beh: 'F', spd: 1, flee: 1.6 },
     { id: 'giant_stag', ix: 26, name: '왕사슴벌레', tpl: 'stag', col: ['#2b2430', '#14101a'], months: [7, 8], hours: [[20, 24], [0, 4]], loc: 'tree', tier: 5, val: 6000, size: [6, 8], beh: 'F', spd: 1.1, flee: 1.8, rare: 0.4 },
     { id: 'flower_chafer', ix: 27, name: '꽃무지', tpl: 'beetle', col: ['#5fbf7a', '#2f7a4a'], months: [5, 6, 7, 8], hours: [[8, 17]], loc: 'flower', tier: 2, val: 400, size: [1.6, 2.4], beh: 'B', spd: 0.6, flee: 1.3 },
     { id: 'jewel_beetle', ix: 28, name: '비단벌레', tpl: 'beetle', col: ['#3fd0a0', '#c45ad0'], months: [7, 8], hours: [[9, 15]], loc: 'tree', tier: 4, val: 3500, size: [3, 4], beh: 'C', spd: 1.2, flee: 2, rare: 0.5 },
     { id: 'snail', ix: 29, name: '달팽이', tpl: 'snail', col: ['#d9a877', '#c9c9b0'], months: ALL, hours: ALLDAY, loc: 'rock', tier: 1, val: 150, size: [1.5, 3], beh: 'E', spd: 0.2, flee: 0.8 },
     { id: 'caterpillar', ix: 30, name: '배추벌레', tpl: 'caterpillar', col: ['#9fe07a', '#ffd24d'], months: [4, 5, 6, 7, 8, 9], hours: [[6, 18]], loc: 'flower', tier: 1, val: 90, size: [2, 3.5], beh: 'B', spd: 0.3, flee: 0.9 },
-    { id: 'water_strider', ix: 31, name: '소금쟁이', tpl: 'whirligig', col: ['#5a4a3a', '#c9d8e0'], months: WARM, hours: [[6, 19]], loc: 'surface', tier: 1, val: 160, size: [1, 1.6], beh: 'G', spd: 1.8, flee: 1.8 },
-    { id: 'diving_beetle', ix: 32, name: '물방개', tpl: 'whirligig', col: ['#2f3a2a', '#c9b45a'], months: [5, 6, 7, 8, 9], hours: ALLDAY, loc: 'surface', tier: 3, val: 750, size: [2.5, 3.8], beh: 'G', spd: 1.4, flee: 1.6 },
+    { id: 'water_strider', ix: 31, name: '소금쟁이', tpl: 'whirligig', art: 'strider', col: ['#5a4a3a', '#c9d8e0'], months: WARM, hours: [[6, 19]], loc: 'surface', tier: 1, val: 160, size: [1, 1.6], beh: 'G', spd: 1.8, flee: 1.8 },
+    { id: 'diving_beetle', ix: 32, name: '물방개', tpl: 'whirligig', art: 'diving', col: ['#2f3a2a', '#c9b45a'], months: [5, 6, 7, 8, 9], hours: ALLDAY, loc: 'surface', tier: 3, val: 750, size: [2.5, 3.8], beh: 'G', spd: 1.4, flee: 1.6 },
     { id: 'moon_moth', ix: 33, name: '달빛나방', tpl: 'moth', col: ['#e6ffd0', '#9ad8a0'], months: [5, 6, 7, 8, 9], hours: [[20, 24], [0, 4]], loc: 'lamp', tier: 3, val: 1000, size: [8, 11], beh: 'A', spd: 1, flee: 1.8 },
     { id: 'tiger_moth', ix: 34, name: '불나방', tpl: 'moth', col: ['#ff9a8a', '#c44a3a'], months: [6, 7, 8, 9, 10], hours: [[19, 24], [0, 5]], loc: 'lamp', tier: 2, val: 450, size: [3, 5], beh: 'A', spd: 1.3, flee: 2 },
     { id: 'winter_moth', ix: 35, name: '겨울자나방', tpl: 'moth', col: ['#d8d2e6', '#8a8098'], months: [11, 12, 1, 2], hours: [[17, 24], [0, 6]], loc: 'lamp', tier: 2, val: 380, size: [2.5, 3.5], beh: 'A', spd: 1.1, flee: 1.8 },
@@ -94,7 +94,7 @@
     // 북쪽 고지대에서만 (high) — 2026-11 고지대 열기
     { id: 'mountain_swallowtail', ix: 41, name: '산호랑나비', tpl: 'butterfly', col: ['#ffe08a', '#3a3030'], months: [4, 5, 6, 7, 8, 9], hours: [[6, 18]], loc: 'flower', tier: 3, val: 1800, size: [7, 10], beh: 'A', spd: 1.8, flee: 2.4, high: true },
     { id: 'cloud_dragonfly', ix: 42, name: '구름잠자리', tpl: 'dragonfly', col: ['#e8f4ff', '#8fb4e8'], months: [5, 6, 7, 8, 9, 10], hours: [[8, 18]], loc: 'air', tier: 3, val: 1600, size: [5, 7], beh: 'A', spd: 2.8, flee: 3.0, high: true },
-    { id: 'alpine_longhorn', ix: 43, name: '고산하늘소', tpl: 'beetle', col: ['#4a6a9a', '#1a2a4a'], months: [6, 7, 8, 9], hours: ALLDAY, loc: 'tree', tier: 4, val: 3200, size: [4, 6], beh: 'F', spd: 1.0, flee: 1.6, high: true },
+    { id: 'alpine_longhorn', ix: 43, name: '고산하늘소', tpl: 'beetle', art: 'longhorn', tint: '#4a6a9a', col: ['#4a6a9a', '#1a2a4a'], months: [6, 7, 8, 9], hours: ALLDAY, loc: 'tree', tier: 4, val: 3200, size: [4, 6], beh: 'F', spd: 1.0, flee: 1.6, high: true },
     { id: 'star_firefly', ix: 44, name: '별반딧불이', tpl: 'firefly', col: ['#b8f0ff', '#2a3a4a'], months: [6, 7, 8, 9], hours: [[20, 24], [0, 3]], loc: 'air', tier: 4, val: 3500, size: [1.2, 1.8], beh: 'A', spd: 0.8, flee: 1.6, high: true },
     { id: 'snow_moth', ix: 45, name: '눈꽃나방', tpl: 'moth', col: ['#ffffff', '#c8d8f0'], months: [11, 12, 1, 2], hours: [[17, 24], [0, 5]], loc: 'air', tier: 3, val: 2000, size: [5, 7], beh: 'A', spd: 1.2, flee: 2.0, high: true },
   ]);
@@ -122,7 +122,7 @@
     { id: 'sunfish', ix: 30, name: '개복치', months: [6, 7, 8, 9], hours: DAY, loc: 'sea', shadow: 5, tier: 5, val: 6000, size: [100, 250], shape: 'sunfish', rare: 0.2 },
     { id: 'blue_crab', ix: 31, name: '꽃게', months: [4, 5, 6, 9, 10, 11], hours: ALLDAY, loc: 'sea', shadow: 2, tier: 2, val: 400, size: [10, 20], shape: 'crab' },
     { id: 'filefish', ix: 32, name: '쥐치', months: ALL, hours: DAY, loc: 'sea', shadow: 2, tier: 1, val: 220, size: [12, 22] },
-    { id: 'tuna', ix: 33, name: '참치', months: [12, 1, 2, 3], hours: [[5, 12]], loc: 'sea', shadow: 5, tier: 5, val: 8000, size: [100, 200], rare: 0.15 },
+    { id: 'tuna', ix: 33, name: '참치', months: [12, 1, 2, 3], hours: [[5, 12]], loc: 'sea', shadow: 5, tier: 5, val: 8000, size: [100, 200], rare: 0.15, shape: 'tuna' },
   ]);
   D.add('fossils', [
     { id: 'dino_egg', ix: 4, name: '공룡알 화석', val: 2500 },
@@ -139,6 +139,54 @@
     { id: 'sea_glass', ix: 7, name: '바다 유리', val: 250, w: 10, col: '#9fe0d0' },
     { id: 'sand_dollar', ix: 8, name: '연잎성게', val: 400, w: 8, col: '#f3e8d0' },
     { id: 'abalone', ix: 9, name: '전복 껍데기', val: 900, w: 5, col: '#b8d8e0' },
+  ]);
+
+  // ---------- 2026-11 새 생물 (GPT 새 그림 27장 + 기존 모양 색 바꾸기) ----------
+  // art = 새 그림 모양(itemart), tint = 같은 모양 다른 종 색, cloud = 구름섬에서만
+  const SUMMER = [6, 7, 8, 9], NIGHTS = [[18, 24], [0, 6]];
+  D.add('bugs', [
+    { id: 'atlas_beetle', ix: 46, name: '아틀라스장수풍뎅이', tpl: 'stag', art: 'rhino', tint: '#3a6a5a', col: ['#3a6a5a', '#1a3a2a'], months: [7, 8, 9], hours: NIGHTS, loc: 'tree', tier: 4, val: 3500, size: [4, 8], beh: 'F', spd: 1, flee: 1.6 },
+    { id: 'gold_rhino', ix: 47, name: '황금장수풍뎅이', tpl: 'stag', art: 'rhino', tint: '#e0b040', col: ['#e0b040', '#8a6a20'], months: [7, 8], hours: [[21, 24], [0, 3]], loc: 'tree', tier: 5, val: 8000, size: [6, 9], beh: 'F', spd: 1.1, flee: 1.8, rare: 0.3 },
+    { id: 'rice_grasshopper', ix: 48, name: '벼메뚜기', tpl: 'cricket', art: 'grasshopper', tint: '#c9c060', col: ['#c9c060', '#8a8a30'], months: [8, 9, 10], hours: DAY, loc: 'ground', tier: 1, val: 160, size: [2.5, 4], beh: 'D', spd: 1.4, flee: 1.9 },
+    { id: 'spotted_longhorn', ix: 49, name: '알락하늘소', tpl: 'beetle', art: 'longhorn', col: ['#2a2a30', '#ffffff'], months: [6, 7, 8], hours: DAY, loc: 'tree', tier: 2, val: 500, size: [2.5, 3.5], beh: 'C', spd: 1, flee: 1.5 },
+    { id: 'musk_longhorn', ix: 50, name: '사향하늘소', tpl: 'beetle', art: 'longhorn', tint: '#3f9a6a', col: ['#3f9a6a', '#1a4a30'], months: [7, 8], hours: [[9, 16]], loc: 'tree', tier: 3, val: 1300, size: [2.5, 3.5], beh: 'C', spd: 1, flee: 1.6 },
+    { id: 'dung_beetle', ix: 51, name: '쇠똥구리', tpl: 'beetle', art: 'dung', col: ['#3a3a40', '#8a6a4a'], months: [5, 6, 7, 8, 9], hours: DAY, loc: 'ground', tier: 3, val: 900, size: [1.5, 2.5], beh: 'B', spd: 0.4, flee: 1.1 },
+    { id: 'walking_stick', ix: 52, name: '대벌레', tpl: 'mantis', art: 'stick', col: ['#b8a070', '#8a7050'], months: [7, 8, 9, 10], hours: ALLDAY, loc: 'tree', tier: 2, val: 600, size: [7, 11], beh: 'C', spd: 0.4, flee: 1 },
+    { id: 'orb_spider', ix: 53, name: '무당거미', tpl: 'ladybug', art: 'spider', tint: '#e0b040', col: ['#e0b040', '#3a3a30'], months: [8, 9, 10], hours: DAY, loc: 'tree', tier: 1, val: 220, size: [2, 3], beh: 'C', spd: 0.6, flee: 1.2 },
+    { id: 'jumping_spider', ix: 54, name: '깡충거미', tpl: 'ladybug', art: 'spider', col: ['#a8845a', '#5a4030'], months: ALL, hours: DAY, loc: 'ground', tier: 1, val: 150, size: [0.6, 1], beh: 'D', spd: 1.2, flee: 1.6 },
+    { id: 'blue_morpho', ix: 55, name: '모르포나비', tpl: 'butterfly', col: ['#3a8aff', '#8fd0ff'], months: SUMMER, hours: [[9, 15]], loc: 'flower', tier: 4, val: 4000, size: [10, 13], beh: 'A', spd: 2, flee: 2.8, rare: 0.5 },
+    { id: 'orange_tip', ix: 56, name: '갈구리나비', tpl: 'butterfly', col: ['#fff8ec', '#ff9a3a'], months: [4, 5], hours: DAY, loc: 'flower', tier: 2, val: 350, size: [3, 4], beh: 'A', spd: 1.6, flee: 2 },
+    { id: 'peacock_butterfly', ix: 57, name: '공작나비', tpl: 'butterfly', col: ['#c44a3a', '#3a6aa8'], months: [5, 6, 7, 8, 9], hours: [[8, 16]], loc: 'flower', tier: 3, val: 1000, size: [5, 7], beh: 'A', spd: 1.8, flee: 2.4 },
+    { id: 'damselfly', ix: 58, name: '실잠자리', tpl: 'dragonfly', col: ['#5ac8c0', '#2a6a7a'], months: [5, 6, 7, 8], hours: DAY, loc: 'water', tier: 1, val: 140, size: [3.5, 4.5], beh: 'A', spd: 2.4, flee: 2.6 },
+    { id: 'field_cricket', ix: 59, name: '왕귀뚜라미', tpl: 'cricket', col: ['#3a2a20', '#6b4f30'], months: [8, 9, 10, 11], hours: [[18, 24], [0, 4]], loc: 'ground', tier: 2, val: 320, size: [2.5, 3.5], beh: 'D', spd: 1.1, flee: 1.6 },
+    // 구름섬에서만
+    { id: 'cloud_butterfly', ix: 60, name: '구름나비', tpl: 'butterfly', art: 'cloudfly', col: ['#cfe6ff', '#ffffff'], months: ALL, hours: ALLDAY, loc: 'flower', tier: 4, val: 3200, size: [8, 11], beh: 'A', spd: 1.6, flee: 2.4, cloud: true },
+    { id: 'rainbow_cloudfly', ix: 61, name: '무지개구름나비', tpl: 'butterfly', art: 'cloudfly', tint: '#ffb0d8', col: ['#ffb0d8', '#b0d8ff'], months: ALL, hours: [[6, 18]], loc: 'flower', tier: 5, val: 7000, size: [9, 12], beh: 'A', spd: 1.8, flee: 2.6, cloud: true, rare: 0.4 },
+    { id: 'fluffy_ladybug', ix: 62, name: '솜털무당벌레', tpl: 'ladybug', col: ['#ffffff', '#ffb0c8'], months: ALL, hours: ALLDAY, loc: 'flower', tier: 3, val: 1500, size: [0.6, 1], beh: 'B', spd: 0.4, flee: 1.1, cloud: true },
+    { id: 'stardust_beetle', ix: 63, name: '별가루풍뎅이', tpl: 'beetle', col: ['#ffd86b', '#8a6aff'], months: ALL, hours: ALLDAY, loc: 'tree', tier: 4, val: 2800, size: [1.5, 2.5], beh: 'C', spd: 1, flee: 1.6, cloud: true },
+  ]);
+  D.add('fish', [
+    { id: 'crayfish', ix: 34, name: '가재', months: [4, 5, 6, 7, 8, 9, 10], hours: ALLDAY, loc: 'river', shadow: 1, tier: 2, val: 450, size: [6, 12], shape: 'crayfish' },
+    { id: 'river_shrimp', ix: 35, name: '징거미새우', months: ALL, hours: ALLDAY, loc: 'river', shadow: 1, tier: 1, val: 200, size: [5, 9], shape: 'shrimp' },
+    { id: 'tree_frog', ix: 36, name: '청개구리', months: [4, 5, 6, 7, 8, 9], hours: ALLDAY, loc: 'pond', shadow: 1, tier: 1, val: 250, size: [3, 5], shape: 'frog' },
+    { id: 'pond_frog', ix: 37, name: '참개구리', months: [5, 6, 7, 8, 9], hours: [[16, 24], [0, 6]], loc: 'pond', shadow: 2, tier: 2, val: 450, size: [6, 9], shape: 'frog', tint: '#8aa850' },
+    { id: 'sturgeon', ix: 38, name: '철갑상어', months: [9, 10, 11, 12, 1, 2, 3], hours: ALLDAY, loc: 'river', shadow: 5, tier: 4, val: 4500, size: [80, 180], shape: 'sturgeon', rare: 0.3 },
+    { id: 'trout', ix: 39, name: '송어', months: [3, 4, 5, 6, 9, 10, 11], hours: ALLDAY, loc: 'river', shadow: 3, tier: 2, val: 600, size: [25, 45] },
+    { id: 'rainbow_trout', ix: 40, name: '무지개송어', months: [3, 4, 5, 10, 11], hours: DAY, loc: 'river', shadow: 3, tier: 3, val: 1100, size: [30, 55] },
+    { id: 'stingray', ix: 41, name: '노랑가오리', months: [5, 6, 7, 8, 9, 10], hours: ALLDAY, loc: 'sea', shadow: 4, tier: 3, val: 1500, size: [40, 90], shape: 'ray' },
+    { id: 'manta', ix: 42, name: '쥐가오리', months: [7, 8, 9], hours: DAY, loc: 'sea', shadow: 5, tier: 5, val: 7000, size: [150, 300], shape: 'ray', tint: '#4a5a78', rare: 0.25 },
+    { id: 'small_shark', ix: 43, name: '별상어', months: ALL, hours: ALLDAY, loc: 'sea', shadow: 4, tier: 3, val: 1800, size: [60, 110], shape: 'shark' },
+    { id: 'hammerhead', ix: 44, name: '귀상어', months: [6, 7, 8, 9], hours: ALLDAY, loc: 'sea', shadow: 5, tier: 5, val: 7500, size: [150, 300], shape: 'shark', tint: '#6a7a8a', rare: 0.2 },
+    { id: 'skipjack', ix: 45, name: '가다랑어', months: [4, 5, 6, 7, 8, 9], hours: DAY, loc: 'sea', shadow: 4, tier: 3, val: 1300, size: [40, 80], shape: 'tuna', tint: '#5a7aa8' },
+    { id: 'spiny_puffer', ix: 46, name: '가시복', months: [7, 8, 9], hours: ALLDAY, loc: 'sea', shadow: 2, tier: 3, val: 1200, size: [20, 40], shape: 'puffer' },
+    { id: 'sole', ix: 47, name: '가자미', months: ALL, hours: ALLDAY, loc: 'sea', shadow: 2, tier: 1, val: 300, size: [20, 40], shape: 'flat' },
+    { id: 'conger', ix: 48, name: '붕장어', months: [5, 6, 7, 8, 9, 10], hours: NIGHT, loc: 'sea', shadow: 3, tier: 2, val: 550, size: [40, 90], shape: 'eel' },
+    { id: 'moray', ix: 49, name: '곰치', months: [6, 7, 8, 9, 10], hours: NIGHT, loc: 'sea', shadow: 3, tier: 3, val: 1400, size: [50, 100], shape: 'moray' },
+    { id: 'lobster', ix: 50, name: '바닷가재', months: [11, 12, 1, 2, 3, 4], hours: NIGHT, loc: 'sea', shadow: 2, tier: 4, val: 3200, size: [25, 45], shape: 'lobster' },
+    // 구름섬에서만
+    { id: 'star_medaka', ix: 51, name: '별빛송사리', months: ALL, hours: ALLDAY, loc: 'pond', shadow: 1, tier: 4, val: 2600, size: [3, 5], shape: 'starfry', cloud: true },
+    { id: 'cotton_goldfish', ix: 52, name: '솜사탕붕어', months: ALL, hours: ALLDAY, loc: 'pond', shadow: 2, tier: 3, val: 1500, size: [8, 14], cloud: true },
+    { id: 'cloud_jelly', ix: 53, name: '구름해파리', months: ALL, hours: ALLDAY, loc: 'pond', shadow: 2, tier: 5, val: 6500, size: [10, 25], shape: 'cloudjelly', cloud: true, rare: 0.35 },
   ]);
 
   // 아이템: 생물·화석·조개는 데이터에서 파생, 나머지는 직접

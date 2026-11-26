@@ -6,8 +6,8 @@
   const MH = G.museumHall = { inside: false, hall: 'lobby' };
   const HALLS = {
     lobby: { w: 16, h: 11, name: '🦴 화석관', wall: '#e9dfcf', wall2: '#d9ccb6', floor: ['#cfc6b8', '#c2b8a8'] },
-    bug: { w: 16, h: 12, name: '🦋 곤충 온실', wall: '#d6efd0', wall2: '#bfe3b6', floor: ['#bcd9a0', '#aecd92'] },
-    fish: { w: 16, h: 12, name: '🐟 수족관', wall: '#2f5f86', wall2: '#27507a', floor: ['#8fb4cc', '#82a8c2'] },
+    bug: { w: 16, h: 15, name: '🦋 곤충 온실', wall: '#d6efd0', wall2: '#bfe3b6', floor: ['#bcd9a0', '#aecd92'] },
+    fish: { w: 16, h: 17, name: '🐟 수족관', wall: '#2f5f86', wall2: '#27507a', floor: ['#8fb4cc', '#82a8c2'] },
   };
   const LOC = { flower: '꽃 근처', air: '하늘', tree: '나무', ground: '땅 위', lamp: '밤 가로등 근처', rock: '바위', river: '강', pond: '연못', sea: '바다', surface: '물 위', water: '물가' };
   const KIND = { bug: ['bug', 'bugs'], fish: ['fish', 'fish'], sea: ['sea', 'sea'], fossil: ['fossil', 'fossils'] };
@@ -18,8 +18,8 @@
     const out = [];
     const grid = (list, kind, rows, xs) => { let i = 0; for (const y of rows) for (const x of xs) { if (i >= list.length) return; out.push({ x, y, kind, r: list[i++] }); } };
     const xs14 = []; for (let x = 1; x <= 14; x++) xs14.push(x);
-    if (hall === 'bug') grid(G.data.all('bugs'), 'bug', [3, 5, 7, 9], xs14);
-    else if (hall === 'fish') grid(G.data.all('fish').map((r) => ({ r, k: 'fish' })).concat(G.data.all('sea').map((r) => ({ r, k: 'sea' }))), 'mix', [3, 5, 7, 9], xs14);
+    if (hall === 'bug') grid(G.data.all('bugs'), 'bug', [3, 5, 7, 9, 11], xs14);
+    else if (hall === 'fish') grid(G.data.all('fish').map((r) => ({ r, k: 'fish' })).concat(G.data.all('sea').map((r) => ({ r, k: 'sea' }))), 'mix', [3, 5, 7, 9, 11, 13], xs14);
     else grid(G.data.all('fossils'), 'fossil', [4, 7], [2, 4, 6, 9, 11, 13]);
     for (const s of out) if (s.kind === 'mix') { s.kind = s.r.k; s.r = s.r.r; }
     return out;

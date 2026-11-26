@@ -5,17 +5,28 @@
   D.table('sea', { key: 'id', ix: true, required: ['id', 'ix', 'name', 'months', 'tier', 'val', 'size'] });
   const ALL = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
   D.add('sea', [
-    { id: 'hermit_crab', ix: 0, name: '소라게', months: ALL, tier: 1, val: 200, size: [3, 6], w: 10, col: ['#ff8a6a', '#f6d4b0'] },
-    { id: 'starfish', ix: 1, name: '불가사리', months: ALL, tier: 1, val: 260, size: [8, 15], w: 8, col: ['#ffa94d', '#ffd8a8'] },
+    { id: 'hermit_crab', art: 'hermit', ix: 0, name: '소라게', months: ALL, tier: 1, val: 200, size: [3, 6], w: 10, col: ['#ff8a6a', '#f6d4b0'] },
+    { id: 'starfish', art: 'starfish', ix: 1, name: '불가사리', months: ALL, tier: 1, val: 260, size: [8, 15], w: 8, col: ['#ffa94d', '#ffd8a8'] },
     { id: 'anemone', ix: 2, name: '말미잘', months: [4, 5, 6, 7, 8, 9, 10, 11], tier: 2, val: 500, size: [4, 9], w: 5, col: ['#ff8fb1', '#ffd1e0'] },
-    { id: 'baby_octopus', ix: 3, name: '꼬마 문어', months: ALL, tier: 3, val: 1500, size: [10, 18], w: 2, col: ['#c97aa8', '#f3c6de'] },
+    { id: 'baby_octopus', art: 'octo', tint: '#c97aa8', ix: 3, name: '꼬마 문어', months: ALL, tier: 3, val: 1500, size: [10, 18], w: 2, col: ['#c97aa8', '#f3c6de'] },
     // 2차 확장 (2026-11)
-    { id: 'shore_crab', ix: 4, name: '방게', months: ALL, tier: 1, val: 180, size: [2, 4], w: 10, col: ['#8a6a5a', '#c9a088'] },
-    { id: 'shrimp', ix: 5, name: '꼬마새우', months: [3, 4, 5, 6, 7, 8, 9, 10], tier: 1, val: 220, size: [2, 5], w: 9, col: ['#ffb8a8', '#ff8a7a'] },
-    { id: 'sea_urchin', ix: 6, name: '보라성게', months: [10, 11, 12, 1, 2, 3, 4], tier: 2, val: 450, size: [4, 8], w: 6, col: ['#7a5aa8', '#c9b3ff'] },
-    { id: 'sea_cucumber', ix: 7, name: '해삼', months: [11, 12, 1, 2, 3], tier: 2, val: 600, size: [10, 20], w: 5, col: ['#8a5a4a', '#c98a6a'] },
-    { id: 'sea_slug', ix: 8, name: '갯민숭달팽이', months: [4, 5, 6, 7, 8, 9], tier: 3, val: 1200, size: [2, 6], w: 3, col: ['#5a8aff', '#ffd24d'] },
-    { id: 'seahorse', ix: 9, name: '해마', months: [5, 6, 7, 8, 9, 10], tier: 4, val: 2800, size: [5, 12], w: 1.2, col: ['#ffb04a', '#ffe0a0'] },
+    { id: 'shore_crab', art: 'crab', tint: '#8a6a5a', ix: 4, name: '방게', months: ALL, tier: 1, val: 180, size: [2, 4], w: 10, col: ['#8a6a5a', '#c9a088'] },
+    { id: 'shrimp', art: 'shrimp', ix: 5, name: '꼬마새우', months: [3, 4, 5, 6, 7, 8, 9, 10], tier: 1, val: 220, size: [2, 5], w: 9, col: ['#ffb8a8', '#ff8a7a'] },
+    { id: 'sea_urchin', art: 'urchin', ix: 6, name: '보라성게', months: [10, 11, 12, 1, 2, 3, 4], tier: 2, val: 450, size: [4, 8], w: 6, col: ['#7a5aa8', '#c9b3ff'] },
+    { id: 'sea_cucumber', art: 'seacuc', ix: 7, name: '해삼', months: [11, 12, 1, 2, 3], tier: 2, val: 600, size: [10, 20], w: 5, col: ['#8a5a4a', '#c98a6a'] },
+    { id: 'sea_slug', art: 'nudi', ix: 8, name: '갯민숭달팽이', months: [4, 5, 6, 7, 8, 9], tier: 3, val: 1200, size: [2, 6], w: 3, col: ['#5a8aff', '#ffd24d'] },
+    { id: 'seahorse', art: 'seahorse', ix: 9, name: '해마', months: [5, 6, 7, 8, 9, 10], tier: 4, val: 2800, size: [5, 12], w: 1.2, col: ['#ffb04a', '#ffe0a0'] },
+    // 2026-11 새 그림 (water-life-b 등)
+    { id: 'scallop_live', art: 'scallop', ix: 10, name: '가리비', months: ALL, tier: 1, val: 250, size: [6, 12], w: 9, col: ['#f0a070', '#ffe0c0'] },
+    { id: 'red_starfish', art: 'starfish', tint: '#e05a4a', ix: 11, name: '빨강불가사리', months: ALL, tier: 1, val: 230, size: [8, 14], w: 7, col: ['#e05a4a', '#ffb0a0'] },
+    { id: 'blue_starfish', art: 'starfish', tint: '#4a8ad8', ix: 12, name: '파랑불가사리', months: [5, 6, 7, 8, 9, 10], tier: 3, val: 1100, size: [10, 18], w: 3, col: ['#4a8ad8', '#b0d0ff'] },
+    { id: 'big_hermit', art: 'hermit', tint: '#c87ad8', ix: 13, name: '큰소라게', months: [6, 7, 8, 9], tier: 3, val: 1300, size: [6, 10], w: 3, col: ['#c87ad8', '#f0d0ff'] },
+    { id: 'moon_jelly', art: 'jelly', ix: 14, name: '보름달물해파리', months: [6, 7, 8, 9], tier: 2, val: 400, size: [10, 25], w: 6, col: ['#c8d8ff', '#ffffff'] },
+    { id: 'pea_crab', art: 'crab', tint: '#e8b070', ix: 15, name: '콩게', months: ALL, tier: 1, val: 150, size: [1, 2], w: 9, col: ['#e8b070', '#ffe0b0'] },
+    { id: 'spiny_lobster', art: 'lobster', tint: '#c86a3a', ix: 16, name: '닭새우', months: [10, 11, 12, 1, 2, 3], tier: 3, val: 1600, size: [15, 30], w: 3, col: ['#c86a3a', '#f0b080'] },
+    { id: 'violet_slug', art: 'nudi', tint: '#a86ad8', ix: 17, name: '보라갯민숭이', months: [3, 4, 5, 6], tier: 3, val: 1200, size: [2, 5], w: 3, col: ['#a86ad8', '#ffd86b'] },
+    { id: 'baby_turtle', art: 'turtle', ix: 18, name: '새끼바다거북', months: [7, 8, 9], tier: 5, val: 5000, size: [8, 15], w: 0.8, col: ['#6a9a5a', '#c8b070'] },
+    { id: 'gold_urchin', art: 'urchin', tint: '#e0b040', ix: 19, name: '황금성게', months: [12, 1, 2], tier: 4, val: 2800, size: [5, 9], w: 1.2, col: ['#e0b040', '#fff0b0'] },
   ]);
   D.add('items', D.all('sea').map((s) => ({ id: 'sea:' + s.id, name: s.name, cat: 'sea', val: s.val, stack: 1, ref: s })));
   G.TRENDS.push({ id: 'sea', name: '바다생물', test: (it) => it.cat === 'sea' });
@@ -70,6 +81,7 @@
         if (!p.sp || G.world.isTaken(p.id)) continue;
         const sp = D.get('sea', p.sp), c = sp.col, k = Math.sin(t * 3 + p.tx) * 1.2;
         ctx.save(); ctx.translate(x + k, y - 1);
+        if (sp.art && G.itemArt && G.itemArt.cell) { ctx.scale(0.42, 0.42); if (G.itemArt.cell(ctx, sp.art, sp.tint || null, 0)) { ctx.restore(); continue; } ctx.setTransform(ctx.getTransform()); ctx.scale(1 / 0.42, 1 / 0.42); }
         if (p.sp === 'hermit_crab') { P.blob(ctx, 1, -2, 4, 3.5, c[1], A_LINE, 1); P.blob(ctx, -3, 0, 2.5, 2, c[0], A_LINE, 1); }
         else if (p.sp === 'starfish') { ctx.fillStyle = c[0]; ctx.beginPath(); for (let i = 0; i < 10; i++) { const r = i % 2 ? 1.8 : 4.6, a = i * Math.PI / 5 - Math.PI / 2; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); } ctx.fill(); }
         else if (p.sp === 'anemone') { for (let i = 0; i < 6; i++) P.blob(ctx, Math.cos(i) * 2.5, Math.sin(i) * 1.5 - 1 + Math.sin(t * 4 + i) * 0.5, 1.2, 2, c[0]); P.blob(ctx, 0, -1, 1.5, 1.2, c[1]); }
@@ -86,6 +98,8 @@
   if (G.art) G.art.drawIcon = (g, id, t) => {
     if (!id.startsWith('sea:')) return drawIconBase(g, id, t);
     const key = id.slice(4).split('#')[0], sp = D.get('sea', key); if (!sp) return;
+    // GPT 새 그림이 있으면 그걸로 (2026-11)
+    if (sp.art && G.itemArt && G.itemArt.cell) { g.save(); g.translate(16, 17); const ok = G.itemArt.cell(g, sp.art, sp.tint || null, 0); g.restore(); if (ok) return; }
     const c = sp.col, P = G.art.paint;
     g.save(); g.translate(16, 17);
     if (key === 'hermit_crab') { P.blob(g, 3, -3, 9, 8, c[1], A_LINE, 1.4); g.strokeStyle = '#d9a87a'; g.lineWidth = 1.4; g.beginPath(); g.arc(3, -3, 4, 0, Math.PI * 1.5); g.stroke(); P.blob(g, -6, 3, 5, 4, c[0], A_LINE, 1.3); P.blob(g, -8, 0, 1, 1.4, '#2d2430'); P.blob(g, -5, 0, 1, 1.4, '#2d2430'); }
