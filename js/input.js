@@ -71,7 +71,15 @@
       if (scenePtr('move', e)) return;
       if (I.stick && e.pointerId === I.stick.id) { I.stick.x = e.clientX; I.stick.y = e.clientY; }
     });
-    const end = (e) => { scenePtr('up', e); if (I.stick && e.pointerId === I.stick.id) I.stick = null; };
+    const end = (e) => {
+      scenePtr('up', e);
+      if (I.stick && e.pointerId === I.stick.id) {
+        // 조이스틱 자리(왼쪽)를 짧게 톡 = 탭 (박물관 전시칸 등을 손가락으로 누를 수 있게)
+        const st = I.stick, moved = Math.hypot(st.x - st.ox, st.y - st.oy);
+        I.stick = null;
+        if (moved < 10 && performance.now() - st.t < 280) I.emit('tapWorld', { cx: e.clientX, cy: e.clientY, mouse: false, quick: true });
+      }
+    };
     canvas.addEventListener('pointerup', end); canvas.addEventListener('pointercancel', end);
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
   };
