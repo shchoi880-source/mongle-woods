@@ -288,10 +288,7 @@
     for (const p of st.plots) {
       const x = p.tx * TILE, y = p.ty * TILE;
       if (x < rect.x - 40 || x > rect.x + rect.w + 40 || y < rect.y - 40 || y > rect.y + rect.h + 40) continue;
-      const wet = p.crop && F.watered(p);
-      P.rrect(ctx, x + 2, y + 3, 28, 27, 6, wet ? '#8a5f3f' : '#b98a5e');
-      ctx.strokeStyle = wet ? 'rgba(60,35,20,0.35)' : 'rgba(120,80,50,0.35)'; ctx.lineWidth = 1.5;
-      ctx.beginPath(); for (const k of [10, 17, 24]) { ctx.moveTo(x + 6, y + k); ctx.lineTo(x + 26, y + k); } ctx.stroke();
+      ctx.drawImage(G.art.soil(!!(p.crop && F.watered(p))), x, y, TILE, TILE);
     }
   };
   F.collect = (R, rect, t) => {

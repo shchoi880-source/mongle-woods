@@ -1,5 +1,5 @@
 // 아트: 팔레트, 스프라이트 캐시, 지형 청크 굽기, 자연물·건물, 물 애니, 시간대 그레이딩, 빛, 날씨
-// 모든 그림은 코드로 그린다(외부 이미지 없음). 단위 u = 타일 1/32.
+// 단위 u = 타일 1/32. 지면은 청크에 굽고, 외부 오브젝트는 스프라이트를 캐시한다.
 (function (G) {
   'use strict';
   const u = G.u, TILE = G.C.TILE, CH = G.C.CHUNK;
@@ -7,21 +7,25 @@
 
   // ---------- 팔레트 ----------
   const PAL = {
-    spring: { grass: '#a5d873', grassD: '#86bd58', grassL: '#c2e790', high: '#94c968', tuft: '#79ad4d', leaf: ['#8fd16a', '#6db552', '#b9e58c'], blossom: '#ffc2d6' },
-    summer: { grass: '#8fd065', grassD: '#6fb24c', grassL: '#ade582', high: '#7fbf58', tuft: '#5f9e3f', leaf: ['#6cc456', '#4ea445', '#93db6e'], blossom: null },
-    autumn: { grass: '#c9c875', grassD: '#a9a858', grassL: '#dedb93', high: '#b7b766', tuft: '#9b963f', leaf: ['#f3a54a', '#de7a3a', '#ffd06a'], blossom: null },
-    winter: { grass: '#eef3fa', grassD: '#cbd8ea', grassL: '#ffffff', high: '#e3ebf6', tuft: '#c3d0e2', leaf: ['#7fae7a', '#5e9264', '#a4cc9c'], blossom: null, snow: true },
+    spring: { grass: '#a6b989', grassD: '#839569', grassL: '#d1d8aa', high: '#96a678', tuft: '#7c9063', leaf: ['#8fd16a', '#6db552', '#b9e58c'], blossom: '#ffc2d6' },
+    summer: { grass: '#99ae76', grassD: '#788d5b', grassL: '#c0ce93', high: '#899f69', tuft: '#708959', leaf: ['#6cc456', '#4ea445', '#93db6e'], blossom: null },
+    autumn: { grass: '#baae76', grassD: '#99895b', grassL: '#d8cd9b', high: '#a79d6b', tuft: '#9c8a63', leaf: ['#f3a54a', '#de7a3a', '#ffd06a'], blossom: null },
+    winter: { grass: '#dce7e6', grassD: '#b6ccd0', grassL: '#f6f5ed', high: '#c7d9dc', tuft: '#a6bec3', leaf: ['#7fae7a', '#5e9264', '#a4cc9c'], blossom: null, snow: true },
   };
   const C = {
-    sea: '#5cbde2', seaD: '#46a6d3', water: '#86d7ea', waterD: '#69c2dc', foam: '#ffffff',
-    sand: '#f5e2b4', sandD: '#ddc48e', wet: '#e3c993',
-    path: '#e2c99d', pathD: '#c9ab7d', plaza: '#ecdcbc', plazaD: '#d6c19c',
+    sea: '#85aeb0', seaD: '#6e979e', water: '#9cbfc1', waterD: '#729e9e', foam: '#f6f2df',
+    sand: '#e2cca7', sandD: '#c1a981', wet: '#c0ad90',
+    path: '#d2b792', pathD: '#b89d77', plaza: '#d7c9b0', plazaD: '#b9a78b',
     cliff: '#c29a74', cliffD: '#a17b5a', cliffL: '#d8b38c',
     wood: '#c98e5a', woodD: '#9c6a40', woodL: '#e0ae7c',
     line: '#5b4636', shadow: 'rgba(60,50,80,0.22)',
   };
   const A = G.art = { PAL, C, PX: 2, season: 'autumn' };
   A.pal = () => PAL[A.season];
+  A.mapColors = (season) => {
+    const pal = PAL[season];
+    return [pal.grass, C.path, C.sand, C.water, C.sea, pal.high, C.cliff, C.wood, C.plaza, '#a0a8a4'];
+  };
 
   // ---------- 스프라이트 캐시 ----------
   const cache = new Map();
@@ -121,18 +125,57 @@
     const isGrassy = (v) => v === TT.GRASS || v === TT.PATH || v === TT.PLAZA || v === TT.HIGH || v === TT.CLIFF;
     const isPath = (v) => v === TT.PATH;
     const isPlaza = (v) => v === TT.PLAZA;
+    const bounds = [tx0 * TILE, ty0 * TILE, (tx1 - tx0 + 1) * TILE, (ty1 - ty0 + 1) * TILE];
+    const scenery = G.scenery;
+    const corners = [[0, 0], [TILE, 0], [TILE, TILE], [0, TILE]];
+    const normals = [[0, -1], [1, 0], [0, 1], [-1, 0]];
 
     function union(test, color, dy = 0, r = 11) {
       region(test, dy, r); g.fillStyle = color; g.fill();
+    }
+    function material(name, alpha, mode) {
+      return scenery?.material(g, name, bounds, alpha, mode);
+    }
+    function paintRegion(test, name, alpha, mode, dy = 0, r = 11) {
+      g.save(); region(test, dy, r); g.clip();
+      material(name, alpha, mode);
+      g.restore();
     }
     function region(test, dy = 0, r = 11) {
       g.beginPath();
       for (let y = ty0; y <= ty1; y++) for (let x = tx0; x <= tx1; x++) {
         if (!test(t(x, y))) continue;
         const px = x * TILE, py = y * TILE + dy;
-        g.roundRect(px, py, TILE, TILE, r);
-        if (test(t(x + 1, y))) g.rect(px + TILE / 2, py, TILE, TILE);
-        if (test(t(x, y + 1))) g.rect(px, py + TILE / 2, TILE, TILE);
+        const joined = normals.map(([nx, ny]) => test(t(x + nx, y + ny)));
+        if (joined.every(Boolean)) { g.rect(px, py, TILE, TILE); continue; }
+        const radii = joined.map((j, i) => j || joined[(i + 3) % 4] ? 0 :
+          r * (0.72 + (u.hash32(seed, x, y, i + 57) & 15) / 44));
+        g.moveTo(px + radii[0], py);
+        for (let i = 0; i < 4; i++) {
+          const next = (i + 1) % 4;
+          const [ax, ay] = corners[i], [bx, by] = corners[next];
+          const [nx, ny] = normals[i];
+          const ex = -ny, ey = nx;
+          const end = radii[next];
+          const right = px + bx - ex * end, bottom = py + by - ey * end;
+          if (joined[i]) g.lineTo(right, bottom);
+          else {
+            const w = ((u.hash32(seed, x, y, i + 66) & 15) - 6) * 0.57;
+            g.bezierCurveTo(px + ax + ex * 13 + nx * w, py + ay + ey * 13 + ny * w,
+              px + bx - ex * 13 + nx * w * 0.7, py + by - ey * 13 + ny * w * 0.7, right, bottom);
+          }
+          if (end) g.quadraticCurveTo(px + bx, py + by, px + bx - nx * end, py + by - ny * end);
+        }
+        g.closePath();
+        // Round inward bends where two neighbors meet an empty diagonal.
+        for (let i = 0; i < 4; i++) {
+          const next = (i + 1) % 4;
+          const [nx, ny] = normals[i], [mx, my] = normals[next];
+          if (!joined[i] || !joined[next] || test(t(x + nx + mx, y + ny + my))) continue;
+          const hx = px + corners[next][0], hy = py + corners[next][1], bend = r * 0.57;
+          g.moveTo(hx, hy); g.lineTo(hx + nx * bend, hy + ny * bend);
+          g.quadraticCurveTo(hx, hy, hx + mx * bend, hy + my * bend); g.closePath();
+        }
       }
     }
     // 부드러운 값 노이즈 (4칸 격자, 결정적) — 풀밭 얼룩용
@@ -145,7 +188,7 @@
     const soft = (x, y, r, col, a) => { const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, col.replace('A', a)); gr.addColorStop(1, col.replace('A', 0)); g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2); };
     const rgbA = (hex) => { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},A)`; };
     // 1) 바다
-    g.fillStyle = C.sea; g.fillRect(tx0 * TILE, ty0 * TILE, (tx1 - tx0 + 1) * TILE, (ty1 - ty0 + 1) * TILE);
+    g.fillStyle = C.sea; g.fillRect(...bounds);
     // 깊은 바다 줄무늬
     g.fillStyle = C.seaD;
     for (let y = ty0; y <= ty1; y++) for (let x = tx0; x <= tx1; x++) {
@@ -153,27 +196,30 @@
       let near = false; for (let k = 1; k <= 3 && !near; k++) if (!isSea(t(x, y - k)) || !isSea(t(x - k, y)) || !isSea(t(x + k, y))) near = true;
       if (!near) g.fillRect(x * TILE, y * TILE, TILE, TILE);
     }
+    material('water', 0.64, 'soft-light');
     // 2) 민물
-    union((v) => isWater(v), C.waterD, 0, 12);
-    union((v) => isWater(v), C.water, 3, 12);
+    union(isWater, C.waterD, 0, 12);
+    union(isWater, C.water, 3, 12);
+    paintRegion(isWater, 'water', 0.55, 'soft-light', 3, 12);
     // 3) 땅: 아래로 둑(3/4 뷰 입술)
     union(isLand, C.wet, 6);
     union(isLand, C.sand, 0);
+    paintRegion((v) => v === TT.SAND, 'dirt', 0.57, 'soft-light');
     // 4) 풀
     union(isGrassy, pal.grassD, 4);
     union(isGrassy, pal.grass, 0);
     // 고지대(살짝 다른 톤)
     union((v) => v === TT.HIGH, pal.high, 0, 8);
-    // 그래픽 개선: 풀밭 얼룩(밝은 곳·짙은 곳) + 잔결 — 단색 바닥이 '옛날 게임'처럼 보이던 문제
+    // 계절색 위에 워시와 마른 붓결을 얹는다. 패턴 기준점은 월드 원점이다.
     g.save(); region(isGrassy, 0, 11); g.clip();
-    const cL = rgbA(pal.grassL), cD = rgbA(pal.grassD), cT = rgbA(pal.tuft);
+    const paintedGrass = material('grass', pal.snow ? 0.27 : 0.75, 'soft-light');
+    const cL = rgbA(pal.grassL), cD = rgbA(pal.grassD);
     for (let y = ty0; y <= ty1; y++) for (let x = tx0; x <= tx1; x++) {
       if (!isGrassy(t(x, y))) continue;
-      const px = x * TILE + 16, py = y * TILE + 16, n = nz(x, y, 31), n2 = nz(x + 50, y + 50, 37, 2.5);
-      if (n > 0.55) soft(px, py, 30, cL, Math.min(0.55, (n - 0.55) * 1.6));
-      if (n < 0.4) soft(px, py, 30, cD, Math.min(0.45, (0.4 - n) * 1.3));
-      if (n2 > 0.7) soft(px + 6, py - 4, 20, cT, (n2 - 0.7) * 0.7);
-      // 잔결: 짧은 풀잎 여러 개 (밝은·짙은 두 톤, 옅게)
+      const px = x * TILE + 16, py = y * TILE + 16, n = nz(x, y, 31);
+      if (n > 0.54) soft(px, py, 36, cL, (n - 0.54) * 0.72);
+      if (n < 0.44) soft(px, py, 36, cD, (0.44 - n) * 0.54);
+      if (paintedGrass) continue;
       const h = u.hash32(seed, x, y, 41);
       g.lineCap = 'round'; g.lineWidth = 1.2;
       for (let k = 0; k < 6; k++) {
@@ -183,25 +229,20 @@
     }
     g.restore();
     // 5) 길·광장
-    union(isPath, C.pathD, 3, 12);
-    union(isPath, C.path, 0, 12);
-    g.save(); region(isPath, 0, 12); g.clip();
+    union(isPath, C.path, 0, 13);
+    g.save(); region(isPath, 0, 13); g.clip();
+    material('dirt', 0.69, 'soft-light');
     for (let y = ty0; y <= ty1; y++) for (let x = tx0; x <= tx1; x++) {
       if (!isPath(t(x, y))) continue;
       const n = nz(x, y, 43, 3); if (n > 0.5) soft(x * TILE + 16, y * TILE + 16, 26, 'rgba(255,240,210,A)', (n - 0.5) * 0.8); else soft(x * TILE + 16, y * TILE + 16, 26, 'rgba(170,135,95,A)', (0.5 - n) * 0.5);
       // 풀 가장자리 그늘 (위쪽이 풀이면 길에 살짝 그늘)
-      if (isGrassy(t(x, y - 1)) && !isPath(t(x, y - 1)) && !isPlaza(t(x, y - 1))) { const lg = g.createLinearGradient(0, y * TILE, 0, y * TILE + 9); lg.addColorStop(0, 'rgba(90,70,50,0.22)'); lg.addColorStop(1, 'rgba(90,70,50,0)'); g.fillStyle = lg; g.fillRect(x * TILE, y * TILE, TILE, 9); }
+      if (isGrassy(t(x, y - 1)) && !isPath(t(x, y - 1)) && !isPlaza(t(x, y - 1))) {
+        soft(x * TILE + 16, y * TILE - 7, 19, 'rgba(105,88,55,A)', 0.26);
+      }
     }
     g.restore();
-    union(isPlaza, C.plazaD, 3, 14);
     union(isPlaza, C.plaza, 0, 14);
-    // 광장 돌 무늬
-    for (let y = ty0; y <= ty1; y++) for (let x = tx0; x <= tx1; x++) {
-      if (!isPlaza(t(x, y))) continue;
-      const h = u.hash32(seed, x, y, 5);
-      g.fillStyle = 'rgba(180,150,110,0.25)';
-      g.beginPath(); g.roundRect(x * TILE + 3 + (h & 3), y * TILE + 4 + ((h >> 2) & 3), 12, 10, 4); g.roundRect(x * TILE + 17 - ((h >> 4) & 3), y * TILE + 17, 12, 10, 4); g.fill();
-    }
+    paintRegion(isPlaza, 'stone', 0.68, 'source-over', 0, 14);
     // 6) 절벽 면
     for (let y = ty0; y <= ty1; y++) for (let x = tx0; x <= tx1; x++) {
       if (t(x, y) !== TT.CLIFF) continue;
@@ -216,8 +257,10 @@
         continue;
       }
       g.fillStyle = C.cliff; g.fillRect(px, py + 6, TILE, TILE - 2);
-      g.fillStyle = C.cliffD; g.fillRect(px, py + 18, TILE, 3); g.fillRect(px, py + 26, TILE, 4);
-      g.fillStyle = C.cliffL; g.fillRect(px, py + 10, TILE, 2);
+      if (!scenery?.material(g, 'cliff', [px, py + 6, TILE, TILE - 2], 0.94)) {
+        g.fillStyle = C.cliffD; g.fillRect(px, py + 18, TILE, 3); g.fillRect(px, py + 26, TILE, 4);
+        g.fillStyle = C.cliffL; g.fillRect(px, py + 10, TILE, 2);
+      }
       // 윗 입술(고지대 풀)
       g.fillStyle = pal.high; g.beginPath(); g.roundRect(px - 1, py - 4, TILE + 2, 11, 5); g.fill();
       // 아래 그림자
@@ -230,9 +273,11 @@
       if (v === TT.BRIDGE) {
         g.fillStyle = 'rgba(40,80,110,0.25)'; g.fillRect(px, py + 6, TILE, TILE);
         g.fillStyle = C.woodD; g.fillRect(px, py + 2, TILE, TILE);
-        for (let k = 0; k < 4; k++) { g.fillStyle = k % 2 ? C.wood : C.woodL; g.fillRect(px + k * 8 + 0.5, py, 7, TILE); }
-        if (t(x, y - 1) !== TT.BRIDGE) { g.fillStyle = C.woodD; g.fillRect(px, py - 2, TILE, 4); }
-        if (t(x, y + 1) !== TT.BRIDGE) { g.fillStyle = C.woodD; g.fillRect(px, py + TILE - 4, TILE, 5); }
+        if (!scenery?.material(g, 'wood', [px, py, TILE, TILE], 0.96)) {
+          for (let k = 0; k < 4; k++) { g.fillStyle = k % 2 ? C.wood : C.woodL; g.fillRect(px + k * 8 + 0.5, py, 7, TILE); }
+        }
+        if (t(x, y - 1) !== TT.BRIDGE) { g.fillStyle = 'rgba(95,61,42,0.45)'; g.fillRect(px, py, TILE, 2); }
+        if (t(x, y + 1) !== TT.BRIDGE) { g.fillStyle = 'rgba(66,48,34,0.44)'; g.fillRect(px, py + TILE - 3, TILE, 4); }
       } else if (v === TT.STONE) {
         const h = u.hash32(seed, x, y, 9);
         P.blob(g, px + 16 + (h & 3) - 1.5, py + 19, 12, 8, '#8c9aa6');
@@ -243,12 +288,12 @@
     // 8) 디테일: 풀포기·모래 자갈·물 반짝 (결정적)
     for (let y = ty0 + 1; y < ty1; y++) for (let x = tx0 + 1; x < tx1; x++) {
       const v = t(x, y), h = u.hash32(seed, x, y, 11), px = x * TILE, py = y * TILE;
-      if ((v === TT.GRASS || v === TT.HIGH) && (h & 7) < 3) {
+      if ((v === TT.GRASS || v === TT.HIGH) && (h & 15) < 2) {
         const ox = 6 + (h >> 3 & 15), oy = 8 + (h >> 7 & 15);
-        g.strokeStyle = pal.tuft; g.lineWidth = 1.6; g.lineCap = 'round'; g.beginPath();
-        g.moveTo(px + ox - 3, py + oy); g.lineTo(px + ox - 4, py + oy - 5);
-        g.moveTo(px + ox, py + oy); g.lineTo(px + ox, py + oy - 7);
-        g.moveTo(px + ox + 3, py + oy); g.lineTo(px + ox + 4, py + oy - 5);
+        g.strokeStyle = rgbA(pal.tuft).replace('A', '0.54'); g.lineWidth = 1.35; g.lineCap = 'round'; g.beginPath();
+        g.moveTo(px + ox - 2, py + oy); g.quadraticCurveTo(px + ox - 3, py + oy - 3, px + ox - 5, py + oy - 4);
+        g.moveTo(px + ox, py + oy); g.quadraticCurveTo(px + ox + 1, py + oy - 6, px + ox + 2, py + oy - 8);
+        g.moveTo(px + ox + 2, py + oy); g.quadraticCurveTo(px + ox + 4, py + oy - 4, px + ox + 6, py + oy - 5);
         g.stroke();
         if (pal.snow && (h & 1)) P.blob(g, px + ox, py + oy - 6, 3, 1.6, '#fff');
       }
@@ -316,6 +361,7 @@
 
   // ---------- 자연물 ----------
   function drawTree(g, kind, season, var_) {
+    if (G.scenery?.tree(g, kind, season)) return;
     // 기준점: 스프라이트 (0,0) 좌상단, 발밑 = (32, 74)
     const pal = PAL[season];
     P.shadow(g, 32, 74, 40, 0.25);
@@ -364,6 +410,7 @@
   A.tree = (kind, season) => A.sprite('tree2:' + kind + ':' + season, 64, 80, (g) => drawTree(g, kind, season));
 
   A.bigOak = (season) => A.sprite('oak:' + season, 112, 128, (g) => {
+    if (G.scenery?.tree(g, 'oak', season)) return;
     const pal = PAL[season];
     P.shadow(g, 56, 118, 92, 0.28);
     // 굵은 줄기와 뿌리
@@ -386,6 +433,7 @@
 
   const FLOWER_COL = [['#ff8fb1', '#ffd1e0'], ['#ffd24d', '#fff1a8'], ['#ffffff', '#e7ecff'], ['#9db7ff', '#d6e2ff']];
   A.flower = (v, season) => A.sprite('flower:' + v + ':' + season, 32, 32, (g) => {
+    if (G.scenery?.flower(g, v, season)) return;
     const [c1, c2] = FLOWER_COL[v % 4];
     const pos = [[10, 20], [21, 16], [17, 26], [26, 25]];
     for (const [x, y] of pos) {
@@ -397,11 +445,22 @@
     }
   });
   A.rock = () => A.sprite('rock', 32, 32, (g) => {
+    if (G.scenery?.rock(g)) return;
     P.shadow(g, 16, 27, 28);
     P.blob(g, 16, 20, 13, 9, '#a7b0ba', C.line);
     P.blob(g, 14, 17, 9, 5, '#c5cdd6');
     P.blob(g, 11, 15, 3, 1.6, '#e3e8ee');
     P.shade(g, 0, 8, 32, 22, { hi: 0.2, lo: 0.25 });
+  });
+  A.soil = (wet) => A.sprite('soil:' + wet, 32, 32, (g) => {
+    P.rrect(g, 2, 3, 28, 27, [7, 5, 6, 7], wet ? '#846047' : '#ae825d');
+    g.save(); g.clip();
+    G.scenery?.material(g, 'soil', [2, 3, 28, 27], wet ? 0.59 : 0.86, wet ? 'soft-light' : 'source-over');
+    g.restore();
+    g.strokeStyle = wet ? 'rgba(59,35,23,0.48)' : 'rgba(87,52,34,0.38)';
+    g.lineWidth = 1.2; g.lineCap = 'round'; g.beginPath();
+    for (const y of [10, 17, 24]) { g.moveTo(6, y); g.quadraticCurveTo(14, y - 1.9, 26, y + 0.7); }
+    g.stroke();
   });
 
   // ---------- 건물 ----------
@@ -416,6 +475,7 @@
   };
   function roofSnow(g, x, y, w) { if (A.season !== 'winter') return; P.rrect(g, x, y, w, 7, 4, '#ffffff', '#cbd8ea', 1); }
   function drawBuilding(g, kind, season, night) {
+    if (G.scenery?.building(g, kind, season, night)) return;
     // 기준: 스프라이트 좌상단 = 부지 좌상단에서 (-16, -44)u. 즉 부지 (0,0) → (16,44)
     const ox = 16, oy = 44;
     const win = night ? '#ffe28a' : '#bfe6f5';
@@ -578,6 +638,7 @@
   }
   // 소품
   A.prop = (kind, season, night) => A.sprite('p3:' + kind + ':' + season + ':' + (night ? 1 : 0), 96, 80, (g) => {
+    if (G.scenery?.prop(g, kind, season)) return;
     const ox = 16, oy = 48; // 부지 (0,0) → (16,48)
     if (kind === 'lamp') {
       P.shadow(g, ox + 16, oy + 28, 18);
@@ -724,8 +785,17 @@
       }
       if (fx === 'fog' && rect) {
         ctx.save();
-        for (let i = 0; i < 6; i++) { const x = rect.x + ((i * 0.27 + (t || 0) * 0.01) % 1.2 - 0.1) * rect.w, y = rect.y + rect.h * (0.15 + i * 0.15); ctx.fillStyle = 'rgba(255,255,255,0.16)'; ctx.beginPath(); ctx.ellipse(x, y, rect.w * 0.35, rect.h * 0.08, 0, 0, Math.PI * 2); ctx.fill(); }
-        ctx.fillStyle = 'rgba(240,244,248,0.18)'; ctx.fillRect(rect.x, rect.y, rect.w, rect.h); ctx.restore();
+        const rx = rect.w * 0.52, ry = rect.h * 0.15;
+        for (let i = 0; i < 5; i++) {
+          const x = rect.x + ((i * 0.28 + (t || 0) * 0.007) % 1.4 - 0.2) * rect.w;
+          const y = rect.y + rect.h * (0.13 + i * 0.19);
+          ctx.save(); ctx.translate(x, y); ctx.scale(rx, ry);
+          const mist = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+          mist.addColorStop(0, 'rgba(255,251,236,0.25)');
+          mist.addColorStop(1, 'rgba(255,251,236,0)');
+          ctx.fillStyle = mist; ctx.fillRect(-1, -1, 2, 2); ctx.restore();
+        }
+        ctx.fillStyle = 'rgba(243,246,245,0.11)'; ctx.fillRect(rect.x, rect.y, rect.w, rect.h); ctx.restore();
       }
       if (fx === 'storm' && rect) { ctx.fillStyle = 'rgba(40,45,70,0.22)'; ctx.fillRect(rect.x, rect.y, rect.w, rect.h); }
       if (fx === 'blizzard' && rect) { ctx.fillStyle = 'rgba(235,242,250,0.22)'; ctx.fillRect(rect.x, rect.y, rect.w, rect.h); }

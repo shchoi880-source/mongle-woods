@@ -98,9 +98,11 @@
     ctx.setTransform(PXr, 0, 0, PXr, ox * PXr, oy * PXr);
     P.rrect(ctx, -8, -12, RW + 16, wallH + 12, [14, 14, 0, 0], R0.wall, L, 2);
     for (let x = 0; x < RW; x += 24) { ctx.fillStyle = R0.wall2; ctx.fillRect(x + 4, -6, 12, wallH - 4); }
+    G.scenery?.material(ctx, 'paper', [0, -6, RW, wallH + 6], 0.45, 'multiply');
     P.rrect(ctx, RW / 2 - 26, 6, 52, 30, 6, '#bfe6f5', L, 1.6); ctx.fillStyle = L; ctx.fillRect(RW / 2 - 1, 6, 2, 30); ctx.fillRect(RW / 2 - 26, 20, 52, 2);
     ctx.save(); ctx.beginPath(); ctx.rect(-8, wallH, RW + 16, RH - wallH + 8); ctx.clip();
     for (let y = wallH; y < RH + 8; y += 16) { ctx.fillStyle = ((y - wallH) / 16) % 2 ? R0.floor[0] : R0.floor[1]; ctx.fillRect(-8, y, RW + 16, 16); }
+    G.scenery?.material(ctx, 'paper', [-8, wallH, RW + 16, RH - wallH + 8], 0.48, 'multiply');
     ctx.restore(); ctx.strokeStyle = L; ctx.lineWidth = 2; ctx.strokeRect(-8, wallH, RW + 16, RH - wallH + 8);
     P.rrect(ctx, (W / 2) * TILE - 16, RH - 4, 32, 14, 5, '#9fd0a8', L, 1.3);
     // 가구 (러그 먼저) + 이웃 + 나 y정렬

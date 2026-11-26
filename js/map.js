@@ -3,7 +3,6 @@
 (function (G) {
   'use strict';
   const TILE = G.C.TILE;
-  const COL = ['#a5d873', '#e2c99d', '#f5e2b4', '#86d7ea', '#5cbde2', '#94c968', '#c29a74', '#c98e5a', '#ecdcbc', '#c9d3da'];
   let terrCache = null, terrSeed = -1;
 
   const MP = G.map = {};
@@ -97,7 +96,7 @@
     if (terrCache && terrSeed === m.seed + ':' + G.art.season) return terrCache;
     const c = document.createElement('canvas'); c.width = m.w * 4; c.height = m.h * 4;
     const g = c.getContext('2d');
-    const col = COL.slice(); if (G.art.season === 'winter') { col[0] = '#e6eef8'; col[5] = '#dde7f3'; } else if (G.art.season === 'autumn') { col[0] = '#cfcb7d'; col[5] = '#bdbb6e'; }
+    const col = G.art.mapColors(G.art.season);
     for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) { g.fillStyle = col[m.terr[y * m.w + x]]; g.fillRect(x * 4, y * 4, 4, 4); }
     for (const o of m.objs) if (!o.gone && (o.kind === 'tree' || o.kind === 'pine' || o.kind === 'fruit')) { g.fillStyle = o.kind === 'pine' ? '#4f8f5a' : '#6aa84f'; g.beginPath(); g.arc(o.tx * 4 + 2, o.ty * 4 + 2, 2.2, 0, 6.3); g.fill(); }
     terrCache = c; terrSeed = m.seed + ':' + G.art.season;
