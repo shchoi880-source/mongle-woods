@@ -819,12 +819,32 @@
     pane.append($('div', 'muted small', `오늘의 유행 바람: 「${tr.name}」 (가판대에서 조금 더 쳐 줘요)`));
   }
 
+  // ---------- 앱 설치 (PWA) ----------
+  let installEvt = null;
+  addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvt = e; });
+  addEventListener('appinstalled', () => { installEvt = null; UI.toast('홈 화면에 설치됐어요! 이제 앱처럼 열 수 있어요.', { icon: '📱' }); });
+  UI.installed = () => (typeof matchMedia !== 'undefined' && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+  UI.install = async () => {
+    if (installEvt) { const e = installEvt; installEvt = null; e.prompt(); try { await e.userChoice; } catch (_) { /* 닫음 */ } return; }
+    const ua = navigator.userAgent, ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+    const steps = ios
+      ? ['사파리에서 이 게임을 열어 주세요. (카카오톡·네이버 앱 안에서 열었다면 오른쪽 아래 ⋯ → 「Safari로 열기」)', '화면 아래 <b>공유 버튼</b> <span class="ibox">□↑</span> 을 눌러요.', '목록을 내려서 <b>「홈 화면에 추가」</b>를 눌러요.', '오른쪽 위 <b>「추가」</b>를 누르면 끝! 홈 화면의 몽글숲 아이콘으로 열어요.']
+      : /Android/.test(ua)
+        ? ['크롬에서 이 게임을 열어 주세요. (카카오톡 안이라면 ⋮ → 「다른 브라우저로 열기」)', '오른쪽 위 <b>⋮</b> 메뉴를 눌러요.', '<b>「앱 설치」</b> 또는 <b>「홈 화면에 추가」</b>를 눌러요.', '「설치」를 누르면 끝! 앱 목록의 몽글숲 아이콘으로 열어요.']
+        : ['크롬이나 엣지에서 이 게임을 열어 주세요.', '주소창 오른쪽의 <b>설치 아이콘</b>(모니터에 ↓)을 누르거나, ⋮ 메뉴 → <b>「앱 설치」</b>를 눌러요.', '「설치」를 누르면 바탕화면·시작 메뉴에서 열 수 있어요.'];
+    UI.modal('홈 화면에 설치하기', (body) => {
+      const ol = $('ol', 'installsteps'); for (const t of steps) ol.append($('li', null, t)); body.append(ol);
+      body.append($('div', 'muted small', '설치해도 새 버전은 열 때마다 자동으로 받아요.' + (ios ? ' 아이폰은 홈 화면 앱과 사파리가 저장 공간을 따로 써요. 앱에서 <b>로그인</b>하면 내 마을을 그대로 불러와요.' : '')));
+    });
+  };
   function setPane(pane) {
     pane.dataset.settings = '1'; pane.innerHTML = '';
     const row = (label, el) => { const r = $('label', 'setrow', `<span>${label}</span>`); r.append(el); return r; };
     const slider = (key) => { const s = $('input'); s.type = 'range'; s.min = 0; s.max = 1; s.step = 0.05; s.value = G.settings.get(key); s.oninput = () => G.settings.set(key, +s.value); return s; };
     const me = $('button', 'btn', '🪞 내 이름·모습 바꾸기'); me.onclick = () => { G.audio.sfx('tap'); UI.open.body.querySelector('[data-t=me]').click(); };
     pane.append(me);
+    // 📱 홈 화면에 설치 (이미 앱으로 열었으면 숨김)
+    if (!UI.installed()) { const ib = $('button', 'btn', '📱 홈 화면에 설치하기'); ib.style.marginTop = '8px'; ib.onclick = () => { G.audio.sfx('tap'); UI.install(); }; pane.append(ib); }
     pane.append(row('배경 음악', slider('bgm')), row('효과음', slider('sfx')), row('목소리', slider('voice')));
     const sp = $('select'); [['느리게', 22], ['보통', 32], ['빠르게', 50], ['즉시', 999]].forEach(([n, v]) => { const o = $('option', null, n); o.value = v; if (G.settings.get('textSpeed') === v) o.selected = true; sp.append(o); });
     sp.onchange = () => G.settings.set('textSpeed', +sp.value);
