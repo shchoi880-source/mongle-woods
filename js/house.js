@@ -144,6 +144,7 @@
     const P = G.art.paint, f = form(it.f), c = COLS[it.c || 0], W = w * TILE, Hh = h * TILE, rot = it.r || 0;
     const wood = '#c98e5a', woodD = '#9c6a40', woodL = '#e0ae7c';
     if (f.layer !== 'rug') P.shadow(g, W / 2, Hh - 3, W * 0.8, 0.2);
+    if (G.itemArt?.furniture(g, it, W, Hh)) return;
     switch (it.f) {
       case 'bed': {
         const vert = h > w;
@@ -213,6 +214,7 @@
     const f = form(id); if (!f) return;
     const it = { f: id, r: 0, c: (x && x.c) || 0 };
     const w = f.w, h = f.h, s = Math.min(26 / (w * TILE), 26 / (h * TILE + 18));
+    if (G.itemArt?.furniture(g, it, w * TILE, h * TILE, true)) return;
     g.save(); g.translate(16 - w * TILE * s / 2, 30 - h * TILE * s); g.scale(s, s); drawFurn(g, it, w, h); g.restore();
   };
 

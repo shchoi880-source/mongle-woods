@@ -191,17 +191,23 @@
     peanut: (g) => { g.save(); g.translate(16, 16); g.rotate(-0.5); for (const y of [-5, 5]) blob(g, 0, y, 6, 6.5, '#d9a868', '#7a5a3a', 1.2); g.fillStyle = '#d9a868'; g.fillRect(-4, -2, 8, 4); g.strokeStyle = 'rgba(120,80,40,0.5)'; g.lineWidth = 0.8; g.beginPath(); for (const y of [-7, -3, 3, 7]) { g.moveTo(-4, y); g.lineTo(4, y); } g.stroke(); g.restore(); },
     sunflower: (g) => { g.save(); g.translate(16, 16); for (let k = 0; k < 14; k++) { g.save(); g.rotate(k / 14 * Math.PI * 2); g.beginPath(); g.ellipse(0, -9.5, 2.6, 5.5, 0, 0, Math.PI * 2); g.fillStyle = k % 2 ? '#ffd23a' : '#ffc21a'; g.fill(); g.strokeStyle = '#a87a1a'; g.lineWidth = 0.8; g.stroke(); g.restore(); } blob(g, 0, 0, 6.5, 6.5, '#7a4a28', '#3a2418', 1.2); g.restore(); },
   };
-  A.drawProduce = (g, id) => { const f = PRODUCE[id]; if (f) { f(g); return true; } return false; };
+  A.drawProduce = (g, id) => {
+    if (G.itemArt?.icon(g, 'crop:' + id)) return true;
+    const draw = PRODUCE[id];
+    if (!draw) return false;
+    draw(g);
+    return true;
+  };
   const base = A.drawIcon;
   A.drawIcon = (g, id, t) => {
     const [cat, rest] = id.split(':'), key = rest && rest.split('#')[0];
-    if (cat === 'crop' && PRODUCE[key]) { g.save(); PRODUCE[key](g); g.restore(); return; }
+    if (cat === 'crop' && PRODUCE[key]) { g.save(); A.drawProduce(g, key); g.restore(); return; }
     if (cat === 'seed' && PRODUCE[key]) {
       // 씨앗 봉투: 종이 봉투 + 작은 수확물 그림 + 씨앗 몇 알
       g.save();
       P_rr(g, 5, 4, 22, 25, 3, '#f6ead0', INK, 1.3);
       g.fillStyle = '#e8d6b0'; g.fillRect(6, 5, 20, 5);
-      g.save(); g.translate(16, 16.5); g.scale(0.5, 0.5); g.translate(-16, -16); PRODUCE[key](g); g.restore();
+      g.save(); g.translate(16, 16.5); g.scale(0.5, 0.5); g.translate(-16, -16); A.drawProduce(g, key); g.restore();
       for (const [x, y] of [[9, 25], [13, 26.5], [21, 25.5]]) blob(g, x, y, 1.2, 0.9, '#a87a48', null);
       g.restore(); return;
     }
@@ -236,7 +242,13 @@
     pancake: (g, d) => { plate(g); blob(g, 16, 19, 11, 5.2, d.col, '#a8783a', 1.2); for (const [x, y] of [[10, 18], [14, 20], [19, 18], [22, 20]]) blob(g, x, y, 1.5, 0.8, '#c8904a', null); if (d.id === 'pajeon') { g.strokeStyle = '#4e9e4a'; g.lineWidth = 1.6; g.beginPath(); for (const x of [9, 13, 17, 21]) { g.moveTo(x, 17); g.lineTo(x + 3, 21); } g.stroke(); } },
     bibimbap: (g) => { bowl(g, '#f6efe4'); const segs = [['#ff9a3a', -2.6], ['#4e9e4a', -1.6], ['#9ad66e', 2.2], ['#e8402c', 3.2]]; for (const [c, a] of segs) blob(g, 16 + Math.cos(a) * 7, 15 + Math.sin(a) * 2.2, 3.2, 1.6, c, null); blob(g, 16, 14.5, 3.6, 2, '#ffffff', '#c8c8b8', 0.7); blob(g, 16, 14.3, 1.6, 1, '#ffc23a', null); },
   };
-  A.drawDish = (g, id) => { const d = F.DISHES.find((x) => x.id === id); if (!d || !LOOK[d.look]) return false; g.save(); LOOK[d.look](g, d); g.restore(); return true; };
+  A.drawDish = (g, id) => {
+    if (G.itemArt?.icon(g, 'dish:' + id)) return true;
+    const d = F.DISHES.find((x) => x.id === id);
+    if (!d || !LOOK[d.look]) return false;
+    g.save(); LOOK[d.look](g, d); g.restore();
+    return true;
+  };
   const base = A.drawIcon;
   A.drawIcon = (g, id, t) => { const [cat, rest] = id.split(':'); if (cat === 'dish' && A.drawDish(g, rest && rest.split('#')[0])) return; return base(g, id, t); };
   if (A.iconReset) A.iconReset();

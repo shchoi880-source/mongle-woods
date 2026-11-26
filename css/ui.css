@@ -170,7 +170,7 @@ input, select, textarea { font: inherit; color: var(--ink); }
 .maps { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
 .mapcard { background: var(--paper); border-radius: 20px; padding: 10px; box-shadow: var(--shadow); display: flex; flex-direction: column; align-items: center; gap: 6px; font-weight: 800; border: 3px solid transparent; }
 .mapcard:hover { border-color: var(--sun); transform: translateY(-2px); }
-.mapcard canvas { width: min(42vw, 224px); border-radius: 12px; image-rendering: pixelated; }
+.mapcard canvas { width: min(40vw, 224px); border-radius: 10px; border: 1px solid #bda988; }
 .shake { animation: shk .35s; } @keyframes shk { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
 
 /* ---- 개발 ---- */
@@ -245,7 +245,7 @@ input, select, textarea { font: inherit; color: var(--ink); }
 .hud-on .hud-goal.on { display: flex; } .hud-goal span { flex: none; }
 .btn-map { margin-left: 2px; }
 .hud-top .hud-money { margin-left: auto; }
-.mapwrap { position: relative; background: #5cbde2; border-radius: 16px; overflow: hidden; border: 3px solid #f3e4cf; touch-action: none; height: min(58vh, 520px); cursor: grab; user-select: none; -webkit-user-select: none; }
+.mapwrap { position: relative; background: #9fbdba; border-radius: 14px; overflow: hidden; border: 2px solid #bbab8b; touch-action: none; height: min(58vh, 520px); cursor: grab; user-select: none; -webkit-user-select: none; }
 .mapcv { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
 .mapctr { position: absolute; right: 8px; top: 8px; display: flex; flex-direction: column; gap: 6px; }
 .mapctr .btn-round { width: 40px; height: 40px; font-size: 18px; }

@@ -1,7 +1,7 @@
 // 캐릭터·생물·아이콘 그림 (실시간 벡터). 눈은 한순간도 멈춰 있지 않다(느낌 #1).
 (function (G) {
   'use strict';
-  const A = G.art, P = A.paint, C = A.C;
+  const A = G.art, P = A.paint, C = A.C, u = G.u;
   const LINE = C.line;
 
   const SKIN = ['#ffe3cf', '#f9d2b4', '#eebd96', '#d79f76', '#b7805a', '#8d5f40', '#fff0e6', '#f5c6b0', '#ffd6c0', '#e0a982', '#6f4630', '#c58c6a'];
@@ -141,12 +141,117 @@
 
   // 각 행은 정면·오른쪽·뒷면, 각 열은 서기·왼발·오른발이다.
   const WALK_FRAMES = [1, 0, 2, 0];
+  // 진행도, 몸의 이동·기울기·눌림, 손 위치와 도구 각도.
+  const ACTION_POSES = {
+    net: [[0, 0, 0, 0, 7, -29, -0.4], [0.23, -2, -0.09, -0.02, 1, -38, -1.16],
+      [0.46, 4, 0.16, 0.07, 15, -27, 1.58], [0.73, 3, 0.09, 0.04, 14, -22, 2.04], [1, 0, 0, 0, 7, -29, 0.43]],
+    axe: [[0, 0, 0, 0, 7, -29, -0.35], [0.32, -2, -0.12, -0.03, 4, -39, -0.79],
+      [0.57, 3, 0.15, 0.11, 15, -25, 1.97], [0.76, 2, 0.09, 0.05, 13, -23, 1.61], [1, 0, 0, 0, 7, -29, 0.5]],
+    shovel: [[0, 0, 0, 0, 7, -29, 0.36], [0.30, -1, -0.06, 0, 6, -37, 0.05],
+      [0.7, 2, 0.11, 0.1, 13, -19, 2.59], [0.85, 1, 0.09, 0.05, 12, -20, 2.14], [1, 0, 0, 0, 7, -29, 0.5]],
+    rod: [[0, 0, 0, 0, 7, -29, -0.4], [0.25, -2, -0.08, -0.01, 4, -35, -1.2],
+      [0.53, 3, 0.08, 0.025, 16, -28, 1.27], [1, 0, 0, 0, 8, -29, 0.55]],
+    can: [[0, 0, 0, 0, 7, -29, 0], [0.42, 2, 0.08, 0.035, 13, -20, 0.78],
+      [0.7, 2, 0.07, 0.045, 14, -20, 0.98], [1, 0, 0, 0, 7, -29, 0]],
+  };
+  function actionPose(tool, p) {
+    const track = ACTION_POSES[tool];
+    let i = 1;
+    while (i < track.length - 1 && p > track[i][0]) i++;
+    const a = track[i - 1], b = track[i], q = u.clamp((p - a[0]) / (b[0] - a[0]), 0, 1);
+    const k = q * q * (3 - 2 * q);
+    return a.slice(1).map((value, n) => u.lerp(value, b[n + 1], k));
+  }
+  const SLEEVE = { cardigan: '#b8917d', dress: '#ca898e', onepiece: '#9c9b67',
+    raincoat: '#dbac58', pajamas: '#b6a4c1' };
+  const SLEEVE_DYES = ['','#d6a2a7','#9ebdca','#abc397','#dec482','#b4a1c7','#c68469','#8492a7','#879e73','#e6caa5'];
+  function drawSwing(ctx, a, phase, pose, side, back) {
+    const [, , , x, y, angle] = pose, shoulder = side ? 4 : 7;
+    const palm = back ? x * 0.65 : x, elbowX = (shoulder + palm) / 2 - 2;
+    const elbowY = (-35 + y) / 2 + (a.tool === 'can' ? 6 : 3);
+    if (a.tool === 'net' || a.tool === 'axe' || a.tool === 'shovel') {
+      const radius = a.tool === 'net' ? 33 : 25;
+      const end = (p) => {
+        const [, , , hx, hy, ang] = actionPose(a.tool, Math.max(0, p));
+        return [(back ? hx * 0.65 : hx) + Math.sin(ang) * radius, hy - Math.cos(ang) * radius];
+      };
+      const a0 = end(phase - 0.13), b0 = end(phase - 0.06), c0 = end(phase);
+      const distance = Math.hypot(c0[0] - a0[0], c0[1] - a0[1]);
+      if (phase > 0.27 && phase < 0.84 && distance > 4) {
+        ctx.save(); ctx.lineCap = 'round';
+        ctx.strokeStyle = `rgba(255,248,219,${Math.min(0.73, distance / 25)})`; ctx.lineWidth = 2.3;
+        ctx.beginPath(); ctx.moveTo(...a0); ctx.quadraticCurveTo(...b0, ...c0); ctx.stroke();
+        ctx.restore();
+      }
+    }
+    const look = a.look?.pk;
+    const style = look?.body || '';
+    const sleeve = SLEEVE_DYES[look?.bc] || SLEEVE[style.replace(/^(female|male)-/, '')] || '#e3c69c';
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(shoulder, -35); ctx.quadraticCurveTo(elbowX, elbowY, palm, y);
+    ctx.lineWidth = 7.4; ctx.strokeStyle = '#80593e'; ctx.stroke();
+    ctx.lineWidth = 5.5; ctx.strokeStyle = sleeve; ctx.stroke();
+    ctx.translate(palm, y); ctx.rotate(angle);
+    paintTool(ctx, a.tool);
+    P.blob(ctx, 0, 0, 2.9, 3.4, '#efbd96', '#855c41', 0.9);
+    P.blob(ctx, -0.8, -1.2, 1, 1.2, 'rgba(255,235,198,0.55)');
+    ctx.restore();
+  }
+
+  function paintTool(ctx, tool) {
+    if (tool === 'can') {
+      P.blob(ctx, 1, -4, 6.6, 5.1, '#739d9f', '#486d71', 1);
+      ctx.strokeStyle = '#486d71'; ctx.lineWidth = 1.1;
+      ctx.beginPath(); ctx.arc(0, -7, 4.4, Math.PI, 0); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(5, -4); ctx.lineTo(13, -10); ctx.stroke();
+      P.blob(ctx, 13, -10, 2.5, 1.6, '#aec7bc', '#486d71', 0.8);
+      return;
+    }
+    const length = { net: 22, rod: 27, axe: 20, shovel: 20 }[tool];
+    if (!length) return;
+    ctx.save(); ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(0, 1); ctx.lineTo(0, -length);
+    ctx.lineWidth = 3; ctx.strokeStyle = '#715038'; ctx.stroke();
+    ctx.lineWidth = 1.55; ctx.strokeStyle = '#c89c69'; ctx.stroke();
+    if (tool === 'net') {
+      P.blob(ctx, 0, -29, 7.1, 7.8, 'rgba(249,237,205,0.74)', '#685442', 1.25);
+      ctx.save(); ctx.clip();
+      ctx.strokeStyle = 'rgba(152,126,94,0.57)'; ctx.lineWidth = 0.55;
+      ctx.beginPath();
+      for (let i = -12; i <= 12; i += 3.2) {
+        ctx.moveTo(i, -38); ctx.lineTo(i + 9, -20);
+        ctx.moveTo(i, -38); ctx.lineTo(i - 9, -20);
+      }
+      ctx.stroke(); ctx.restore();
+      ctx.strokeStyle = '#f7e0b7'; ctx.lineWidth = 0.9;
+      ctx.beginPath(); ctx.arc(0, -29, 6.2, 3.38, 5.14); ctx.stroke();
+    } else if (tool === 'rod') {
+      P.blob(ctx, 1, -4, 2.5, 2.6, '#b77559', '#704d3d', 0.85);
+      ctx.strokeStyle = 'rgba(110,98,86,0.68)'; ctx.lineWidth = 0.6;
+      ctx.beginPath(); ctx.moveTo(0, -26); ctx.quadraticCurveTo(4, -23, 6, -16); ctx.stroke();
+    } else if (tool === 'axe') {
+      const steel = ctx.createLinearGradient(0, -25, 9, -14);
+      steel.addColorStop(0, '#f3ead8'); steel.addColorStop(1, '#8dacae');
+      ctx.beginPath(); ctx.moveTo(-1, -20); ctx.quadraticCurveTo(3, -20, 8, -24);
+      ctx.quadraticCurveTo(11, -19, 8, -14); ctx.lineTo(-1, -16); ctx.closePath();
+      ctx.fillStyle = steel; ctx.fill(); ctx.strokeStyle = '#60594d'; ctx.lineWidth = 1; ctx.stroke();
+    } else {
+      const steel = ctx.createLinearGradient(-5, -29, 4, -19);
+      steel.addColorStop(0, '#f4ecda'); steel.addColorStop(1, '#8fa8ae');
+      P.rrect(ctx, -4.2, -29, 8.4, 10, [4, 4, 2, 2], steel, '#5d5b53', 1);
+    }
+    ctx.restore();
+  }
   function drawPostkeeper(ctx, a, im, t, H) {
     const side = a.dir === 1 || a.dir === 3;
     const back = a.dir === 2;
     const row = back ? 2 : side ? 1 : 0;
     const phase = a.walk || 0;
-    const col = a.moving ? WALK_FRAMES[Math.floor(phase * 4) % 4] : 0;
+    const action = a.actionPhase > 0 && ACTION_POSES[a.tool] ? a.actionPhase : 0;
+    const pose = action ? actionPose(a.tool, action) : null;
+    const col = pose ? (action > 0.34 && action < 0.85 ? 2 : 0) :
+      a.moving ? WALK_FRAMES[Math.floor(phase * 4) % 4] : 0;
     const ims = Array.isArray(im) ? im : [im];
     const size = ims[0].naturalWidth / 3;
     const height = H || 72;
@@ -160,11 +265,17 @@
     P.shadow(ctx, 0, 0, 22 - Math.min(hop, 10) * 0.6, 0.26);
     ctx.translate(0, -hop - lift);
     ctx.scale((a.dir === 1 ? -1 : 1) * (1 + squash * 0.5), 1 + breath - squash);
+    if (pose) {
+      const [shift, lean, bend] = pose;
+      ctx.translate(side ? shift : shift * 0.4, 0);
+      ctx.transform(1, 0, -lean * (side ? 1 : 0.63), 1 - bend, 0, 0);
+    }
     if (a.sleep) ctx.globalAlpha *= 0.92;
     // 도구 (오너: 도끼를 왜 저렇게 들고 있냐): 평소엔 등에 메고(어깨 너머로 머리만 보임), 쓸 때만 손에 들고 휘두른다
     const hasTool = a.tool && a.tool !== 'hand';
-    const using = (a.swing || 0) > 0 || (a.kind === 'player' && G.fishing && G.fishing.state && G.fishing.state !== 'idle');
+    const using = !!pose || (a.swing || 0) > 0 || (a.kind === 'player' && G.fishing && G.fishing.state && G.fishing.state !== 'idle');
     const tool = () => {
+      if (pose) { drawSwing(ctx, a, action, pose, side, back); return; }
       ctx.save();
       if (using) { const [hx, hy, ex] = side ? [7, -29, 0.5] : [9, -29, 0.55]; ctx.translate(hx, hy); ctx.rotate(ex); }
       else { ctx.translate(back ? -6 : -8, back ? -12 : -14); ctx.rotate(0.22); ctx.scale(0.95, 0.95); } // 도구 그림 자체가 -0.6 기울어 있어 최종 각도는 왼쪽 위로 약 20도
@@ -557,19 +668,7 @@
       const hx = side ? 2 : 9, hy = -10;
       ctx.translate(hx, hy);
       ctx.rotate(-0.6 + sw * 2.2 * (side ? -1 : 1) + (back ? 0.3 : 0));
-      if (a.tool === 'net') {
-        ctx.strokeStyle = '#a7724a'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -22); ctx.stroke();
-        P.blob(ctx, 0, -28, 6, 7, 'rgba(255,255,255,0.55)', LINE, 1.3);
-      } else if (a.tool === 'rod') {
-        ctx.strokeStyle = '#a7724a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -26); ctx.stroke();
-        P.blob(ctx, 0, -6, 2.5, 2.5, '#ff7a7a', LINE, 1);
-      } else if (a.tool === 'axe') {
-        ctx.strokeStyle = '#a7724a'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -20); ctx.stroke();
-        ctx.fillStyle = '#c9d3da'; ctx.strokeStyle = LINE; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(0, -20); ctx.lineTo(8, -24); ctx.quadraticCurveTo(10, -19, 8, -14); ctx.lineTo(0, -16); ctx.closePath(); ctx.fill(); ctx.stroke();
-      } else if (a.tool === 'shovel') {
-        ctx.strokeStyle = '#a7724a'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -18); ctx.stroke();
-        P.rrect(ctx, -4, -26, 8, 9, [1, 1, 4, 4], '#c9d3da', LINE, 1.2);
-      }
+      paintTool(ctx, a.tool);
       ctx.restore();
     },
   };
@@ -614,7 +713,7 @@
     if (b.alt) { ctx.save(); ctx.translate(0, b.alt); P.shadow(ctx, 0, 0, 8, 0.18); ctx.restore(); } else P.shadow(ctx, 0, 1, 7, 0.18);
     ctx.scale(s * (b.face < 0 ? -1 : 1), s);
     const flap = Math.sin(t * 22 + b.seed) ;
-    switch (sp.tpl) {
+    if (!G.itemArt?.bug(ctx, b, col, flap, t)) switch (sp.tpl) {
       case 'butterfly': case 'moth': {
         const w = 0.35 + Math.abs(flap) * 0.65;
         ctx.save(); ctx.scale(w, 1);
@@ -708,9 +807,17 @@
     const s = [0, 5, 7, 9, 12, 15][f.shadow] || 6;
     ctx.save(); ctx.translate(f.x, f.y); ctx.rotate(f.ang || 0);
     const wig = Math.sin(t * 8 + f.seed) * 0.25;
-    ctx.fillStyle = 'rgba(30,60,90,0.38)';
-    ctx.beginPath(); ctx.ellipse(0, 0, s, s * 0.45, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(-s * 0.9, 0); ctx.lineTo(-s * 1.5, -s * 0.35 + wig * s * 0.3); ctx.lineTo(-s * 1.5, s * 0.35 + wig * s * 0.3); ctx.fill();
+    const slim = f.sp?.shape === 'eel' || f.sp?.shape === 'long';
+    const h = s * (slim ? 0.28 : 0.45);
+    ctx.fillStyle = 'rgba(30,60,76,0.4)';
+    ctx.beginPath(); ctx.moveTo(-s * 1.5, -h * 0.69 + wig * s * 0.3);
+    ctx.quadraticCurveTo(-s * 1.21, -h * 0.72, -s * 0.75, -h * 0.27);
+    ctx.bezierCurveTo(-s * 0.27, -h * 1.2, s * 0.67, -h, s, 0);
+    ctx.bezierCurveTo(s * 0.59, h * 0.98, -s * 0.36, h * 1.03, -s * 0.75, h * 0.22);
+    ctx.quadraticCurveTo(-s * 1.14, h * 0.46, -s * 1.5, h * 0.78 + wig * s * 0.3);
+    ctx.quadraticCurveTo(-s * 1.28, 0, -s * 1.5, -h * 0.69 + wig * s * 0.3);
+    ctx.closePath(); ctx.fill();
+    P.blob(ctx, s * 0.32, -h * 0.26, s * 0.36, Math.max(0.45, h * 0.22), 'rgba(225,239,224,0.12)');
     ctx.restore();
   };
 
@@ -736,6 +843,7 @@
   };
   A.drawIcon = (g, id, t = 0) => {
     if (id.startsWith('furn:')) { const [k, c] = id.slice(5).split('#'); G.house.drawIcon(g, k, { c: +c || 0 }); return; }
+    if (G.itemArt?.icon(g, id.split('#', 1)[0])) return;
     let vv = 0, vs = '';
     if (id.indexOf('#') > 0) { const [base, rest] = id.split('#'); id = base; const [a, b] = rest.split('.'); vv = +a || 0; vs = b || ''; }
     const [cat, key] = id.indexOf(':') > 0 ? id.split(':') : [id, id];
@@ -749,6 +857,7 @@
       g.translate(16, 17);
       g.fillStyle = c1; g.strokeStyle = LINE; g.lineWidth = 1.4;
       const shp = (G.data.get('fish', key) || {}).shape;
+      if (G.itemArt?.fish(g, key, shp, c1, vv)) { g.restore(); return; }
       if (shp && A.fishShape(g, shp, c1, c2, vv)) { g.restore(); return; }
       g.beginPath(); g.ellipse(1, 0, 11, 6.5, 0, 0, Math.PI * 2); g.fill(); g.stroke();
       g.beginPath(); g.moveTo(-9, 0); g.lineTo(-15, -6); g.lineTo(-15, 6); g.closePath(); g.fill(); g.stroke();

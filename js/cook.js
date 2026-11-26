@@ -17,7 +17,7 @@
     ov.innerHTML = `<div class="cookcard"><div class="cooktitle">🍳 ${name} 만드는 중…</div><canvas class="cookcv"></canvas><div class="cookbar"><i></i></div><div class="cookhint">톡톡 누르면 ${tool === 'oven' ? '불을 지펴' : tool === 'grill' || tool === 'pan' ? '뒤적여' : '저어'} 더 빨리 돼요!</div><div class="cookbtns"><label class="cookskip"><input type="checkbox"> 다음부터 바로 완성</label><button class="btn small ghost">건너뛰기 ⏭</button></div></div>`;
     G.ui.root.append(ov);
     const cv = ov.querySelector('canvas'), dpr = Math.min(globalThis.devicePixelRatio || 1, 2), W = 280, H = 210;
-    cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + 'px'; cv.style.height = H + 'px';
+    cv.width = W * dpr; cv.height = H * dpr; cv.style.width = `min(100%, ${W}px)`; cv.style.height = 'auto';
     const g = cv.getContext('2d'); g.scale(dpr, dpr);
     const bar = ov.querySelector('.cookbar i'), title = ov.querySelector('.cooktitle'), hint = ov.querySelector('.cookhint');
     // 재료 그림
@@ -36,27 +36,58 @@
       prog = Math.min(1, prog + 0.07); stir = 1; G.audio.sfx(tool === 'pan' || tool === 'grill' ? 'shake' : 'plop');
     };
     const ease = (k) => 1 - Math.pow(1 - k, 3);
+    function glaze(y, h, light, mid, dark) {
+      const fill = g.createLinearGradient(0, y, 0, y + h);
+      fill.addColorStop(0, light);
+      fill.addColorStop(0.54, mid);
+      fill.addColorStop(1, dark);
+      return fill;
+    }
     function vessel() {
       const P = G.art.paint, mix = (a, b, k) => { const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16); const c = [16, 8, 0].map((s) => Math.round(((pa >> s) & 255) * (1 - k) + ((pb >> s) & 255) * k)); return `rgb(${c[0]},${c[1]},${c[2]})`; };
-      const cook = Math.min(1, prog * 1.1), liquid = mix(tool === 'pan' || tool === 'grill' ? '#f3e6b0' : '#9fd8ef', d.col || '#e8c890', cook);
+      const cook = Math.min(1, prog * 1.1), liquid = mix(tool === 'bowl' ? '#f0dfbc' : '#e9c58c', d.col || '#e8c890', cook);
+      P.blob(g, 141, 191, 82, 7, 'rgba(117,78,46,0.16)');
       // 불
       if (tool !== 'bowl') for (let k = 0; k < 5; k++) { const fx = 100 + k * 20, fh = 10 + Math.sin(t * 12 + k * 1.7) * 4 + prog * 4; g.fillStyle = k % 2 ? '#ffb03a' : '#ff7a2a'; g.beginPath(); g.moveTo(fx - 6, 196); g.quadraticCurveTo(fx, 196 - fh * 2, fx + 6, 196); g.fill(); g.fillStyle = '#ffe28a'; g.beginPath(); g.moveTo(fx - 3, 196); g.quadraticCurveTo(fx, 196 - fh, fx + 3, 196); g.fill(); }
       if (tool === 'pot') {
-        P.rrect(g, 70, 110, 140, 78, [6, 6, 26, 26], '#8fa8c0', '#3a4a5a', 2.5); P.rrect(g, 60, 116, 14, 8, 4, '#6a7a8a', '#3a4a5a', 1.5); P.rrect(g, 206, 116, 14, 8, 4, '#6a7a8a', '#3a4a5a', 1.5);
-        g.fillStyle = 'rgba(255,255,255,0.25)'; g.fillRect(80, 120, 8, 52);
-        g.fillStyle = liquid; g.beginPath(); g.ellipse(140, 112, 66, 12, 0, 0, Math.PI * 2); g.fill(); g.strokeStyle = '#3a4a5a'; g.lineWidth = 2; g.beginPath(); g.ellipse(140, 110, 70, 13, 0, 0, Math.PI * 2); g.stroke();
+        for (const x of [53, 199]) P.rrect(g, x, 120, 28, 13, 6, '#a17a57', '#785640', 1.6);
+        P.rrect(g, 70, 109, 140, 77, [12, 12, 26, 26], glaze(109, 78, '#bfcec1', '#8aab9c', '#5f847a'), '#566e62', 2);
+        P.rrect(g, 80, 123, 8, 41, 4, 'rgba(246,239,209,0.36)');
+        P.blob(g, 140, 110, 70, 14, '#eadfc4', '#566e62', 1.8);
+        P.blob(g, 140, 112, 64, 10, liquid, '#ad8b62', 1);
       } else if (tool === 'pan') {
-        g.fillStyle = '#4a4a52'; g.beginPath(); g.ellipse(140, 150, 80, 22, 0, 0, Math.PI * 2); g.fill(); P.rrect(g, 210, 142, 60, 12, 6, '#7a5a3a', '#3a2a1a', 1.5);
-        g.fillStyle = liquid; g.beginPath(); g.ellipse(140, 146, 68, 16, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = 'rgba(255,255,255,0.18)'; g.beginPath(); g.ellipse(120, 142, 30, 5, -0.1, 0, Math.PI * 2); g.fill();
+        P.rrect(g, 208, 140, 59, 14, 7, glaze(140, 14, '#d7a774', '#b78156', '#875c42'), '#73533e', 1.6);
+        P.blob(g, 140, 151, 80, 22, glaze(130, 45, '#7c847e', '#67706b', '#424c47'), '#50544b', 1.8);
+        P.blob(g, 140, 146, 69, 16, liquid, '#8a7660', 1.2);
+        P.blob(g, 120, 143, 26, 3.2, 'rgba(255,250,226,0.31)');
       } else if (tool === 'grill') {
-        g.fillStyle = '#3a3a42'; g.fillRect(70, 150, 140, 8); g.strokeStyle = '#6a6a72'; g.lineWidth = 3; g.beginPath(); for (let x = 76; x <= 204; x += 16) { g.moveTo(x, 136); g.lineTo(x, 156); } g.stroke();
+        P.rrect(g, 68, 142, 144, 34, [8, 8, 12, 12], glaze(142, 34, '#9c7964', '#75594d', '#54423c'), '#6a4d40', 1.7);
+        P.rrect(g, 73, 135, 134, 18, 5, '#5a5249', '#726451', 1.5);
+        g.strokeStyle = '#ad9c85'; g.lineWidth = 2.5; g.beginPath();
+        for (let x = 82; x <= 203; x += 12) { g.moveTo(x, 138); g.lineTo(x - 4, 151); }
+        g.stroke();
       } else if (tool === 'oven') {
-        P.rrect(g, 60, 70, 160, 126, 14, '#e8b07a', '#7a4a2a', 2.5); P.rrect(g, 78, 92, 124, 80, 10, '#3a2a28', '#7a4a2a', 2);
+        P.rrect(g, 60, 70, 160, 126, 14, glaze(70, 126, '#ecc8a0', '#cb9376', '#ab7356'), '#815940', 2.5);
+        P.rrect(g, 78, 92, 124, 80, 10, '#4d3830', '#815940', 2);
         g.fillStyle = `rgba(255,170,60,${0.25 + prog * 0.5 + Math.sin(t * 8) * 0.05})`; g.beginPath(); g.roundRect(82, 96, 116, 72, 8); g.fill();
         for (let k = 0; k < 3; k++) P.blob(g, 90 + k * 22, 82, 5, 5, '#c8784a', '#7a4a2a', 1.2);
       } else { // bowl
-        g.fillStyle = '#ffffff'; g.strokeStyle = '#5a6a7a'; g.lineWidth = 2.5; g.beginPath(); g.moveTo(60, 120); g.quadraticCurveTo(140, 220, 220, 120); g.closePath(); g.fill(); g.stroke(); g.fillStyle = '#8fc6e8'; g.fillRect(100, 175, 80, 5);
-        g.fillStyle = liquid; g.beginPath(); g.ellipse(140, 122, 74, 12, 0, 0, Math.PI * 2); g.fill();
+        P.rrect(g, 112, 172, 56, 10, [4, 4, 7, 7], '#a57952', '#7c563d', 1.4);
+        g.beginPath(); g.moveTo(61, 121); g.bezierCurveTo(69, 156, 101, 177, 140, 178);
+        g.bezierCurveTo(179, 177, 211, 156, 219, 121); g.closePath();
+        g.fillStyle = glaze(120, 58, '#ecd5ab', '#cc9a67', '#a77755'); g.fill();
+        g.lineWidth = 1.9; g.strokeStyle = '#7c563d'; g.stroke();
+        g.save(); g.clip();
+        g.strokeStyle = 'rgba(141,85,56,0.31)'; g.lineWidth = 1.2;
+        g.beginPath(); g.moveTo(65, 142); g.quadraticCurveTo(140, 168, 215, 142);
+        g.moveTo(72, 151); g.quadraticCurveTo(140, 176, 208, 151); g.stroke();
+        for (let x = 93; x <= 188; x += 15) {
+          const y = 151 + 9 * (1 - ((x - 140) / 48) ** 2);
+          P.blob(g, x, y, 1.6, 3.4, 'rgba(246,222,176,0.66)');
+        }
+        g.restore();
+        P.blob(g, 140, 120, 79, 16, '#f0d7a8', '#7c563d', 1.7);
+        P.blob(g, 140, 122, 71, 11, liquid, '#a77954', 1.1);
       }
     }
     function frame(now) {
@@ -66,8 +97,10 @@
       stir = Math.max(0, stir - dt * 3);
       bar.style.width = (prog * 100).toFixed(1) + '%';
       g.clearRect(0, 0, W, H);
-      g.fillStyle = '#fff6e8'; g.fillRect(0, 0, W, H);
-      g.fillStyle = '#f0dcc0'; g.fillRect(0, 176, W, 34); // 부뚜막
+      g.fillStyle = '#f5ead5'; g.fillRect(0, 0, W, H);
+      G.scenery?.material(g, 'paper', [0, 0, W, H], 0.53, 'multiply');
+      g.fillStyle = '#ddbd96'; g.fillRect(0, 176, W, 34);
+      G.scenery?.material(g, 'wood', [0, 176, W, 34], 0.34, 'soft-light');
       vessel();
       // 재료 떨어지기 → 담기면 둥둥 떠서 돌기
       for (const dr of drops) {

@@ -47,6 +47,11 @@
     const c = document.createElement('canvas'); c.width = Math.max(1, w); c.height = Math.max(1, h); return c;
   }
   A.mkCanvas = mkCanvas;
+  A.atlasFrame = (g, image, index, x, y, w, h) => {
+    const cell = image.naturalWidth / 3;
+    g.drawImage(image, (index % 3) * cell + 4, Math.floor(index / 3) * cell + 4,
+      cell - 8, cell - 8, x, y, w, h);
+  };
 
   // 색 선 (그래픽 개선: 모든 물체에 같은 진갈색 선 → 채운 색을 어둡게 한 '색 외곽선'. 요즘 귀여운 그림체)
   const lineCache = new Map();
