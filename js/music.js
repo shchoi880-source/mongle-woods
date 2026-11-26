@@ -49,6 +49,10 @@
       prog: [0, 2, 3, 4, 0, 5, 1, 4],
       A: bars('0 2 4 ~ 4 5 4 ~ / 2 ~ 4 2 0 ~ . . / 3 ~ 5 ~ 7 ~ 5 ~ / 4 ~ ~ ~ 6 ~ ~ ~'),
       B: bars('7 ~ 6 5 4 ~ 2 ~ / 5 ~ 4 2 0 ~ ~ ~ / 1 ~ 3 ~ 5 ~ 3 ~ / 4 ~ ~ ~ . . . .') },
+    sky: { name: '구름 위 소풍', bpm: 100, root: 76, meter: 4, lead: 'flute', comp: 'arp', perc: true, soft: true,
+      prog: [0, 3, 4, 0, 5, 3, 1, 4],
+      A: bars('0 ~ 4 ~ 7 ~ 4 ~ / 5 ~ 7 ~ 9 ~ 7 5 / 4 ~ 6 ~ 8 ~ 6 4 / 7 ~ ~ ~ . . . .'),
+      B: bars('9 ~ 7 ~ 5 ~ 4 ~ / 5 ~ 3 ~ 2 ~ 0 ~ / 1 ~ 3 ~ 5 ~ 8 ~ / 6 ~ ~ ~ 4 ~ ~ ~') },
     museum: { name: '조용한 전시실', bpm: 60, root: 74, meter: 4, lead: 'musicbox', comp: 'pad', perc: false, soft: true,
       prog: [0, 3, 5, 4, 3, 0, 1, 4],
       A: bars('4 ~ ~ ~ 7 ~ ~ ~ / 5 ~ ~ ~ 3 ~ ~ ~ / 2 ~ 4 ~ 9 ~ ~ ~ / 6 ~ ~ ~ . . . .'),
@@ -61,6 +65,7 @@
   const M = { cur: null, bar: 0, next: 0, on: true, songId: null };
   function pickSong() {
     if (G.scene.is('museum_in')) return 'museum';
+    if (G.scene.is('cloudisle')) return 'sky';
     if (G.scene.is('interior') || G.scene.is('vhome')) return 'home';
     return blockOf(G.time.hour());
   }
