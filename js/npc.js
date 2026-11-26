@@ -312,8 +312,9 @@
         s.toolDay = day;
         seq.push(say(L(G.player.tool)[0].text));
       } else {
-        const chat = L('chat');
-        if (N.level(id) >= 2 && s.seen % 7 === 6 && L('hearts').length) seq.push(say(L('hearts')[0].text));
+        const chat = L('chat'), ctxLine = N.contextLine && Math.random() < 0.6 ? N.contextLine(id) : null;
+        if (ctxLine) seq.push({ who: id, text: ctxLine });
+        else if (N.level(id) >= 2 && s.seen % 7 === 6 && L('hearts').length) seq.push(say(L('hearts')[0].text));
         else seq.push(say(chat[s.seen % chat.length].text));
         s.seen++;
       }
