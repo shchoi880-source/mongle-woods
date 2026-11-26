@@ -57,7 +57,7 @@
       // 꿈: 70%는 오늘 실제로 나오는 생물 힌트
       const month = G.time.dayDate(day).m;
       const cands = [...G.data.all('bugs').map((b) => ['bug', b]), ...G.data.all('fish').map((f) => ['fish', f])]
-        .filter(([, r]) => r.months.includes(month) && r.tier >= 2);
+        .filter(([, r]) => r.months.includes(month) && r.tier >= 2 && !r.cloud && !r.high);
       if (cands.length && R() < 0.7) {
         const [kind, r] = cands[Math.floor(R() * cands.length)];
         st.dream = DREAM_HINT[r.loc] || DREAM_FREE[0]; st.dreamSp = kind + ':' + r.id;

@@ -6,7 +6,7 @@
   const coloredFrames = new Map();
   const animalColors = new Map();
   for (const name of ['home', 'room', 'objects', 'decor', 'harvest', 'crops-a', 'crops-b', 'food-a', 'food-b', 'food-c',
-    'bugs-a', 'bugs-b', 'fish', 'water-life', 'ranch']) {
+    'bugs-a', 'bugs-b', 'fish', 'water-life', 'ranch', 'bugs-c', 'fish-b', 'water-life-b']) {
     const image = new Image();
     image.onload = () => { A.clearCache(); A.iconReset?.(); };
     image.src = 'assets/scenery/items/' + name + '.webp';
@@ -208,9 +208,13 @@
     firefly: ['bugs-b', 0, 9, 12], bee: ['bugs-b', 1, 13, 12], cicada: ['bugs-b', 2, 13, 19],
     mantis: ['bugs-b', 3, 18, 13], stag: ['bugs-b', 4, 15, 21], snail: ['bugs-b', 5, 15, 11],
     caterpillar: ['bugs-b', 6, 14, 8],
+    // 2026-11 GPT 새 그림 (bugs-c)
+    rhino: ['bugs-c', 0, 18, 15], grasshopper: ['bugs-c', 1, 20, 14], longhorn: ['bugs-c', 2, 22, 14],
+    strider: ['bugs-c', 3, 20, 15], diving: ['bugs-c', 4, 15, 14], dung: ['bugs-c', 5, 20, 14],
+    stick: ['bugs-c', 6, 24, 10], spider: ['bugs-c', 7, 16, 14], cloudfly: ['bugs-c', 8, 22, 19],
   };
   function bug(g, b, colors, flap, t) {
-    const type = b.sp.tpl;
+    const type = b.sp.art || b.sp.tpl;
     if (b.state === 'curl' || !bugs[type]) return false;
     let [sheet, i, w, h] = bugs[type];
     if (type === 'butterfly' && /swallowtail|morpho/.test(b.sp.id)) {
@@ -218,7 +222,7 @@
       i = b.sp.id.includes('swallowtail') ? 7 : 8;
     }
     if (!imageReady(sheet)) return false;
-    if (type === 'butterfly' || type === 'moth' || type === 'dragonfly') w *= 0.43 + Math.abs(flap) * 0.57;
+    if (type === 'butterfly' || type === 'moth' || type === 'dragonfly' || type === 'cloudfly') w *= 0.43 + Math.abs(flap) * 0.57;
     if (type === 'bee') {
       w *= 0.93 + Math.abs(flap) * 0.07;
       h *= 0.88 + Math.abs(flap) * 0.12;
@@ -231,12 +235,31 @@
       const k = (t * 1.3 + b.seed) % 1;
       A.paint.blob(g, 0, 2, 4 + k * 6, 2 + k * 3, null, `rgba(250,245,218,${0.52 * (1 - k)})`, 0.7);
     }
-    return animal(g, sheet, i, -w / 2, -h / 2, w, h, colors[0], b.v);
+    // 새 그림 원래 색 그대로(art 지정 + tint 없음), 같은 모양 다른 종은 tint로 색만 바꾼다
+    const tint = b.sp.art ? (b.v ? colors[0] : b.sp.tint || null) : colors[0];
+    return animal(g, sheet, i, -w / 2, -h / 2, w, h, tint, b.v);
   }
 
   const waterLife = { squid: [0, 23, 29], octo: [1, 27, 26], jelly: [2, 22, 29],
     crab: [3, 29, 23], turtle: [4, 29, 23], sunfish: [5, 25, 29] };
+  // 2026-11 GPT 새 그림: fish-b(해마·가재·새우·가오리·상어·참치·철갑상어·개구리·별빛송사리), water-life-b(바다)
+  const FISHB = { seahorse: [0, 20, 29], crayfish: [1, 28, 22], shrimp: [2, 28, 24], ray: [3, 28, 23], shark: [4, 30, 20],
+    tuna: [5, 30, 19], sturgeon: [6, 30, 17], frog: [7, 26, 24], starfry: [8, 26, 16] };
+  const SEAB = { starfish: [0, 26, 26], urchin: [1, 26, 26], hermit: [2, 27, 24], lobster: [3, 29, 23], seacuc: [4, 29, 18],
+    nudi: [5, 29, 19], scallop: [6, 26, 24], moray: [7, 28, 23], cloudjelly: [8, 24, 29] };
+  // 아무 칸이나 32×32 아이콘 칸 가운데에 (tint가 있으면 그 색으로)
+  function cell(g, art, tint, variant) {
+    if (!art) return false;
+    let sheet, i, w, h;
+    if (FISHB[art]) { [i, w, h] = FISHB[art]; sheet = 'fish-b'; }
+    else if (SEAB[art]) { [i, w, h] = SEAB[art]; sheet = 'water-life-b'; }
+    else if (waterLife[art]) { [i, w, h] = waterLife[art]; sheet = 'water-life'; }
+    else return false;
+    return animal(g, sheet, i, -w / 2, -h / 2 - 0.4, w, h, tint || null, variant);
+  }
   function fish(g, key, shape, color, variant) {
+    const sp = G.data.get('fish', key);
+    if (FISHB[shape] || SEAB[shape]) return cell(g, shape, variant ? color : sp && sp.tint, variant);
     if (waterLife[shape]) {
       const [i, w, h] = waterLife[shape];
       return animal(g, 'water-life', i, -w / 2, -h / 2 - 0.4, w, h, variant ? color : null, variant);
@@ -247,7 +270,7 @@
     else if (shape === 'puffer') { i = 4; w = 26; h = 24; }
     else if (key === 'catfish' || key === 'bagrid') { i = 6; h = 18; }
     else if (key === 'goldfish') { i = 8; h = 23; }
-    else if (/salmon|tuna|yellowtail|seabream/.test(key)) { i = 2; h = 18; }
+    else if (/salmon|tuna|yellowtail|seabream|trout/.test(key)) { i = 2; h = 18; }
     else if (/mackerel|rockfish|mandarin/.test(key)) { i = 7; h = 17; }
     else if (/minnow|medaka|smelt|chub|sweetfish|bitterling/.test(key)) { i = 1; h = 15; }
     return animal(g, 'fish', i, -w / 2, -h / 2 - 0.5, w, h, color, variant);
@@ -267,5 +290,5 @@
     const s = 27 / Math.max(w, h);
     return draw(g, 'ranch', i, (32 - w * s) / 2, (32 - h * s) / 2, w * s, h * s);
   }
-  G.itemArt = { furniture: drawFurniture, icon, acornTree, bug, fish, ranch, ranchIcon };
+  G.itemArt = { furniture: drawFurniture, icon, acornTree, bug, fish, ranch, ranchIcon, cell };
 })(globalThis.G);

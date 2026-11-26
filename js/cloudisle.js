@@ -53,11 +53,11 @@
   // ---------- 생물 ----------
   const TIER_W = [0, 10, 5, 2, 0.7, 0.25];
   function pickSp(list, kind) {
-    const w = list.map((s) => TIER_W[s.tier] * (s.rare || 1) * (s.tier >= 3 ? 3 : 1) * (G.skills ? G.skills.rareMul(kind, s.tier) : 1));
+    const w = list.map((s) => TIER_W[s.tier] * (s.rare || 1) * (s.tier >= 3 ? 3 : 1) * (s.cloud ? 4 : 1) * (G.skills ? G.skills.rareMul(kind, s.tier) : 1)); // 구름섬 전용은 4배 더
     let r = Math.random() * w.reduce((a, b) => a + b, 0); for (let i = 0; i < list.length; i++) { r -= w[i]; if (r <= 0) return list[i]; } return list[0];
   }
   function spawnBug() {
-    const m = G.time.month(), list = G.data.all('bugs').filter((s) => s.months.includes(m) && !s.high && s.loc !== 'water' && s.beh !== 'G');
+    const m = G.time.month(), list = G.data.all('bugs').filter((s) => (s.cloud || s.months.includes(m)) && !s.high && s.loc !== 'water' && s.loc !== 'surface' && s.beh !== 'G');
     if (!list.length) return;
     const fl = I.objs.filter((o) => o.k === 'flower' || o.k === 'tree' || o.k === 'fruit');
     const o = fl[Math.floor(Math.random() * fl.length)] || I.dock;
@@ -66,7 +66,7 @@
     I.bugs.push({ sp, x, y, hx: x, hy: y, seed: Math.random() * 10, alt: 6, baseAlt: 6, face: 1, t: 0, fade: 0, state: 'idle', v: 0, size: Math.round((sz[0] + Math.random() * (sz[1] - sz[0])) * 10) / 10 });
   }
   function spawnFish() {
-    const m = G.time.month(), list = G.data.all('fish').filter((s) => s.months.includes(m) && s.loc !== 'sea');
+    const m = G.time.month(), list = G.data.all('fish').filter((s) => (s.cloud || s.months.includes(m)) && s.loc !== 'sea');
     if (!list.length) return;
     const sp = pickSp(list, 'fish'), a = Math.random() * 6.28, r = Math.random() * 0.6, sz = sp.size || [10, 20];
     I.fish.push({ sp, shadow: sp.shadow || 2, x: I.pond.x + Math.cos(a) * I.pond.rx * r, y: I.pond.y + Math.sin(a) * I.pond.ry * r, ang: Math.random() * 6.28, seed: Math.random() * 10, fade: 0, size: Math.round(sz[0] + Math.random() * (sz[1] - sz[0])) });

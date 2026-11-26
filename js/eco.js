@@ -44,7 +44,7 @@
     const R = Math.random;
     // 고지대 곤충(high)은 고지대에서만, 고지대에선 더 자주
     const inHigh = G.world.highOpen() && p.y < (G.world.HIGH_ROWS + 1) * TILE;
-    let cands = G.data.all('bugs').filter((sp) => available(sp, month, hour) && (!sp.high || inHigh));
+    let cands = G.data.all('bugs').filter((sp) => available(sp, month, hour) && (!sp.high || inHigh) && !sp.cloud);
     if (wx.type === 'rain' || wx.type === 'snow') cands = cands.filter((sp) => sp.loc !== 'air' && sp.loc !== 'flower');
     if (!cands.length) return;
     const dream = G.mail ? G.mail.dreamSpecies() : '';
@@ -72,7 +72,7 @@
       // 물 한가운데(사방이 물)만
       if (![[0, 1], [1, 0], [-1, 0], [0, -1]].every(([dx, dy]) => W.isWater(W.tile(tx + dx, ty + dy)))) continue;
       if (Math.abs(tx - ptx) < 2 && Math.abs(ty - pty) < 2) continue;
-      const cands = G.data.all('fish').filter((f) => f.loc === wk && available(f, month, hour));
+      const cands = G.data.all('fish').filter((f) => f.loc === wk && available(f, month, hour) && !f.cloud);
       if (!cands.length) return;
       const dream = G.mail ? G.mail.dreamSpecies() : '';
       const sp = u.pickW(cands.map((s) => ({ s, w: TIER_W[s.tier] * (s.rare || 1) * (dream === 'fish:' + s.id ? 6 : 1) * (G.skills ? G.skills.rareMul('fish', s.tier) : 1) })), R()).s;
