@@ -5,26 +5,27 @@
   const list = [];
 
   // ---------- 상주 주민 정의 (r2-재미 1-4) ----------
-  // sched: [시작, 끝, 장소] — 장소: home·plaza·oak·pond·river·beach·garden·stroll(마을 산책). 목록 밖 시간은 잠
+  // sched: [시작, 끝, 장소] — 장소: home·plaza·oak·pond·river·beach·garden·stroll(마을 산책)·far(이웃마다 다른 마을 바깥 방향)·hill(고지대, 닫혀 있으면 far). 목록 밖 시간은 잠
+  // v0.16.3 오너: "아직도 가운데 다 있다" → 광장·큰 나무는 하루 2시간 이하, 자리도 이웃마다 둘레에 흩어 앉기
   // 오너: "애들이 계속 가운데 뭉쳐 있다" → 광장 일정을 줄이고 산책을 넣음, 강·연못·바닷가 자리는 이웃마다 다르게
   const VILLAGERS = {
     ddalang: { name: '딸랑', species: 'rabbit', pers: '햇살', catch: '랄랄', bday: '03-21', plot: 'house1', look: { body: '#fff6f2' }, heart: '#ff8fb1',
-      sched: [[6, 9, 'home'], [9, 13, 'plaza'], [13, 17, 'oak'], [17, 22, 'stroll']], tool: null },
+      sched: [[6, 9, 'home'], [9, 11, 'plaza'], [11, 15, 'far'], [15, 18, 'garden'], [18, 22, 'stroll']], tool: null },
     sogeum: { name: '소금', species: 'otter', pers: '엉뚱', catch: '퐁당', bday: '07-14', plot: 'house2', look: { scarf: '#7fc6e8' }, heart: '#6fa8c9',
       sched: [[7, 11, 'river'], [11, 15, 'pond'], [15, 20, 'beach'], [20, 23, 'home']], tool: 'rod' },
     lime: { name: '라임', species: 'cat', pers: '새침', catch: '흥칫', bday: '08-30', plot: 'house3', look: { scarf: '#b8e68f' }, heart: '#9bc94a',
-      sched: [[8, 12, 'garden'], [12, 16, 'stroll'], [16, 20, 'oak'], [20, 24, 'garden']], tool: 'net' },
+      sched: [[8, 11, 'garden'], [11, 15, 'stroll'], [15, 18, 'far'], [18, 20, 'oak'], [20, 24, 'garden']], tool: 'net' },
     // moveIn: 이사 후 며칠째에 입주하는가 (r2-재미 §3-2: 쫑알 D2, 단추 D3)
     jjongal: { name: '쫑알', species: 'squirrel', pers: '수다', catch: '도토독', bday: '10-05', plot: 'house4', look: { scarf: '#ffd24d' }, heart: '#e09a56', moveIn: 1,
-      sched: [[7, 11, 'plaza'], [11, 15, 'stroll'], [15, 19, 'river'], [19, 22, 'oak']], tool: null },
+      sched: [[7, 9, 'plaza'], [9, 13, 'far'], [13, 15, 'stroll'], [15, 19, 'river'], [19, 22, 'hill']], tool: null },
     hotteok: { name: '호떡', species: 'bear', pers: '씩씩', catch: '후끈', bday: '01-09', plot: 'house6', look: { scarf: '#ff8a7a' }, heart: '#c08a5e', moveIn: 3,
-      sched: [[5, 9, 'beach'], [9, 13, 'stroll'], [13, 17, 'river'], [17, 21, 'plaza']], tool: null },
+      sched: [[5, 9, 'beach'], [9, 13, 'far'], [13, 17, 'river'], [17, 19, 'plaza'], [19, 21, 'stroll']], tool: null },
     mungchi: { name: '뭉치', species: 'hamster', pers: '뒹굴', catch: '말랑', bday: '11-11', plot: 'house7', look: { scarf: '#b8e68f' }, heart: '#ffd7a0', moveIn: 5,
-      sched: [[10, 13, 'home'], [13, 16, 'oak'], [16, 19, 'plaza'], [19, 21, 'home']], tool: null },
+      sched: [[10, 13, 'home'], [13, 15, 'oak'], [15, 19, 'far'], [19, 21, 'home']], tool: null },
     mongsil: { name: '몽실', species: 'sheep', pers: '꿈꾸미', catch: '포슬', bday: '04-17', plot: 'house8', look: { scarf: '#c9b3ff' }, heart: '#c9b3ff', moveIn: 7,
-      sched: [[7, 10, 'oak'], [10, 14, 'pond'], [14, 18, 'stroll'], [18, 23, 'garden']], tool: null },
+      sched: [[7, 10, 'hill'], [10, 14, 'pond'], [14, 18, 'far'], [18, 23, 'garden']], tool: null },
     danchu: { name: '단추', species: 'penguin', pers: '꼼꼼', catch: '단정', bday: '06-02', plot: 'house5', look: { bow: '#ff6b6b' }, heart: '#46546a', moveIn: 2,
-      sched: [[6, 9, 'home'], [9, 13, 'plaza'], [13, 17, 'beach'], [17, 21, 'home']], tool: null },
+      sched: [[6, 9, 'home'], [9, 11, 'plaza'], [11, 13, 'stroll'], [13, 17, 'beach'], [17, 21, 'home']], tool: null },
   };
   const LV = [0, 5, 15, 35, 70]; // 하트 1~4 문턱
   // 좋아하는 선물: 아이템 id 또는 'cat:<분류>'
@@ -84,6 +85,15 @@
         n.spots = Object.assign({ home }, spots, { river: pickOf(spots.rivers, 1) || spots.river, pond: pickOf(spots.ponds, 2) || spots.pond, beach: pickOf(spots.beaches, 3) || spots.beach, walk: spots.walk });
         // 라임의 정원 = 집 근처 꽃밭
         n.spots.garden = nearestObj(m, 'flower', Math.floor(home.x / TILE), Math.floor(home.y / TILE)) || home;
+        // 광장·큰 나무: 한 점에 모이지 않게 이웃마다 둘레의 다른 자리
+        const idx = Object.keys(VILLAGERS).indexOf(id), ang = idx * Math.PI * 2 / 8 + 0.3;
+        const ring = (c, rr) => standNear(c.x + Math.cos(ang) * rr * TILE, c.y + Math.sin(ang) * rr * TILE, n.r) || c;
+        n.spots.plaza = ring(spots.plaza, 4); n.spots.oak = ring(spots.oak, 3);
+        // 마을 바깥쪽: 광장에서 18칸 넘게 떨어진 자리 중 이웃마다 다른 방향(±70°)
+        const far = spots.walk.filter((q) => Math.hypot(q.tx - m.plaza.x, q.ty - m.plaza.y) >= 18);
+        const diff = (q) => { let d = Math.atan2(q.ty - m.plaza.y, q.tx - m.plaza.x) - ang; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return Math.abs(d); };
+        const sec = far.filter((q) => diff(q) < 1.2);
+        n.spots.far = sec.length >= 3 ? sec : far.length ? far : spots.walk;
         // 처음 놓일 때 지금 활동 장소 근처로
         const a = N.activity(n); if (a && a.ax) { const p = standNear(a.ax, a.ay, n.r); if (p) { n.x = p.x; n.y = p.y; n.tx = n.x; n.ty = n.y; } }
         list.push(n);
@@ -98,6 +108,15 @@
       if (!slot) return { act: 'sleep' };
       const where = slot[2];
       // 산책: 마을 곳곳의 걸을 수 있는 자리를 하나씩 들렀다 간다 (닿거나 1분 지나면 다음 자리)
+      // 마을 바깥·고지대: 그 근처를 천천히 돌아다니며 머문다 (닿거나 45초 지나면 다음 자리)
+      if (where === 'far' || where === 'hill') {
+        const L = where === 'hill' && G.world.highOpen && G.world.highOpen() && n.spots.hill && n.spots.hill.length ? n.spots.hill : n.spots.far;
+        if (L && L.length) {
+          const now = G.game ? G.game.t : 0;
+          if (!n.roam || n.roamL !== L || u.dist(n.x, n.y, n.roam.x, n.roam.y) < TILE * 1.2 && now - (n.roamAt || 0) > 20 || now - (n.roamAt || 0) > 45) { n.roam = L[Math.floor(Math.random() * L.length)]; n.roamL = L; n.roamAt = now; }
+          return { act: where, ax: n.roam.x, ay: n.roam.y, r: 2.5 };
+        }
+      }
       if (where === 'stroll' && n.spots.walk && n.spots.walk.length) {
         const now = G.game ? G.game.t : 0;
         if (!n.stroll || u.dist(n.x, n.y, n.stroll.x, n.stroll.y) < TILE * 1.5 || now - (n.strollAt || 0) > 60) { n.stroll = n.spots.walk[Math.floor(Math.random() * n.spots.walk.length)]; n.strollAt = now; }
@@ -373,7 +392,10 @@
       }
       if ((t === G.TERR.GRASS || t === G.TERR.PATH) && x % 6 === 0 && y % 6 === 0 && W.walkableTile(x + 1, y) && W.walkableTile(x, y + 1)) walk.push(at);
     }
-    Object.assign(out, { rivers, ponds, beaches, walk });
+    // 고지대 자리 (열린 뒤에만 쓴다)
+    const hill = [];
+    for (let y = 3; y < W.HIGH_ROWS - 1; y += 4) for (let x = 4; x < m.w - 4; x += 5) if (W.tile(x, y) === G.TERR.HIGH && W.tile(x + 1, y) === G.TERR.HIGH && W.tile(x, y + 1) === G.TERR.HIGH) hill.push({ x: x * TILE + 16, y: y * TILE + 16, tx: x, ty: y });
+    Object.assign(out, { rivers, ponds, beaches, walk, hill });
     return out;
   }
 

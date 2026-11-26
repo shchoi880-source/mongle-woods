@@ -1,6 +1,6 @@
 // 서비스 워커: 설치를 마친 한 버전의 파일끼리 사용해 오프라인에서도 실행한다.
 const CACHE_PREFIX = 'mongle-';
-const CACHE = CACHE_PREFIX + '0.16.2-refresh-1';
+const CACHE = CACHE_PREFIX + '0.16.3-keys-1';
 const FILES = [
   './', 'index.html', 'manifest.webmanifest', 'icons/icon.svg', 'css/ui.css', 'fonts/jua-subset.woff2',
   'js/scenery.js', 'assets/scenery/materials.webp', 'assets/scenery/details.webp', 'assets/scenery/buildings.webp', 'assets/scenery/trees.webp', 'assets/scenery/props.webp', 'assets/scenery/title.jpg',

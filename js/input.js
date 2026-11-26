@@ -20,7 +20,15 @@
   let runHold = 0;
   const STICK_R = 56;
 
+  // 달리기·살금 고정 (오너: 아이콘으로 고르고 단축키도 보이게) — 다시 누르면 보통 걸음
+  I.modeLock = null;
+  I.toggleMode = (m) => { I.modeLock = I.modeLock === m ? null : m; G.audio && G.audio.sfx('tap'); G.emit('input:mode', { lock: I.modeLock }); };
+  // 키보드·마우스로 하는 중이면 화면에 단축키를 보여 준다 (미디어쿼리만으론 터치 되는 노트북 PC에서 안 보였다)
+  const kb = (on) => document.documentElement.classList.toggle('kb', on);
   I.init = (canvas) => {
+    kb(typeof matchMedia !== 'undefined' && matchMedia('(any-pointer: fine)').matches && !matchMedia('(pointer: coarse)').matches);
+    addEventListener('pointerdown', (e) => { if (e.pointerType === 'mouse') kb(true); else kb(false); }, true);
+    addEventListener('keydown', () => kb(true), true);
     addEventListener('pointerdown', (e) => { I.lastTouch = e.pointerType === 'touch' || e.pointerType === 'pen'; if (I.lastTouch) I.lastKey = false; }, true);
     addEventListener('keydown', (e) => {
       if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
@@ -32,6 +40,8 @@
         else if (TOOL_KEYS.has(e.code)) I.emit('tool');
         else if (e.code === 'Tab' || e.code === 'KeyI' || e.code === 'KeyB') { I.emit('menu'); e.preventDefault(); }
         else if (e.code === 'KeyM') I.emit('map');
+        else if (e.code === 'KeyR') I.toggleMode('run');
+        else if (e.code === 'KeyC') I.toggleMode('sneak');
         else if (e.code === 'KeyT' || e.code === 'Slash') { I.emit('chat'); e.preventDefault(); }
         else if (e.code === 'Escape' || e.code === 'Backspace') I.emit('back');
       }
@@ -79,6 +89,7 @@
       // 달리기: 기울기 ≥ 92%를 250ms 유지, < 70%면 복귀
       if (mag >= 0.92) runHold += dt; else if (mag < 0.7) runHold = 0;
       mode = runHold >= 0.25 ? 'run' : mag < 0.45 ? 'sneak' : 'walk';
+      if (I.modeLock && mag > 0.12) mode = I.modeLock; // 달리기·살금 버튼을 켜 두면 조이스틱 기울기와 상관없이
     } else {
       const k = I.keys;
       if (k.has('ArrowUp') || k.has('KeyW')) y -= 1;
@@ -87,7 +98,7 @@
       if (k.has('ArrowRight') || k.has('KeyD')) x += 1;
       const len = Math.hypot(x, y);
       if (len) { x /= len; y /= len; mag = 1; }
-      mode = (k.has('ShiftLeft') || k.has('ShiftRight')) ? 'run' : (k.has('KeyC') || k.has('ControlLeft')) ? 'sneak' : 'walk';
+      mode = (k.has('ShiftLeft') || k.has('ShiftRight')) ? 'run' : k.has('ControlLeft') ? 'sneak' : (I.modeLock || 'walk');
       runHold = 0;
     }
     if (I.locked()) { x = 0; y = 0; mag = 0; }
