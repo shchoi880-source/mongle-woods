@@ -114,12 +114,36 @@
     if (P('museum2')) b('museum2', '🦴', G.museum.isOpen() ? '조약돌 박물관' : '박물관 (내일 개관)');
     if (P('oak')) add(P('oak').x + 1, P('oak').y + 1, '🌳', '할아버지 참나무 (광장)', 'bld');
     for (const [id, v] of Object.entries(G.npc.VILLAGERS)) { const p = P(v.plot); if (p && G.npc.isResident(id)) add(p.x + p.w / 2, p.y + p.h / 2, '🏡', `${G.npc.st[id].met ? v.name : '???'}의 집`, 'home'); }
+    // 고지대 계단·고지대 (2026-11)
+    if (m.stairs) for (const s of m.stairs) add(s.x + 0.5, s.y + 0.5, G.world.highOpen() ? '🪜' : '⛔', G.world.highOpen() ? '고지대 계단' : '고지대 계단 (아직 닫힘)', 'stairs');
+    if (G.world.highOpen() && m.stairs && m.stairs[1]) add(m.stairs[1].x + 0.5, Math.max(4, m.stairs[1].y - 8), '⛰️', '북쪽 고지대', 'bld');
+    // 바닷가: 광장에서 가장 가까운 모래사장
+    if (!MP._beach || MP._beach.seed !== m.seed) { let best = null, bd = 1e9; for (let y = G.world.HIGH_ROWS; y < m.h - 1; y++) for (let x = 2; x < m.w - 2; x++) if (G.world.tile(x, y) === G.TERR.SAND && G.world.tile(x, y + 1) === G.TERR.SEA) { const d = (x - m.plaza.x) ** 2 + (y - m.plaza.y) ** 2; if (d < bd) { bd = d; best = { x, y }; } } MP._beach = { seed: m.seed, p: best }; }
+    if (MP._beach.p) add(MP._beach.p.x + 0.5, MP._beach.p.y + 0.5, '🏖️', '바닷가', 'bld');
     for (const o of m.objs) if (o.kind === 'lantern') add(o.tx + 0.5, o.ty + 0.5, o.n <= G.lantern.count() ? '🏮' : '•', `${o.n}번 등불 기둥${o.n <= G.lantern.count() ? ' (켜짐)' : ''}`, 'lantern');
     if (G.tide && G.tide.low()) for (const p of G.tide.pools) if (p.sp && !G.world.isTaken(p.id)) add(p.tx + 0.5, p.ty + 0.5, '💧', '조수 웅덩이 (썰물)', 'pool');
     for (const n of G.npc.list) { if (!n.vis || n.id === 'todak' || n.id === 'tosil') continue; const v = G.npc.VILLAGERS[n.id]; const met = !v || G.npc.st[n.id].met; add(n.x / TILE, n.y / TILE, 'npc', met ? n.name : '??? (새 이웃)', 'npc'); out[out.length - 1].col = v ? v.heart : '#c98e5a'; out[out.length - 1].label = met ? n.name.slice(0, 2) : '?'; }
     return out;
   }
 
+  MP.teleport = (tx, ty) => {
+    const W = G.world, pl = G.player, GM = G.game;
+    if ((G.house && G.house.inside) || (G.museumHall && G.museumHall.inside) || (G.villaHome && G.villaHome.inside)) { G.ui.toast('순간이동은 밖에서 할 수 있어요.', { icon: '✨' }); return false; }
+    if (G.net && G.net.guest) { G.ui.toast('친구 마을에서는 순간이동을 할 수 없어요.', { icon: '✨' }); return false; }
+    // 장소 바로 앞(아래쪽)에서 설 수 있는 가장 가까운 칸
+    let best = null, bd = 1e9;
+    for (let y = Math.floor(ty) - 4; y <= Math.floor(ty) + 6; y++) for (let x = Math.floor(tx) - 5; x <= Math.floor(tx) + 5; x++) {
+      const px = x * TILE + 16, py = y * TILE + 18; if (!W.canStand(px, py, pl.r)) continue;
+      const d = (x + 0.5 - tx) ** 2 + (y + 0.5 - ty - 2) ** 2; if (d < bd) { bd = d; best = [px, py]; }
+    }
+    if (!best) { G.ui.toast('거기엔 내릴 자리가 없어요.', { icon: '✨' }); return false; }
+    if (GM.autoStop) GM.autoStop('tp'); if (G.fishing.state !== 'idle') G.fishing.cancel(true); if (G.ranch) G.ranch.dismount();
+    if (GM.sparkle) GM.sparkle(pl.x, pl.y - 20, 12, '#cfe8ff');
+    pl.x = best[0]; pl.y = best[1]; pl.dir = 0; if (G.cam.follow) G.cam.follow(pl.x, pl.y, 0, true);
+    if (GM.sparkle) setTimeout(() => GM.sparkle(pl.x, pl.y - 20, 14, '#fff6a8'), 60);
+    G.audio.sfx('chime'); G.emit('player:teleport', {});
+    return true;
+  };
   MP.open = () => {
     const m = G.world.map; if (!m) return;
     const obj = MP.objective();
@@ -127,7 +151,7 @@
       // 확대·축소·이동(오너 요청): 손가락 두 개로 벌리기/오므리기, 끌어서 이동, PC는 휠·＋－ 버튼. 장소를 누르면 「여기로 가기」
       const wrap = document.createElement('div'); wrap.className = 'mapwrap';
       const cv = document.createElement('canvas'); cv.className = 'mapcv';
-      const y0 = G.world.HIGH_ROWS - 4;
+      const y0 = G.world.highOpen() ? 0 : G.world.HIGH_ROWS - 4;
       const W = m.w, H = m.h - y0, S = 12;
       cv.width = W * S; cv.height = H * S;
       const g = cv.getContext('2d');
@@ -139,9 +163,15 @@
         b.onclick = () => { if (G.game.autoGo(k.tx, k.ty, k.short || '')) { G.audio.sfx('tap'); close(); } else G.ui.toast('거기로 가는 길을 찾지 못했어요.', { icon: '🚧' }); };
         return b;
       };
+      // 순간이동 (오너: 지역마다 텔레포트) — 건물·장소 표시만. 밖에서, 내 마을에서
+      const tpBtn = (k) => {
+        const b = document.createElement('button'); b.className = 'btn small'; b.textContent = '✨ 순간이동';
+        b.onclick = () => { if (MP.teleport(k.tx, k.ty)) close(); };
+        return b;
+      };
       const showInfo = () => {
         info.innerHTML = '';
-        if (sel) { const t = document.createElement('b'); t.textContent = sel.name; info.append(t); if (!sel.me) info.append(' ', goBtn(sel)); return; }
+        if (sel) { const t = document.createElement('b'); t.textContent = sel.name; info.append(t); if (!sel.me) { info.append(' ', goBtn(sel)); if (sel.kind === 'bld' || sel.kind === 'home' || (sel.kind === 'stairs' && G.world.highOpen())) info.append(' ', tpBtn(sel)); } return; }
         if (obj) {
           const t = document.createElement('span'); t.innerHTML = `<b>📌 지금 할 일</b> ${obj.text}${obj.pos ? ' <span class="muted">(⭐ 위치)</span>' : ' <span class="muted">(어디서든 할 수 있어요)</span>'}`; info.append(t);
           if (obj.pos) info.append(' ', goBtn({ tx: obj.pos.x / TILE, ty: obj.pos.y / TILE, short: '목적지' }));
@@ -233,7 +263,7 @@
       ctr.append(mkb('＋', () => zoomAt(view.z * 1.4, wrap.clientWidth / 2, wrap.clientHeight / 2), '확대'), mkb('－', () => zoomAt(view.z / 1.4, wrap.clientWidth / 2, wrap.clientHeight / 2), '축소'), mkb('📍', () => { const p = meXY(); centerOn(p.x, p.y, Math.max(view.z, fitZ() * 2.5)); }, '내 위치'), mkb('🗺️', () => { view.z = fitZ(); clamp(); }, '전체 보기'));
       wrap.append(cv, ctr);
       const legend = document.createElement('div'); legend.className = 'muted small maplegend';
-      legend.textContent = (G.input.isTouch() || (globalThis.matchMedia && matchMedia('(pointer: coarse)').matches) ? '두 손가락으로 확대·축소, 끌어서 이동' : '휠·＋－로 확대·축소, 끌어서 이동') + ' · 표시나 땅을 누르고 「여기로 가기」 · 🏪 상점 · 📮 우체국 · 🏠 내 집 · 🦴 박물관 · 🏡 이웃 집 · 🌳 광장 · 🏮 등불 · 💧 웅덩이 · 분홍 = 나';
+      legend.textContent = (G.input.isTouch() || (globalThis.matchMedia && matchMedia('(pointer: coarse)').matches) ? '두 손가락으로 확대·축소, 끌어서 이동' : '휠·＋－로 확대·축소, 끌어서 이동') + ' · 표시나 땅을 누르고 「여기로 가기」 · 🏪 상점 · 📮 우체국 · 🏠 내 집 · 🦴 박물관 · 🏡 이웃 집 · 🌳 광장 · 🏮 등불 · 💧 웅덩이 · 🪜 고지대 계단 · 건물·장소는 ✨ 순간이동 · 분홍 = 나';
       body.append(wrap, info, legend);
     }, { wide: true });
   };

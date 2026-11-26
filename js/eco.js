@@ -24,12 +24,12 @@
       const ang = R() * Math.PI * 2, d = 5 + R() * 9;
       const tx = Math.round(ptx + Math.cos(ang) * d), ty = Math.round(pty + Math.sin(ang) * d);
       const t = W.tile(tx, ty), o = W.objAtTile(tx, ty);
-      const grassy = t === G.TERR.GRASS || t === G.TERR.PATH;
+      const grassy = t === G.TERR.GRASS || t === G.TERR.PATH || (t === G.TERR.HIGH && W.highOpen());
       if (loc === 'flower' && o && o.kind === 'flower') return [tx, ty, 0];
       if (loc === 'air' && grassy && !o) return [tx, ty, 14];
       if (loc === 'ground' && grassy && !o) return [tx, ty, 0];
       if (loc === 'rock') { for (const [dx, dy] of [[0, 1], [1, 0], [-1, 0]]) { const r = W.objAtTile(tx + dx, ty + dy); if (r && r.kind === 'rock' && W.walkableTile(tx, ty)) return [tx, ty, 0]; } }
-      if (loc === 'tree' && o && (o.kind === 'tree' || o.kind === 'fruit') && !o.deco) return [tx, ty, 22, o];
+      if (loc === 'tree' && o && (o.kind === 'tree' || o.kind === 'fruit') && (!o.deco || (W.highOpen() && o.ty < W.HIGH_ROWS))) return [tx, ty, 22, o];
       if (loc === 'water' && grassy && !o && [[0, 1], [1, 0], [-1, 0], [0, -1]].some(([dx, dy]) => W.isWater(W.tile(tx + dx, ty + dy)))) return [tx, ty, 10];
       if (loc === 'lamp' && o && o.kind === 'lamp') return [tx, ty + 1, 26];
       // 물 위(물가에서 한 칸 안쪽): 잠자리채가 닿는 거리
@@ -42,11 +42,13 @@
     const month = G.time.month(), hour = G.time.hour();
     const wx = G.weather.now();
     const R = Math.random;
-    let cands = G.data.all('bugs').filter((sp) => available(sp, month, hour));
+    // 고지대 곤충(high)은 고지대에서만, 고지대에선 더 자주
+    const inHigh = G.world.highOpen() && p.y < (G.world.HIGH_ROWS + 1) * TILE;
+    let cands = G.data.all('bugs').filter((sp) => available(sp, month, hour) && (!sp.high || inHigh));
     if (wx.type === 'rain' || wx.type === 'snow') cands = cands.filter((sp) => sp.loc !== 'air' && sp.loc !== 'flower');
     if (!cands.length) return;
     const dream = G.mail ? G.mail.dreamSpecies() : '';
-    const sp = u.pickW(cands.map((s) => ({ s, w: TIER_W[s.tier] * (s.rare || 1) * (dream === 'bug:' + s.id ? 6 : 1) })), R()).s;
+    const sp = u.pickW(cands.map((s) => ({ s, w: TIER_W[s.tier] * (s.rare || 1) * (dream === 'bug:' + s.id ? 6 : 1) * (s.high ? 4 : 1) })), R()).s;
     const spot = findSpot(sp.loc, p.x, p.y, R); if (!spot) return;
     const [tx, ty, alt, obj] = spot;
     const v = G.rollVariant(R(), { night: G.time.isNight(), wet: wx.type !== 'clear' && wx.type !== 'cloudy', golden: G.lantern && G.lantern.golden() });

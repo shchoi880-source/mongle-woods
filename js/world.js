@@ -279,7 +279,31 @@
       const m = generateValid(seed);
       W.map = m; state.seed = m.seed;
       W.index();
+      W.highland(m);
       return m;
+    },
+    // 고지대 준비 (지도 생성 뒤, 결정적): 절벽 계단 3곳 + 고지대 꽃밭·바위 (물체 목록 끝에 붙여 기존 번호는 그대로)
+    highland(m) {
+      if (m.stairs) return;
+      const at = (x, y) => W.tile(x, y), seed = m.seed;
+      m.stairs = [];
+      for (const fx of [0.22, 0.5, 0.78]) {
+        let best = null;
+        for (let d = 0; d < 20 && !best; d++) for (const s of [1, -1]) {
+          const x = Math.round(m.w * fx) + d * s; if (x < 3 || x > m.w - 4) continue;
+          for (let y = HIGH_ROWS - 4; y < HIGH_ROWS + 5; y++) if (at(x, y) === T.CLIFF && at(x, y - 1) === T.HIGH && (at(x, y + 1) === T.GRASS || at(x, y + 1) === T.PATH) && !W.objAtTile(x, y + 1) && !(m.fall && m.fall.x === x)) { best = { x, y }; break; }
+          if (best) break;
+        }
+        if (best) m.stairs.push(best);
+      }
+      const used = new Set(m.objs.filter((o) => o.ty < HIGH_ROWS + 2).map((o) => o.tx + ',' + o.ty));
+      for (let y = 2; y < HIGH_ROWS - 1; y++) for (let x = 2; x < m.w - 2; x++) {
+        if (at(x, y) !== T.HIGH || used.has(x + ',' + y) || m.stairs.some((s) => Math.abs(s.x - x) < 2 && Math.abs(s.y - y) < 3)) continue;
+        const f = u.hashf(seed, x, y, 91), n = (Math.sin(x * 0.35 + seed % 7) + Math.cos(y * 0.42 + seed % 5)) * 0.5;
+        if (n > 0.55 && f < 0.5) m.objs.push({ kind: 'flower', tx: x, ty: y, w: 1, h: 1, solid: false, var: Math.floor(u.hashf(seed, x, y, 92) * 4), high: true });
+        else if (f > 0.993) m.objs.push({ kind: 'rock', tx: x, ty: y, w: 1, h: 1, solid: true, high: true });
+      }
+      W.index();
     },
     index() {
       const m = W.map;
@@ -290,8 +314,13 @@
     tileAt(x, y) { return W.tile(Math.floor(x / TILE), Math.floor(y / TILE)); },
     objAtTile(tx, ty) { const m = W.map; if (tx < 0 || ty < 0 || tx >= m.w || ty >= m.h) return null; const i = W.objGrid[ty * m.w + tx]; return i >= 0 ? m.objs[i] : null; },
     isWater(t) { return t === T.WATER || t === T.SEA; },
+    // 북쪽 고지대 (2026-11 열기): 열리면 고지대 땅과 절벽 계단으로 걸어 다닌다
+    highOpen: () => !!state.high,
+    isStair: (tx, ty) => !!(W.map && W.map.stairs && W.map.stairs.some((s) => s.x === tx && s.y === ty)),
     walkableTile(tx, ty) {
-      const t = W.tile(tx, ty); if (!WALK.has(t)) return false;
+      const t = W.tile(tx, ty);
+      if (state.high && (t === T.HIGH || (t === T.CLIFF && W.isStair(tx, ty)))) { const o = W.objAtTile(tx, ty); return !(o && o.solid); }
+      if (!WALK.has(t)) return false;
       const o = W.objAtTile(tx, ty); if (o && o.solid) return false;
       return !(G.yard && G.yard.blocked(tx, ty)); // 마당에 놓은 가구
     },
@@ -355,10 +384,11 @@
       if (state.listsDay === day) return;
       state.listsDay = day;
       const m = W.map; const R = G.rng.stream(G.rng.KEYS.DAY, day, 1);
-      const grassFree = (tx, ty) => W.tile(tx, ty) === T.GRASS && !W.objAtTile(tx, ty);
+      const grassFree = (tx, ty) => (W.tile(tx, ty) === T.GRASS || (state.high && W.tile(tx, ty) === T.HIGH)) && !W.objAtTile(tx, ty);
       state.digs = [];
-      for (let k = 0, guard = 0; k < 4 && guard < 500; guard++) {
-        const tx = 3 + Math.floor(R() * (m.w - 6)), ty = HIGH_ROWS + 3 + Math.floor(R() * (m.h - HIGH_ROWS - 10));
+      const top = state.high ? 3 : HIGH_ROWS + 3;
+      for (let k = 0, guard = 0; k < (state.high ? 6 : 4) && guard < 800; guard++) {
+        const tx = 3 + Math.floor(R() * (m.w - 6)), ty = top + Math.floor(R() * (m.h - top - 7));
         if (!grassFree(tx, ty) || state.digs.some((d) => d.tx === tx && d.ty === ty)) continue;
         state.digs.push({ tx, ty, id: 'dig' + k }); k++;
       }
@@ -380,9 +410,9 @@
   G.save.section('world', {
     v: 1,
     def: () => ({ seed: 0, dailyDay: -1, taken: {}, shakes: {}, drops: [], firstBalloon: false }),
-    get: () => ({ seed: state.seed, dailyDay: state.dailyDay, taken: state.taken, shakes: state.shakes, drops: state.drops, firstBalloon: state.firstBalloon }),
+    get: () => ({ seed: state.seed, dailyDay: state.dailyDay, taken: state.taken, shakes: state.shakes, drops: state.drops, firstBalloon: state.firstBalloon, high: !!state.high }),
     set: (d) => {
-      state.seed = d.seed; state.taken = d.taken || {}; state.shakes = d.shakes || {}; state.drops = d.drops || []; state.firstBalloon = !!d.firstBalloon;
+      state.seed = d.seed; state.taken = d.taken || {}; state.shakes = d.shakes || {}; state.drops = d.drops || []; state.firstBalloon = !!d.firstBalloon; state.high = !!d.high;
       // 일일 목록(화석 자리·조개)은 시드·날짜에서 재생성하므로 저장하지 않는다
       state.dailyDay = d.dailyDay; state.listsDay = -1;
     },
