@@ -8,13 +8,13 @@
   // [가구, x, y, 색, 회전]
   const ROOMS = {
     ddalang: { wall: '#ffe6ee', wall2: '#ffd1e0', floor: ['#f6dcc0', '#efd0b0'], items: [['bed', 0, 2, 0], ['rug', 3, 4, 0], ['teddy', 2, 2, 0], ['floorlamp', 8, 2, 0], ['radio', 7, 2, 0], ['cake', 5, 2, 0], ['plant', 0, 6, 0], ['cushion', 4, 4, 0]] },
-    sogeum: { wall: '#dfeef8', wall2: '#c8e2f2', floor: ['#cfe0e8', '#c2d6e0'], items: [['aquarium', 0, 2, 0], ['desk', 6, 2, 0], ['globe', 8, 4, 0], ['shelf', 3, 2, 0], ['clock', 5, 2, 0], ['crate', 0, 6, 0], ['chair', 6, 3, 2]] },
-    lime: { wall: '#eef8e4', wall2: '#dff0d0', floor: ['#e8dcc8', '#e0d2bc'], items: [['sofa', 3, 2, 2], ['plant', 0, 2, 0], ['tree_pot', 8, 2, 0], ['starlamp', 2, 2, 2], ['rug', 3, 4, 2], ['wardrobe', 6, 2, 2], ['plant', 8, 6, 0]] },
-    jjongal: { wall: '#fff2d8', wall2: '#ffe6b8', floor: ['#e8c494', '#dfb888'], items: [['desk', 0, 2, 0], ['chair', 1, 3, 0], ['radio', 3, 2, 3], ['tv', 4, 2, 3], ['shelf', 6, 2, 0], ['globe', 8, 2, 0], ['crate', 8, 6, 0]] },
-    hotteok: { wall: '#f8e0d0', wall2: '#f0ccb8', floor: ['#d9a877', '#cf9c6a'], items: [['fireplace', 3, 2, 0], ['fridge', 0, 2, 2], ['stove', 1, 2, 0], ['table', 4, 4, 0], ['chair', 3, 4, 0], ['chair', 5, 4, 0], ['bench', 7, 2, 0]] },
+    sogeum: { wall: '#dfeef8', wall2: '#c8e2f2', floor: ['#cfe0e8', '#c2d6e0'], items: [['bed', 0, 3, 1], ['aquarium', 0, 2, 0], ['desk', 6, 2, 0], ['globe', 8, 4, 0], ['shelf', 3, 2, 0], ['clock', 5, 2, 0], ['crate', 0, 6, 0], ['chair', 6, 3, 2]] },
+    lime: { wall: '#eef8e4', wall2: '#dff0d0', floor: ['#e8dcc8', '#e0d2bc'], items: [['bed', 0, 3, 2], ['sofa', 3, 2, 2], ['plant', 0, 2, 0], ['tree_pot', 8, 2, 0], ['starlamp', 2, 2, 2], ['rug', 3, 4, 2], ['wardrobe', 6, 2, 2], ['plant', 8, 6, 0]] },
+    jjongal: { wall: '#fff2d8', wall2: '#ffe6b8', floor: ['#e8c494', '#dfb888'], items: [['bed', 8, 3, 0], ['desk', 0, 2, 0], ['chair', 1, 3, 0], ['radio', 3, 2, 3], ['tv', 4, 2, 3], ['shelf', 6, 2, 0], ['globe', 8, 2, 0], ['crate', 8, 6, 0]] },
+    hotteok: { wall: '#f8e0d0', wall2: '#f0ccb8', floor: ['#d9a877', '#cf9c6a'], items: [['bed', 8, 3, 1], ['fireplace', 3, 2, 0], ['fridge', 0, 2, 2], ['stove', 1, 2, 0], ['table', 4, 4, 0], ['chair', 3, 4, 0], ['chair', 5, 4, 0], ['bench', 7, 2, 0]] },
     mungchi: { wall: '#fff6dc', wall2: '#ffecc0', floor: ['#f2dcb8', '#ead2aa'], items: [['bed', 0, 2, 3], ['cushion', 3, 3, 3], ['cushion', 5, 4, 1], ['rug', 3, 4, 3], ['teddy', 8, 2, 3], ['lamp', 2, 2, 3], ['plant', 8, 6, 0]] },
     mongsil: { wall: '#e8e0ff', wall2: '#d8ccff', floor: ['#e6def4', '#ddd4ee'], items: [['bed', 8, 2, 4], ['starlamp', 7, 2, 4], ['piano', 0, 2, 0], ['rug', 3, 4, 4], ['cushion', 4, 4, 4], ['floorlamp', 3, 2, 4], ['globe', 0, 6, 0]] },
-    danchu: { wall: '#e4ecf4', wall2: '#d2dce8', floor: ['#c8d2dc', '#bec8d4'], items: [['desk', 0, 2, 0], ['chair', 1, 3, 0], ['clock', 3, 2, 0], ['shelf', 4, 2, 0], ['wardrobe', 7, 2, 1], ['bathtub', 7, 5, 1], ['plant', 0, 6, 0]] },
+    danchu: { wall: '#e4ecf4', wall2: '#d2dce8', floor: ['#c8d2dc', '#bec8d4'], items: [['bed', 8, 3, 1], ['desk', 0, 2, 0], ['chair', 1, 3, 0], ['clock', 3, 2, 0], ['shelf', 4, 2, 0], ['wardrobe', 7, 2, 1], ['bathtub', 7, 5, 1], ['plant', 0, 6, 0]] },
   };
   let RW = W * TILE, RH = H * TILE, ox = 0, oy = 0, PXr = 2, saved = null, guest = null;
   const form = (id) => G.house.FORMS.find((f) => f.id === id);
@@ -29,7 +29,9 @@
     const pl = G.player; saved = { x: pl.x, y: pl.y }; if (G.ranch) G.ranch.dismount(); G.fishing.cancel(true);
     VH.inside = true; VH.id = id;
     // 집에 있으면 안에서 만난다 (자는 중이면 침대 옆)
-    guest = home ? { id, kind: 'npc', species: v.species, look: v.look, x: act.act === 'sleep' ? 4.5 * TILE : 4.5 * TILE, y: 5 * TILE, dir: 0, seed: 1, sleep: act.act === 'sleep', walk: 0, moving: false, villager: true, name: v.name } : null;
+    guest = home ? { id, kind: 'npc', species: v.species, look: v.look, x: 4.5 * TILE, y: 5 * TILE, dir: 0, seed: 1, sleep: act.act === 'sleep', walk: 0, moving: false, villager: true, name: v.name } : null;
+    // 자는 중이면 침대(없으면 깔개)에 눕는다 (오너: 서서 자면서 나를 쳐다본다 ㅋㅋ)
+    if (guest && guest.sleep) { const bed = ROOMS[id].items.find((it) => it[0] === 'bed') || ROOMS[id].items.find((it) => it[0] === 'rug'); if (bed) { const f = form(bed[0]); guest.bed = bed; guest.x = (bed[1] + f.w / 2) * TILE; guest.y = (bed[2] + f.h / 2) * TILE; } }
     pl.x = (W / 2) * TILE; pl.y = RH - 8; pl.dir = 2;
     G.game.mover = move; G.scene.push('vhome'); G.audio.sfx('open');
     G.emit('npc:visit', { id });
@@ -37,7 +39,7 @@
   VH.exit = () => { const pl = G.player; VH.inside = false; G.game.mover = null; if (saved) { pl.x = saved.x; pl.y = saved.y + 8; } pl.dir = 0; if (G.game.unstick) G.game.unstick(); G.scene.pop(); G.audio.sfx('close'); G.ui.refreshHud(); };
   function blocked(x, y) {
     for (const it of ROOMS[VH.id].items) { const f = form(it[0]); if (!f || f.layer === 'rug') continue; const b = fpOf(it); if (x > it[1] * TILE - 4 && x < (it[1] + b.w) * TILE + 4 && y > it[2] * TILE + 2 && y < (it[2] + b.h) * TILE + 6) return true; }
-    if (guest && Math.hypot(x - guest.x, y - guest.y) < 14) return true;
+    if (guest && !guest.bed && Math.hypot(x - guest.x, y - guest.y) < 14) return true;
     return false;
   }
   function move(e, dx, dy) {
@@ -47,7 +49,7 @@
   }
   function target() {
     const pl = G.player, D4 = [[0, 1], [-1, 0], [0, -1], [1, 0]], [dx, dy] = D4[pl.dir], fx = pl.x + dx * 24, fy = pl.y + dy * 24 - 4;
-    if (guest && Math.hypot(fx - guest.x, fy - guest.y) < 22) return { guest };
+    if (guest && Math.hypot(fx - guest.x, fy - guest.y) < (guest.bed ? 30 : 22)) return { guest };
     for (const it of ROOMS[VH.id].items) { const f = form(it[0]); if (!f || f.layer === 'rug') continue; const b = fpOf(it); if (fx > it[1] * TILE - 4 && fx < (it[1] + b.w) * TILE + 4 && fy > it[2] * TILE - 6 && fy < (it[2] + b.h) * TILE + 10) return { it, f }; }
     return null;
   }
@@ -73,7 +75,7 @@
       G.ui.updateDialog(dt); G.ui.drawStick(G.input.stick);
       if (G.audio.music) G.audio.music.update();
       if (G.player.y > RH + 8) { VH.exit(); return; }
-      if (guest) guest.dir = G.npc.faceDir(G.player.x - guest.x, G.player.y - guest.y);
+      if (guest && !guest.sleep) guest.dir = G.npc.faceDir(G.player.x - guest.x, G.player.y - guest.y);
       const tg = target();
       if (G.ui.dialogOpen() || G.ui.open) G.ui.setAction('✋', '', '');
       else if (tg && tg.guest) G.ui.setAction(guest.sleep ? '💤' : '💬', guest.sleep ? '쉿' : '말 걸기', guest.name);
@@ -104,7 +106,23 @@
     // 가구 (러그 먼저) + 이웃 + 나 y정렬
     const draws = [];
     for (const it of R0.items) { const f = form(it[0]); if (!f) continue; const d = () => { ctx.save(); ctx.translate(it[1] * TILE, it[2] * TILE); G.house.drawFurn(ctx, { f: it[0], c: it[3] || 0, r: 0 }, f.w, f.h); ctx.restore(); }; if (f.layer === 'rug') d(); else draws.push({ sy: (it[2] + f.h) * TILE - 2, d }); }
-    if (guest) draws.push({ sy: guest.y, d: () => { A.actor.draw(ctx, guest, t); if (guest.sleep) { ctx.fillStyle = '#8a7aa8'; ctx.font = G.fontPx(11); ctx.fillText('z z Z', guest.x + 10, guest.y - 60 - Math.sin(t * 2) * 3); } } });
+    if (guest && guest.bed) {
+      // 누워서 자기: 침대 위에 옆으로 눕히고 이불을 덮는다. 숨 쉴 때마다 살짝 들썩
+      draws.push({ sy: (guest.bed[2] + form(guest.bed[0]).h) * TILE, d: () => {
+        // 세로 침대: 머리는 베개 위, 몸은 이불 속. 이불이 숨 쉴 때마다 살짝 들썩
+        const f = form(guest.bed[0]), bx = guest.bed[1] * TILE, by = guest.bed[2] * TILE, bw = f.w * TILE, bh = f.h * TILE;
+        const breath = Math.sin(t * 1.6);
+        ctx.save(); ctx.beginPath(); ctx.rect(bx - 6, by - 30, bw + 12, bh * 0.5 + 30); ctx.clip();
+        ctx.translate(bx + bw / 2, by + bh * 0.62); ctx.scale(0.62, 0.62);
+        A.actor.draw(ctx, Object.assign({}, guest, { x: 0, y: 0, dir: 0, moving: false }), 0);
+        ctx.restore();
+        const top = by + bh * 0.36 - breath * 0.8;
+        A.paint.rrect(ctx, bx + 2, top, bw - 4, by + bh - top - 3, 6, guest.bed[0] === 'bed' ? G.house.COLS[guest.bed[3] || 0] : 'rgba(255,240,220,0.95)', '#5b4636', 1.2);
+        ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.fillRect(bx + 5, top + 3, bw - 10, 3);
+        guest.zl = bx > RW / 2; guest.zx = guest.zl ? bx - 6 : bx + bw - 2; guest.zy = by + 4;
+        const k = (t * 0.5) % 1; ctx.globalAlpha = 1 - k; ctx.fillStyle = '#8a7aa8'; ctx.font = G.fontPx(9 + k * 5); ctx.fillText('Z', guest.zx + (guest.zl ? -6 - k * 10 : 4 + k * 10), guest.zy - 6 - k * 18); ctx.font = G.fontPx(8); ctx.fillText('z', guest.zx, guest.zy + 2); ctx.globalAlpha = 1;
+      } });
+    } else if (guest) draws.push({ sy: guest.y, d: () => { A.actor.draw(ctx, guest, t); } });
     draws.push({ sy: G.player.y, d: () => G.game.drawPlayer(ctx, t) });
     draws.sort((a, b) => a.sy - b.sy); for (const r of draws) r.d();
     // 이름표
