@@ -172,6 +172,16 @@
     }
     st.lastMin = now; if (changed) G.save.mark('farm');
   };
+  // 몽글 비료(별 가게): 심어 둔 작물이 반쯤 쑥 자란다
+  F.boost = () => {
+    let k = 0;
+    for (const p of st.plots) {
+      if (!p.crop) continue; const c = D.get('crops', p.crop); if (p.prog >= c.grow) continue;
+      p.gp = (p.gp === undefined ? (p.prog || 0) * GROW_MIN : p.gp) + Math.ceil(c.grow / 2) * GROW_MIN;
+      p.prog = Math.min(c.grow, Math.floor(p.gp / GROW_MIN)); if (p.prog >= c.grow) G.emit('farm:ripe', { crop: c.id }); k++;
+    }
+    if (k) G.save.mark('farm'); return k;
+  };
   F.stage = (p) => { if (!p.crop) return -1; const c = D.get('crops', p.crop); return p.prog >= c.grow ? 3 : p.prog === 0 ? 0 : p.prog / c.grow < 0.5 ? 1 : 2; };
   F.watered = (p) => (p.wet || 0) > G.time.pmin() || raining();
   // 다 자라기까지 남은 실제 분(촉촉하다는 가정)
@@ -234,7 +244,7 @@
       // 거대 작물: 12% ("잘 나오네" 정도, 오너 요청) + 8번 연속 안 나오면 다음은 확정
       const giant = (st.dry || 0) >= 8 || u.hashf(G.rng.seed, G.time.pmin(), p.tx, p.ty, st.harvested) < 0.12;
       st.dry = giant ? 0 : (st.dry || 0) + 1;
-      const n = giant ? 1 : 1 + (u.hashf(G.rng.seed, p.tx, p.ty, G.time.pmin(), st.harvested) < 0.35 ? 1 : 0);
+      const n = giant ? 1 : 1 + (u.hashf(G.rng.seed, p.tx, p.ty, G.time.pmin(), st.harvested) < (G.skills ? G.skills.farmExtra() : 0.35) ? 1 : 0);
       const x = giant ? { v: 1, size: Math.round(c.val / 10) } : null;
       if (!G.inv.canFit('crop:' + c.id, x)) { G.audio.sfx('error'); G.ui.toast('가방이 꽉 찼어요!', { icon: '🎒' }); return; }
       if (G.game.gain('crop:' + c.id, n, x, { msg: giant ? `거대 ${c.name}를 수확했다! 쫑알이 보면 1면감이야!` : `${c.name} ${n}개 수확!`, src: 'farm' })) {

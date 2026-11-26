@@ -169,7 +169,7 @@
       if (o.kind === 'lantern') return { kind: 'lantern', ref: o, icon: '🏮', label: G.lantern.ready(o.n) ? '불 켜기' : '살펴보기', name: `${o.n}번 등불 기둥` };
       if (o.kind === 'museum') return { kind: 'museum', ref: o, icon: '🦴', label: G.museum.isOpen() ? '들어가기' : '살펴보기', name: '조약돌 박물관' };
       if (o.kind === 'signboard') return { kind: 'read', ref: o, icon: '📜', label: '읽기', name: '표지판' };
-      if (o.kind === 'board') return { kind: 'board', ref: o, icon: '📌', label: '보기', name: '게시판' };
+      if (o.kind === 'board') return { kind: 'board', ref: o, icon: '📋', label: '의뢰 보기', name: '의뢰판' };
       if (o.kind === 'tent') return { kind: 'tent', ref: o, icon: '🏠', label: '들어가기', name: '내 ' + G.nest.cur().name };
       if (o.kind === 'mailbox') return { kind: 'mailbox', ref: o, icon: '📮', label: '열기', name: '우체통' };
       if (o.kind === 'house') { const v = G.npc.VILLAGERS[o.owner || 'ddalang']; return { kind: 'house', ref: o, icon: '🚪', label: '두드리기', name: `${v ? v.name : '이웃'}의 집` }; }
@@ -297,12 +297,7 @@
       case 'read': await G.ui.say([{ who: 'sys', text: G.museum.isOpen() ? '「조약돌 박물관」 — 화석 감정은 무료! 기증은 언제나 환영이래요.' : '「조약돌 박물관 — 내일 개관」 느림보 박사가 오는 중이래요. 조금 느려서….' }]); break;
       case 'lantern': await G.lantern.interact(tg.ref); break;
       case 'museum': if (G.museum.isOpen()) { if (G.museumHall) G.museumHall.enter('lobby'); else await G.museum.talk(); } else await G.ui.say([{ who: 'sys', text: '천막 입구에 「내일 아침 개관!」이라고 적혀 있어요. 박사님은 아직 오는 중인가 봐요.' }]); break;
-      case 'board': {
-        if (G.news.available()) { await G.news.open(); break; }
-        const tr = G.market.trend();
-        await G.ui.say([{ who: 'sys', text: `[몽글소식] 오늘의 유행 바람은 「${tr.name}」 쪽으로 분대요. 땅굴상점에서 조금 더 쳐 준대요.` }, { who: 'sys', text: '게시판 한쪽에 「신문 창간 예정! — 곧 이사 올 다람쥐 기자」라는 쪽지가 붙어 있어요.' }]);
-        break;
-      }
+      case 'board': await G.quests.open(); break;
       case 'tent': G.house.enter(); break;
       case 'mailbox': await G.mail.open(); break;
       case 'house': if (G.villaHome && tg.ref.owner && G.npc.isResident(tg.ref.owner)) await G.villaHome.enter(tg.ref.owner); else await G.ui.say([{ who: 'sys', text: '아직 아무도 살지 않는 집이에요. 곧 새 이웃이 이사 올 것 같아요.' }]); break;
@@ -671,6 +666,8 @@
         // 그림판 왼쪽 = 부지 왼쪽 - 16u. 두 칸짜리는 흔들림 축만 가운데로
         const pw = k === 'bench' || k === 'board' ? 2 : 1;
         R.push({ sy: foot - 4, draw: (c) => drawShaky(c, sp, bx + pw * 16, foot - 4, -16 - pw * 16, -76, o, 96, 80, 0.04) });
+        // 의뢰판: 건넬 수 있는 의뢰가 있으면 ⭐가 통통
+        if (k === 'board' && G.quests && G.quests.readySoon()) R.push({ sy: foot + 40, draw: (c) => { const yy = foot - 70 + Math.sin(GM.t * 4) * 3; c.fillStyle = '#fff8e6'; c.strokeStyle = '#d49a3a'; c.lineWidth = 2; c.beginPath(); c.arc(bx + 32, yy, 11, 0, 6.3); c.fill(); c.stroke(); c.font = G.fontPx(13); c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('⭐', bx + 32, yy + 1); c.textAlign = 'left'; c.textBaseline = 'alphabetic'; } });
       }
     }
   }
@@ -1078,6 +1075,12 @@
   G.on('quest:done', (p) => { G.wallet.add(300, 'quest'); G.ui.toast(`할 일 완료: ${p.text} (+300몽 · 첫날 ${G.quest.doneCount()}/${G.quest.CARDS.length})`, { icon: '✅', ms: 3000 }); G.audio.sfx('chime'); fxSparkle(pl.x, pl.y - 50, 8); });
   G.on('stamp:earn', (p) => { setTimeout(async () => { G.audio.sfx('stamp'); kongalReact('jump'); await G.ui.say([{ who: 'kongal', text: '꼬물꼬물! (오늘 멋졌어!)' }, { who: 'sys', text: p.id === 'daily' ? '오늘의 부탁을 모두 들어줬어요! 반짝 도장을 하나 받았어요.' : '반짝 도장을 하나 받았어요! 내일은 박물관이 문을 열고, 새 이웃도 온대요.' }]); }, 1400); });
   // 잡았을 때 손맛 (10차 회의): 빛 고리 + 꽃가루, 희귀·새 종·변이는 더 크게 + 살짝 흔들림
+  // 몽글소식 (의뢰판 아래 버튼)
+  GM.boardNews = async () => {
+    if (G.news.available()) { await G.news.open(); return; }
+    const tr = G.market.trend();
+    await G.ui.say([{ who: 'sys', text: `[몽글소식] 오늘의 유행 바람은 「${tr.name}」 쪽으로 분대요. 땅굴상점에서 조금 더 쳐 준대요.` }, { who: 'sys', text: '게시판 한쪽에 「신문 창간 예정! — 곧 이사 올 다람쥐 기자」라는 쪽지가 붙어 있어요.' }]);
+  };
   GM.celebrate = (x, y, big) => {
     const cols = ['#ff6b8b', '#ffd24d', '#7cc35a', '#4d96ff', '#c9b3ff', '#ff9a3a'];
     GM.fx.push({ x, y, vx: 0, vy: 0, t: 0, life: big ? 0.7 : 0.45, kind: 'ring', c: big ? '#ffe066' : '#ffffff', r: big ? 70 : 36 });

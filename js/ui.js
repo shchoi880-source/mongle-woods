@@ -367,13 +367,13 @@
   // 잎첩: 탭 4개
   UI.notebook = (tab = 'bag') => UI.modal('잎첩', (body, close, card) => {
     const tabs = $('div', 'tabs');
-    const TABS = [['bag', '🎒 가방'], ['me', '🪞 나'], ['friends', '👫 친구'], ['dex', '📖 도감'], ['folk', '🐾 이웃'], ['todo', '✅ 할 일'], ['set', '⚙️ 설정']];
+    const TABS = [['bag', '🎒 가방'], ['me', '🪞 나'], ['friends', '👫 친구'], ['dex', '📖 도감'], ['folk', '🐾 이웃'], ['todo', '✅ 할 일'], ['grow', '⭐ 성장'], ['set', '⚙️ 설정']];
     const pane = $('div', 'pane');
     const show = (id) => {
       tab = id; tabs.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.t === id));
       pane.innerHTML = '';
       if (UI._previewStop) { UI._previewStop(); UI._previewStop = null; }
-      ({ bag: bagPane, me: mePane, friends: friendsPane, dex: dexPane, folk: folkPane, todo: todoPane, set: setPane })[id](pane, close);
+      ({ bag: bagPane, me: mePane, friends: friendsPane, dex: dexPane, folk: folkPane, todo: todoPane, grow: growPane, set: setPane })[id](pane, close);
     };
     for (const [id, nm] of TABS) { const b = $('button', 'tab', nm); b.dataset.t = id; b.onclick = () => { G.audio.sfx('tap'); show(id); }; tabs.append(b); }
     const sto = tab === 'storage'; if (sto) tab = 'bag';
@@ -756,6 +756,23 @@
     pane.append(list);
   }
 
+  // ⭐ 성장: 숙련도 다섯 갈래 + 몽글 별
+  function growPane(pane, close) {
+    const S = G.skills; if (!S) return;
+    pane.append($('div', 'muted small', `하면 할수록 손이 익어요. 5레벨마다 축하 선물! (레벨 합 ${S.totalLv()}/${S.DEF.length * S.MAX})`));
+    for (const d of S.DEF) {
+      const lv = S.lv(d.id), max = lv >= S.MAX, need = S.need(lv), xp = S.xp(d.id);
+      const row = $('div', 'goalrow skrow');
+      row.innerHTML = `<div class="gr-top"><b></b><span>Lv.${lv}${max ? ' MAX' : ''}</span></div><div class="gbar"><i style="width:${max ? 100 : Math.min(100, xp / need * 100).toFixed(1)}%"></i></div><div class="gr-sub muted small"></div>`;
+      row.querySelector('b').textContent = `${d.icon} ${d.name} · ${S.title(d.id)}`;
+      row.querySelector('.gr-sub').textContent = `${S.perk(d.id)}${max ? '' : ` · 다음 레벨까지 ${G.fmt.num(need - xp)}`}`;
+      pane.append(row);
+    }
+    if (G.quests) {
+      const q = $('div', 'goalrow'); q.innerHTML = `<div class="gr-top"><b>⭐ 몽글 별</b><span>${G.quests.stars()}개</span></div><div class="muted small">광장 의뢰판에서 이웃 부탁을 들어주면 받아요. 별 가게에서 미끼·꿀 향수·행운·비료·옷으로 바꿀 수 있어요.</div>`;
+      pane.append(q);
+    }
+  }
   function todoPane(pane) {
     if (G.goals) { const gb = $('button', 'btn small', '🎯 큰 목표 한눈에 보기'); gb.onclick = () => { G.ui.open.close(); setTimeout(() => G.goals.open(), 50); }; pane.append(gb); }
     // 등불 (메타 목표)

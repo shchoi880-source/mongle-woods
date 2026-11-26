@@ -48,7 +48,7 @@
     if (wx.type === 'rain' || wx.type === 'snow') cands = cands.filter((sp) => sp.loc !== 'air' && sp.loc !== 'flower');
     if (!cands.length) return;
     const dream = G.mail ? G.mail.dreamSpecies() : '';
-    const sp = u.pickW(cands.map((s) => ({ s, w: TIER_W[s.tier] * (s.rare || 1) * (dream === 'bug:' + s.id ? 6 : 1) * (s.high ? 4 : 1) })), R()).s;
+    const sp = u.pickW(cands.map((s) => ({ s, w: TIER_W[s.tier] * (s.rare || 1) * (dream === 'bug:' + s.id ? 6 : 1) * (s.high ? 4 : 1) * (G.skills ? G.skills.rareMul('bug', s.tier) : 1) })), R()).s;
     const spot = findSpot(sp.loc, p.x, p.y, R); if (!spot) return;
     const [tx, ty, alt, obj] = spot;
     const v = G.rollVariant(R(), { night: G.time.isNight(), wet: wx.type !== 'clear' && wx.type !== 'cloudy', golden: G.lantern && G.lantern.golden() });
@@ -75,7 +75,7 @@
       const cands = G.data.all('fish').filter((f) => f.loc === wk && available(f, month, hour));
       if (!cands.length) return;
       const dream = G.mail ? G.mail.dreamSpecies() : '';
-      const sp = u.pickW(cands.map((s) => ({ s, w: TIER_W[s.tier] * (s.rare || 1) * (dream === 'fish:' + s.id ? 6 : 1) })), R()).s;
+      const sp = u.pickW(cands.map((s) => ({ s, w: TIER_W[s.tier] * (s.rare || 1) * (dream === 'fish:' + s.id ? 6 : 1) * (G.skills ? G.skills.rareMul('fish', s.tier) : 1) })), R()).s;
       const wx = G.weather.now();
       const v = G.rollVariant(R(), { night: G.time.isNight(), wet: wx.type !== 'clear' && wx.type !== 'cloudy', golden: G.lantern && G.lantern.golden() });
       const giant = v === 1;
