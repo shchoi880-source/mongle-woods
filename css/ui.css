@@ -406,3 +406,15 @@ input, select, textarea { font: inherit; color: var(--ink); }
 .qrow .btn[disabled] { opacity: .55; }
 .qsec { margin: 12px 0 6px; font-weight: 800; color: #7a5a3a; }
 .skrow .gr-top b { font-size: 14px; }
+
+/* PC 단축키 표시 (키보드·마우스로 할 때, html.kb) + 달리기·살금 버튼 */
+html.kb .hud-key { display: block; }
+html.kb .hud-target { bottom: calc(138px + var(--safe-b)); }
+.btn-map, .btn-menu { position: relative; }
+.hud-key.mini { position: absolute; left: 50%; bottom: -10px; transform: translateX(-50%); min-width: 0; padding: 2px 5px; font-size: 10px; border-bottom-width: 3px; pointer-events: none; }
+.hud-modes { display: flex; flex-direction: column; gap: 8px; align-self: flex-end; }
+.hud-modes .hud-control { flex-direction: row; gap: 5px; }
+.hud-modes .hud-key { order: -1; }
+.btn-mode { width: 44px; height: 44px; font-size: 20px; transition: transform .15s, background .15s; }
+.btn-mode.on { background: linear-gradient(150deg, #fff1c4, #ffd36b); border-color: #d49a3a; box-shadow: 0 0 0 3px rgba(255,200,90,.45), var(--shadow); transform: scale(1.06); }
+html.kb .dlg-next::before { content: 'Space'; display: inline-block; margin-right: 6px; padding: 1px 6px; border: 2px solid rgba(91,70,54,.22); border-bottom-width: 3px; border-radius: 6px; background: #fffaf1; color: var(--ink2); font: 700 10px/1.2 system-ui, sans-serif; vertical-align: 2px; }

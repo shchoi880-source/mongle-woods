@@ -1028,7 +1028,7 @@
       G.npc.pop(b, 'heart');
       await GM.introScript();
       b.x = b.homeX; b.y = b.homeY; b.dir = 0;
-      G.ui.hint(G.input.isTouch() ? '왼쪽 화면을 끌어서 걷기 · 노란 버튼으로 행동 · 🗺️ 지도' : '방향키/WASD 걷기 · Space 행동 · M 지도 · Tab 잎첩');
+      G.ui.hint(G.input.isTouch() ? '왼쪽 화면을 끌어서 걷기 · 노란 버튼으로 행동 · 🏃 달리기 · 🐾 살금' : '방향키/WASD 걷기 · Space 행동·대화 넘기기 · Q 도구 · R 달리기 · C 살금 · M 지도 · Tab 잎첩');
       setTimeout(() => G.ui.hint(''), 6000);
     } else if (!fresh) {
       const k = G.time.st.playDays;

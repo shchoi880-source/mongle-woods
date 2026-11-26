@@ -15,12 +15,14 @@
     const top = $('div', 'hud-top');
     hud.time = $('div', 'hud-time'); hud.money = $('div', 'hud-money');
     top.append(hud.time, hud.money);
-    hud.menu = $('button', 'btn-round btn-menu', '🍃'); hud.menu.title = '잎첩 (Tab)';
+    hud.menu = $('button', 'btn-round btn-menu', '🍃'); hud.menu.title = '잎첩 (Tab · I)';
     hud.menu.onclick = () => { press(hud.menu); G.input.emit('menu'); };
     hud.map = $('button', 'btn-round btn-map', '🗺️'); hud.map.title = '지도 (M)';
     hud.map.onclick = () => { press(hud.map); G.input.emit('map'); };
     hud.chat = $('button', 'btn-round btn-chat hidden', '💬'); hud.chat.title = '채팅 (Enter)';
     hud.chat.onclick = () => { press(hud.chat); UI.chat(); };
+    // PC 단축키 표시: 지도 M, 잎첩 Tab
+    for (const [b, k] of [[hud.map, 'M'], [hud.menu, 'Tab']]) b.append($('kbd', 'hud-key mini', k));
     top.append(hud.map, hud.menu);
     hud.log = $('div', 'chatlog'); hud.log.title = '눌러서 대화 전체 보기'; hud.log.onclick = () => UI.chat(); root.append(hud.log);
     G.on('net:change', () => UI.refreshNet());
@@ -41,7 +43,18 @@
     hud.act.addEventListener('pointerdown', (e) => { e.preventDefault(); press(hud.act); G.input.emit('act'); });
     const toolKey = $('div', 'hud-control'); toolKey.append(hud.tool, $('kbd', 'hud-key', 'Q'));
     const actKey = $('div', 'hud-control'); actKey.append(hud.act, $('kbd', 'hud-key', 'Space'));
-    br.append(hud.chat, toolKey, actKey);
+    // 달리기·살금 버튼 (누르면 고정, 다시 누르면 보통 걸음)
+    const modes = $('div', 'hud-modes');
+    hud.run = $('button', 'btn-round btn-mode', '🏃'); hud.run.title = '달리기 고정 (R · Shift 누르는 동안)';
+    hud.sneak = $('button', 'btn-round btn-mode', '🐾'); hud.sneak.title = '살금살금 고정 (C)';
+    hud.run.onclick = () => { press(hud.run); G.input.toggleMode('run'); };
+    hud.sneak.onclick = () => { press(hud.sneak); G.input.toggleMode('sneak'); };
+    const runKey = $('div', 'hud-control'); runKey.append(hud.run, $('kbd', 'hud-key', 'R'));
+    const sneakKey = $('div', 'hud-control'); sneakKey.append(hud.sneak, $('kbd', 'hud-key', 'C'));
+    modes.append(runKey, sneakKey);
+    const syncMode = () => { const l = G.input.modeLock; hud.run.classList.toggle('on', l === 'run'); hud.sneak.classList.toggle('on', l === 'sneak'); };
+    G.on('input:mode', (p) => { syncMode(); UI.toast(p.lock === 'run' ? '달리기 모드! 다시 누르면 보통 걸음' : p.lock === 'sneak' ? '살금살금 모드! 곤충·물고기가 덜 놀라요' : '보통 걸음', { icon: p.lock === 'run' ? '🏃' : p.lock === 'sneak' ? '🐾' : '🚶', ms: 1400 }); });
+    br.append(modes, hud.chat, toolKey, actKey);
     root.append(br);
     hud.target = $('div', 'hud-target'); root.append(hud.target);
     hud.stick = $('div', 'stick', '<div class="nub"></div>'); root.append(hud.stick);
