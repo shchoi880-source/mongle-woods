@@ -296,7 +296,7 @@
       }
       case 'read': await G.ui.say([{ who: 'sys', text: G.museum.isOpen() ? '「조약돌 박물관」 — 화석 감정은 무료! 기증은 언제나 환영이래요.' : '「조약돌 박물관 — 내일 개관」 느림보 박사가 오는 중이래요. 조금 느려서….' }]); break;
       case 'lantern': await G.lantern.interact(tg.ref); break;
-      case 'museum': if (G.museum.isOpen()) await G.museum.talk(); else await G.ui.say([{ who: 'sys', text: '천막 입구에 「내일 아침 개관!」이라고 적혀 있어요. 박사님은 아직 오는 중인가 봐요.' }]); break;
+      case 'museum': if (G.museum.isOpen()) { if (G.museumHall) G.museumHall.enter('lobby'); else await G.museum.talk(); } else await G.ui.say([{ who: 'sys', text: '천막 입구에 「내일 아침 개관!」이라고 적혀 있어요. 박사님은 아직 오는 중인가 봐요.' }]); break;
       case 'board': {
         if (G.news.available()) { await G.news.open(); break; }
         const tr = G.market.trend();
