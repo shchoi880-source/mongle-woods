@@ -613,6 +613,8 @@
         ctx.fillStyle = A.C.line; ctx.font = G.fontPx(10); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(G.npc.st[n.id] && !G.npc.st[n.id].met ? '?' : '!', n.x, hy - k + 0.5);
       }
     }
+    // 이웃 말풍선 (이웃끼리 수다 — 11차 회의)
+    for (const n of G.npc.list) if (n.vis && n.sayT > 0 && n.sayText) bubble(n.x, n.y - 70 - (n.species === 'rabbit' ? 10 : 0), n.sayText, Math.min(1, n.sayT * 3));
     if (pl.hold) drawHeld(t);
     if (kg.sayT > 0 && !G.ui.dialogOpen()) bubble(pl.x, pl.y - 74 - kg.jump, kg.say, Math.min(1, kg.sayT * 3));
     G.fishing.drawPost(ctx, pl);
