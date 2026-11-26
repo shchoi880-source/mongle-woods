@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>몽글숲 업데이트</title>
+  <style>
+    body { margin: 0; padding: 24px; min-height: 85dvh; display: grid; place-items: center; background: #f5ecda; color: #4e3d30; font: 16px/1.6 system-ui, sans-serif; }
+    main { max-width: 28rem; text-align: center; }
+    h1 { font-size: 1.5rem; }
+    a { color: #395b49; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>몽글숲 업데이트</h1>
+    <p id="status" role="status">새 버전을 확인하고 있어요.</p>
+    <a href="./">게임으로 돌아가기</a>
+  </main>
+  <script>
+    (async () => {
+      const workers = navigator.serviceWorker;
+      const status = document.getElementById('status');
+      const openGame = () => location.replace('./');
+      if (!workers) { openGame(); return; }
+      workers.addEventListener('controllerchange', openGame, { once: true });
+      const fail = () => {
+        workers.removeEventListener('controllerchange', openGame);
+        status.textContent = '인터넷 연결을 확인한 뒤 이 페이지를 새로고침해 주세요.';
+      };
+      const timeout = setTimeout(fail, 40000);
+      try {
+        const registration = await workers.register('./sw.js', { updateViaCache: 'none' });
+        if (!registration.installing && !registration.waiting) await registration.update();
+        const incoming = registration.installing || registration.waiting;
+        if (!incoming) { clearTimeout(timeout); openGame(); return; }
+        const checkState = () => {
+          if (incoming.state === 'activated') { clearTimeout(timeout); openGame(); }
+          if (incoming.state === 'redundant') { clearTimeout(timeout); fail(); }
+        };
+        incoming.addEventListener('statechange', checkState);
+        checkState();
+      } catch {
+        clearTimeout(timeout);
+        fail();
+      }
+    })();
+  </script>
+</body>
+</html>

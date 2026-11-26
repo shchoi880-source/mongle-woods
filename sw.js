@@ -1,5 +1,6 @@
-// 서비스 워커: 오프라인 실행 (캐시 우선, 버전이 바뀌면 새 캐시)
-const CACHE = 'mongle-0.16.1-storybook-1';
+// 서비스 워커: 설치를 마친 한 버전의 파일끼리 사용해 오프라인에서도 실행한다.
+const CACHE_PREFIX = 'mongle-';
+const CACHE = CACHE_PREFIX + '0.16.2-refresh-1';
 const FILES = [
   './', 'index.html', 'manifest.webmanifest', 'icons/icon.svg', 'css/ui.css', 'fonts/jua-subset.woff2',
   'js/scenery.js', 'assets/scenery/materials.webp', 'assets/scenery/details.webp', 'assets/scenery/buildings.webp', 'assets/scenery/trees.webp', 'assets/scenery/props.webp', 'assets/scenery/title.jpg',
@@ -9,15 +10,40 @@ const FILES = [
   'js/input.js', 'js/audio.js', 'js/sys.js', 'js/eco.js', 'js/npc.js', 'js/npclife.js', 'js/villahome.js', 'js/house.js', 'js/yard.js', 'js/museum.js', 'js/museumhall.js', 'js/mail.js', 'js/nest.js', 'js/requests.js', 'js/news.js', 'js/tide.js', 'js/lantern.js', 'js/story.js', 'js/festival.js', 'js/map.js', 'js/goals.js', 'js/skills.js', 'js/quests.js', 'js/events.js', 'js/farm.js', 'js/cropart.js', 'js/cook.js', 'js/ranch.js', 'js/ui.js', 'js/game.js', 'js/dev.js', 'js/boot.js',
   'assets/chars/s/bori-w.webp', 'assets/chars/s/bori-walk.webp', 'assets/chars/s/bori.webp', 'assets/chars/s/danchu-w.webp', 'assets/chars/s/danchu-walk.webp', 'assets/chars/s/danchu.webp', 'assets/chars/s/danpung-w.webp', 'assets/chars/s/danpung.webp', 'assets/chars/s/ddalang-surprised-w.webp', 'assets/chars/s/ddalang-surprised.webp', 'assets/chars/s/ddalang-w.webp', 'assets/chars/s/ddalang-walk.webp', 'assets/chars/s/ddalang.webp', 'assets/chars/s/hotteok-w.webp', 'assets/chars/s/hotteok-walk.webp', 'assets/chars/s/hotteok.webp', 'assets/chars/s/jjongal-w.webp', 'assets/chars/s/jjongal-walk.webp', 'assets/chars/s/jjongal.webp', 'assets/chars/s/lime-w.webp', 'assets/chars/s/lime-walk.webp', 'assets/chars/s/lime.webp', 'assets/chars/s/mongsil-w.webp', 'assets/chars/s/mongsil-walk.webp', 'assets/chars/s/mongsil.webp', 'assets/chars/s/mungchi-w.webp', 'assets/chars/s/mungchi-walk.webp', 'assets/chars/s/mungchi.webp', 'assets/chars/s/postkeeper-male-w.webp', 'assets/chars/s/postkeeper-male.webp', 'assets/chars/s/postkeeper-w.webp', 'assets/chars/s/postkeeper.webp', 'assets/chars/s/slowpoke-w.webp', 'assets/chars/s/slowpoke.webp', 'assets/chars/s/sogeum-happy-w.webp', 'assets/chars/s/sogeum-happy.webp', 'assets/chars/s/sogeum-w.webp', 'assets/chars/s/sogeum-walk.webp', 'assets/chars/s/sogeum.webp', 'assets/chars/s/todak-w.webp', 'assets/chars/s/todak.webp', 'assets/chars/s/tosil-w.webp', 'assets/chars/s/tosil.webp',
 ];
-// 새 버전은 기다리지 않고 바로 교체한다(페이지가 controllerchange를 받아 저장 후 새로고침)
-self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES)).then(() => self.skipWaiting())); });
-self.addEventListener('activate', (e) => {
-  e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
+// 예전 HTTP 캐시에 있는 파일로 새 버전 캐시를 채우지 않는다.
+self.addEventListener('install', (event) => {
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE);
+    await cache.addAll(FILES.map((file) => new Request(file, { cache: 'reload' })));
+    await self.skipWaiting();
+  })());
 });
-self.addEventListener('fetch', (e) => {
-  if (e.request.method !== 'GET') return;
-  e.respondWith(caches.match(e.request, { ignoreSearch: true }).then((r) => r || fetch(e.request).then((res) => {
-    if (res.ok && new URL(e.request.url).origin === location.origin) { const cp = res.clone(); caches.open(CACHE).then((c) => c.put(e.request, cp)); }
-    return res;
-  }).catch(() => caches.match('index.html'))));
+self.addEventListener('activate', (event) => {
+  event.waitUntil((async () => {
+    const oldCaches = (await caches.keys()).filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE);
+    await Promise.all(oldCaches.map((key) => caches.delete(key)));
+    await self.clients.claim();
+  })());
 });
+
+const scope = new URL(self.registration.scope);
+const updatePage = new URL('update.html', scope).pathname;
+self.addEventListener('fetch', (event) => {
+  const request = event.request;
+  const url = new URL(request.url);
+  if (request.method !== 'GET' || url.origin !== scope.origin || !url.pathname.startsWith(scope.pathname) || url.pathname === updatePage) return;
+  event.respondWith(serve(request));
+});
+
+async function serve(request) {
+  const cache = await caches.open(CACHE);
+  const cached = await cache.match(request, { ignoreSearch: true });
+  if (cached) return cached;
+  try {
+    const response = await fetch(request);
+    if (response.ok) await cache.put(request, response.clone()).catch(() => {});
+    return response;
+  } catch {
+    return request.mode === 'navigate' ? (await cache.match('index.html')) || Response.error() : Response.error();
+  }
+}
