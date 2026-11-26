@@ -462,7 +462,7 @@
     if (mv.mag > 0 && canMove) {
       const speed = (inMode === 'run' ? 9.5 : inMode === 'sneak' ? 1.6 : 4.0) * TILE // 달리기 6.5→9.5 (오너: 별로 안 빠르다)
         * (G.house && G.house.inside ? 1 : G.ranch.speedMul());
-      const s = speed * (stick ? Math.max(0.35, mv.mag) : 1) * dt;
+      const s = speed * dt; // 조이스틱도 기울기와 상관없이 같은 속도 (모드는 🏃·🐾 버튼으로)
       if (G.fishing.state !== 'idle') G.fishing.cancel(true);
       const ox = pl.x, oy = pl.y;
       // 빠를 때 벽을 뚫지 않게 잘게 나눠 움직인다
