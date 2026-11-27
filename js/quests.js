@@ -131,22 +131,28 @@
         const btns = el('div', 'qbtns'); btns.append(btn);
         row.append(top, d, btns); pane.append(row);
       }
-      // 옷 코너에서만 팔던 옷·모자·머리를 별로도 연다 (날마다 3개)
-      const A = G.art; if (!A || !A.PK) return;
-      const pool = [];
-      for (const it of A.PK.bodies.concat(A.PK.heads)) if (it[2] && it[2].lock === 'shop') pool.push(it);
-      for (const sl of A.PK.slots) for (const it of sl.items) if (it[2] && it[2].lock === 'shop') pool.push(it);
-      const own = G.player.unlocks || {}, left = pool.filter((it) => !own['pk_' + it[0]]);
-      if (!left.length) return;
-      pane.append(el('div', 'qsec', '👕 별로 여는 옷 (날마다 바뀌어요)'));
-      const R3 = G.rng.stream(G.rng.KEYS.SHOP, G.time.day(), 23), list = [];
-      for (let k = 0; k < 3 && left.length; k++) list.push(left.splice(Math.floor(R3() * left.length), 1)[0]);
-      for (const it of list) {
-        const row = el('div', 'goalrow qrow'), top = el('div', 'gr-top'), b = el('b'); b.textContent = it[1];
-        top.append(b, el('span', '', `⭐${WEAR_PRICE}`));
-        const btn = el('button', 'btn small', '열기');
-        btn.onclick = () => buy(WEAR_PRICE, () => { G.player.unlocks = Object.assign({}, G.player.unlocks, { ['pk_' + it[0]]: 1 }); G.save.mark('player'); G.ui.toast(`${it[1]}을(를) 열었어요! 잎첩 🪞 나에서 입어 봐요.`, { icon: '👕' }); });
-        const btns = el('div', 'qbtns'); btns.append(btn); row.append(top, btns); pane.append(row);
+      const wardrobe = G.shop.wardrobeStock();
+      for (const [part, name] of Object.entries(G.shop.WARDROBE)) {
+        const entries = wardrobe.filter((e) => e.part === part);
+        if (!entries.length) continue;
+        pane.append(el('div', 'qsec', `별로 여는 ${name}`));
+        for (const e of entries) {
+          const owned = !!G.player.unlocks?.[e.key];
+          const row = el('div', 'goalrow qrow'), top = el('div', 'gr-top');
+          top.append(el('b', '', e.name), el('span', '', owned ? '가지고 있음' : `⭐${WEAR_PRICE}`));
+          row.append(top);
+          if (!owned) {
+            const btn = el('button', 'btn small', '열기');
+            btn.onclick = () => buy(WEAR_PRICE, () => {
+              if (G.player.unlocks?.[e.key]) return false;
+              G.player.unlocks = Object.assign({}, G.player.unlocks, { [e.key]: 1 });
+              G.save.mark('player');
+              G.ui.toast(`「${e.name}」을 열었어요! 잎첩 🪞 나에서 꾸며 봐요.`, { icon: '👕' });
+            });
+            const btns = el('div', 'qbtns'); btns.append(btn); row.append(btns);
+          }
+          pane.append(row);
+        }
       }
     };
     for (const [id, nm] of [['q', '📋 의뢰'], ['shop', '⭐ 별 가게']]) { const b = el('button', 'tab', nm); b.dataset.t = id; b.onclick = () => { G.audio.sfx('tap'); tab = id; draw(); }; tabs.append(b); }

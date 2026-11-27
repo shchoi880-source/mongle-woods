@@ -4,7 +4,7 @@
   const u = G.u, TILE = G.C.TILE;
   const TIER_W = [0, 10, 5, 2, 0.7, 0.25];
   // 코지 채집 보정: 채를 들고 걷는 접근은 넉넉하게, 달리기는 여전히 곤충을 놀라게 한다.
-  const BUG_TUNE = Object.freeze({ walkScare: 0.65, netWalkScare: 0.35, runScare: 1.15, netRunScare: 0.85, fleeSpeed: 105, catchRadius: 34, catchGrace: 0.5, missScare: 1.5 });
+  const BUG_TUNE = Object.freeze({ walkScare: 0.65, netWalkScare: 0.35, runScare: 1.15, netRunScare: 0.85, fleeSpeed: 105, catchRadius: 34, catchGrace: G.toolTiers('net')[0].grace, missScare: 1.5 });
 
   const bugs = [], fish = [];
   let spawnT = 0, fishT = 0;
@@ -15,6 +15,22 @@
   function rollSize(sp, r, giant) {
     const s = u.lerp(sp.size[0], sp.size[1], Math.pow(r, 1.5));
     return Math.round((giant ? s * 1.55 : s) * 10) / 10;
+  }
+  // 별 3~5의 가중치와 별 4~5의 최소 합산 비율. 그 장소의 후보에 없는 종은 추가하지 않는다.
+  function rareWeights(weighted, tool) {
+    let common = 0, rare = 0;
+    const adjusted = weighted.map(({ s, w }) => {
+      const weight = w * (tool.rare[s.tier - 3] || 1);
+      if (s.tier >= 4) rare += weight;
+      else common += weight;
+      return { s, w: weight };
+    });
+    const target = common * tool.minRare / (1 - tool.minRare);
+    if (rare && rare < target) {
+      const scale = target / rare;
+      for (const entry of adjusted) if (entry.s.tier >= 4) entry.w *= scale;
+    }
+    return adjusted;
   }
 
   // 위치 후보 찾기
@@ -48,7 +64,8 @@
     if (wx.type === 'rain' || wx.type === 'snow') cands = cands.filter((sp) => sp.loc !== 'air' && sp.loc !== 'flower');
     if (!cands.length) return;
     const dream = G.mail ? G.mail.dreamSpecies() : '';
-    const sp = u.pickW(cands.map((s) => ({ s, w: TIER_W[s.tier] * (s.rare || 1) * (dream === 'bug:' + s.id ? 6 : 1) * (s.high ? 4 : 1) * (G.skills ? G.skills.rareMul('bug', s.tier) : 1) })), R()).s;
+    const weighted = cands.map((s) => ({ s, w: TIER_W[s.tier] * (s.rare || 1) * (dream === 'bug:' + s.id ? 6 : 1) * (s.high ? 4 : 1) * (G.skills ? G.skills.rareMul('bug', s.tier) : 1) }));
+    const sp = u.pickW(E.netWeights(weighted, p), R()).s;
     const spot = findSpot(sp.loc, p.x, p.y, R); if (!spot) return;
     const [tx, ty, alt, obj] = spot;
     const v = G.rollVariant(R(), { night: G.time.isNight(), wet: wx.type !== 'clear' && wx.type !== 'cloudy', golden: G.lantern && G.lantern.golden() });
@@ -63,6 +80,14 @@
     G.emit('eco:spawn', { e: b });
   }
 
+  function townFishWeights(loc, month, hour) {
+    const dream = G.mail ? G.mail.dreamSpecies() : '';
+    return G.data.all('fish').filter((s) => s.loc === loc && available(s, month, hour) && !s.cloud).map((s) => {
+      const skill = G.skills ? G.skills.rareMul('fish', s.tier) : 1;
+      const featured = dream === 'fish:' + s.id ? 6 : 1;
+      return { s, w: TIER_W[s.tier] * (s.rare || 1) * featured * skill };
+    });
+  }
   function spawnFish(p) {
     const W = G.world, month = G.time.month(), hour = G.time.hour(), R = Math.random;
     const ptx = Math.floor(p.x / TILE), pty = Math.floor(p.y / TILE);
@@ -72,19 +97,9 @@
       // 물 한가운데(사방이 물)만
       if (![[0, 1], [1, 0], [-1, 0], [0, -1]].every(([dx, dy]) => W.isWater(W.tile(tx + dx, ty + dy)))) continue;
       if (Math.abs(tx - ptx) < 2 && Math.abs(ty - pty) < 2) continue;
-      const cands = G.data.all('fish').filter((f) => f.loc === wk && available(f, month, hour) && !f.cloud);
-      if (!cands.length) return;
-      const dream = G.mail ? G.mail.dreamSpecies() : '';
-      const weighted = cands.map((s) => {
-        const skill = G.skills ? G.skills.rareMul('fish', s.tier) : 1;
-        const featured = dream === 'fish:' + s.id ? 6 : 1;
-        return { s, w: TIER_W[s.tier] * (s.rare || 1) * featured * skill };
-      });
-      const sp = u.pickW(F.rodWeights(weighted), R()).s;
-      const wx = G.weather.now();
-      const v = G.rollVariant(R(), { night: G.time.isNight(), wet: wx.type !== 'clear' && wx.type !== 'cloudy', golden: G.lantern && G.lantern.golden() });
-      const giant = v === 1;
-      fish.push({ kind: 'fish', sp, shadow: giant ? Math.min(5, sp.shadow + 1) : sp.shadow, x: tx * TILE + 16, y: ty * TILE + 16, ang: R() * 6.28, spd: 0, t: 0, seed: R() * 10, state: 'swim', v, size: rollSize(sp, R(), giant), fade: 0 });
+      const style = F.shadowStyle(townFishWeights(wk, month, hour));
+      if (!style) continue;
+      fish.push({ kind: 'fish', loc: wk, ...style, x: tx * TILE + 16, y: ty * TILE + 16, ang: R() * 6.28, spd: 0, t: 0, seed: R() * 10, state: 'swim', fade: 0 });
       return;
     }
   }
@@ -93,6 +108,9 @@
 
   const E = G.eco = {
     bugs, fish,
+    netWeights(weighted, p = G.player) {
+      return p?.hasTool?.('net') ? rareWeights(weighted, G.toolTier('net', p)) : weighted;
+    },
     update(dt, p) {
       // 스폰
       spawnT -= dt; fishT -= dt;
@@ -141,14 +159,14 @@
       const DIRS = [[0, 1], [-1, 0], [0, -1], [1, 0]];
       const [dx, dy] = DIRS[p.dir];
       const tx = p.x + dx * 22, ty = p.y + dy * 22;
+      const { reach, grace } = G.toolTier('net', p);
       let best = null, bd = 1e9;
       for (const b of bugs) {
-        if (b.state === 'held' || b.fade < 0.5) continue;
+        if (b.state === 'held' || b.fade < 0.5 || (b.state === 'flee' && b.t >= grace)) continue;
         const d = u.dist(b.x, b.y - (b.alt || 0) * 0.4, tx, ty);
-        if (d < BUG_TUNE.catchRadius * (p.up && p.up.net ? 1.35 : 1) && d < bd) { bd = d; best = b; }
+        if (d < BUG_TUNE.catchRadius * reach && d < bd) { bd = d; best = b; }
       }
-      if (best && best.state !== 'flee') { bugs.splice(bugs.indexOf(best), 1); return best; }
-      if (best && best.state === 'flee' && best.t < BUG_TUNE.catchGrace) { bugs.splice(bugs.indexOf(best), 1); return best; } // 막 날아오른 순간은 넉넉히 봐준다
+      if (best) { bugs.splice(bugs.indexOf(best), 1); return best; }
       // 헛손질: 근처 곤충이 놀람
       for (const b of bugs) if (u.dist(b.x, b.y, p.x, p.y) < TILE * BUG_TUNE.missScare) E.scare(b, p);
       return null;
@@ -250,27 +268,17 @@
   const F = G.fishing = {
     RODS,
     state: 'idle', bob: null, target: null, t: 0, nibbles: 0, nibbleT: 0, fake: 0,
-    rodLevel() {
-      const level = Number(G.player?.up?.rod);
-      return Number.isInteger(level) ? u.clamp(level, 0, RODS.length - 1) : 0;
-    },
+    rodLevel() { return G.toolLevel('rod'); },
     rodWeights(weighted) {
       const level = F.rodLevel();
-      if (!level) return weighted;
-      const rod = RODS[level];
-      let common = 0, rare = 0;
-      const adjusted = weighted.map(({ s, w }) => {
-        const weight = w * (rod.rare[s.tier - 3] || 1);
-        if (s.tier >= 4) rare += weight;
-        else common += weight;
-        return { s, w: weight };
-      });
-      const target = common * rod.minRare / (1 - rod.minRare);
-      if (rare && rare < target) {
-        const scale = target / rare;
-        for (const entry of adjusted) if (entry.s.tier >= 4) entry.w *= scale;
-      }
-      return adjusted;
+      return level ? rareWeights(weighted, RODS[level]) : weighted;
+    },
+    shadowStyle(weighted) {
+      const look = u.pickW(weighted, Math.random())?.s;
+      return look && { shadow: look.shadow || 2, slim: look.shape === 'eel' || look.shape === 'long' };
+    },
+    pickCatch(weighted) {
+      return u.pickW(F.rodWeights(weighted), Math.random())?.s;
     },
     cast(p) {
       const DIRS = [[0, 1], [-1, 0], [0, -1], [1, 0]];
@@ -278,8 +286,9 @@
       // 앞으로 1.5~3타일 중 물 찾기
       for (let dd = 2.6; dd >= 1.1; dd -= 0.25) {
         const x = p.x + dx * dd * TILE, y = p.y + dy * dd * TILE - (dy === 0 ? 6 : 0);
-        if (inWater(x, y)) {
-          F.state = 'flying'; F.t = 0; F.bob = { x0: p.x + dx * 10, y0: p.y - 30, x, y, dip: 0, ring: [] };
+        const loc = G.world.waterKind(Math.floor(x / TILE), Math.floor(y / TILE));
+        if (loc) {
+          F.state = 'flying'; F.t = 0; F.bob = { x0: p.x + dx * 10, y0: p.y - 30, x, y, loc, dip: 0, ring: [] };
           G.audio.sfx('cast');
           return true;
         }
@@ -301,9 +310,15 @@
         if (F.reel < 3) return { reel: true };
       }
       if (F.state === 'bite' || F.state === 'reel') {
-        const f = F.target; F.state = 'idle'; F.bob = null; F.target = null;
-        fish.splice(fish.indexOf(f), 1);
-        return { caught: f };
+        const f = F.target, loc = F.bob?.loc || f.loc;
+        F.state = 'idle'; F.bob = null; F.target = null;
+        const i = fish.indexOf(f);
+        if (i >= 0) fish.splice(i, 1);
+        const sp = F.pickCatch(townFishWeights(loc, G.time.month(), G.time.hour()));
+        if (!sp) return { cancel: true };
+        const wx = G.weather.now();
+        const v = G.rollVariant(Math.random(), { night: G.time.isNight(), wet: wx.type !== 'clear' && wx.type !== 'cloudy', golden: G.lantern && G.lantern.golden() });
+        return { caught: { ...f, sp, v, size: rollSize(sp, Math.random(), v === 1) } };
       }
       if (F.state === 'nibble' || F.state === 'approach') {
         // 너무 일찍 당김 → 귀엽게 놓침
@@ -325,7 +340,7 @@
       if (F.state === 'wait') {
         // 3타일 안의 물고기가 관심
         if (F.t > 0.6 && !F.target) {
-          let best = null, bd = TILE * (G.player.up && G.player.up.rod ? 4.6 : 3.2);
+          let best = null, bd = TILE * (F.rodLevel() ? 4.6 : 3.2);
           for (const f of fish) { if (f.state !== 'swim') continue; const d = u.dist(f.x, f.y, b.x, b.y); if (d < bd) { bd = d; best = f; } }
           if (best) { F.target = best; best.state = 'approach'; F.state = 'approach'; F.t = 0; }
         }
@@ -340,7 +355,7 @@
         f.ang = a; const d = u.dist(f.x, f.y, b.x, b.y);
         const front = 8 + f.shadow * 2;
         if (d > front) { f.x += Math.cos(a) * 18 * dt; f.y += Math.sin(a) * 18 * dt; }
-        else { F.state = 'nibble'; F.t = 0; F.nibbles = Math.floor(Math.random() * (G.player.up && G.player.up.rod ? 2 : 4)); F.nibbleT = 0.6 + Math.random() * 0.8; }
+        else { F.state = 'nibble'; F.t = 0; F.nibbles = Math.floor(Math.random() * (F.rodLevel() ? 2 : 4)); F.nibbleT = 0.6 + Math.random() * 0.8; }
         return;
       }
       if (F.state === 'nibble') {

@@ -102,7 +102,7 @@
     const n = s[key] || 0;
     if (n >= 3) return { none: true };
     s[key] = n + 1; G.save.mark('gather');
-    if (tool === 'axe') return { id: 'wood' };
+    if (tool === 'axe') return { id: 'wood', n: G.toolTier('axe').wood[n] };
     const r = u.hashf(W.map.seed, G.time.day(), o.i, n);
     return { id: r < 0.12 ? 'iron' : r < 0.3 ? 'clay' : 'stone' };
   };

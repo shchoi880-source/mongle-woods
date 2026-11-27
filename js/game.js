@@ -40,7 +40,7 @@
     kind: 'player', species: 'human', x: 0, y: 0, dir: 0, r: 9.6, walk: 0, moving: false, mode: 'walk', seed: 0,
     look: { skin: 0, hair: 0, hairC: 0, shirt: 0 }, name: '', town: '', tools: ['hand'], tool: 'hand',
     swing: 0, busy: 0, hold: null, holdT: 0, squash: 0, stepT: 0, idleT: 0,
-    up: {}, // 도구 업그레이드 {net, rod, can} (6차 회의)
+    up: {}, // 도구 업그레이드 {net, rod, axe, can}
     unlocks: {}, // 축제 꾸미기 잠금 해제 {'hat13': 1, ...}
     hasTool(t) { return this.tools.includes(t); },
     giveTool(t) { if (!this.tools.includes(t)) this.tools.push(t); G.save.mark('tool'); G.ui.refreshHud(); },
@@ -85,7 +85,7 @@
   // 아이템 얻기 공통 흐름: 가방 확인 → 들어 올리기 연출 → 도감 → 토스트
   const gainCount = {};
   GM.gain = (id, n, x, opt = {}) => {
-    if (!G.inv.canFit(id, x)) {
+    if (!G.inv.canFit(id, x, n)) {
       G.audio.sfx('error');
       G.ui.toast('가방이 꽉 찼어요! 가판대에서 팔거나, 집 앞에서 📦 보관함에 넣어요.', { icon: '🎒', ms: 3200 });
       return false;
@@ -289,7 +289,7 @@
           G.audio.sfx(chop ? 'shake' : 'dig');
           const r = G.nest.gather(o, chop ? 'axe' : 'shovel');
           if (r.none) { G.audio.sfx('bump'); G.ui.toast(tg.kind === 'chop' ? `이 나무는 오늘 많이 내줬어요. 다음 아침(약 ${G.time.minsToMorning()}분 뒤)에 또 와요.` : `이 바위는 오늘 다 두드렸어요. 다음 아침(약 ${G.time.minsToMorning()}분 뒤)에 또 와요.`, { icon: tg.kind === 'chop' ? '🌳' : '🪨', ms: 1500 }); return; }
-          dropItem(r.id, o.tx * TILE + 16 + (pl.x < o.tx * TILE + 16 ? -18 : 18), o.ty * TILE + 28, 1);
+          dropItem(r.id, o.tx * TILE + 16 + (pl.x < o.tx * TILE + 16 ? -18 : 18), o.ty * TILE + 28, r.n || 1);
           G.audio.sfx('drop'); if (chop) leafFx(o);
         }, chop ? 180 : 220);
         break;

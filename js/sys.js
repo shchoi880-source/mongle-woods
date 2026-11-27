@@ -53,10 +53,14 @@
     has(id) { return inv.slots.some((s) => s.id === id); },
     count(id) { return inv.slots.reduce((a, s) => a + (s.id === id ? s.n : 0), 0); },
     removeId(id, n = 1) { for (let i = inv.slots.length - 1; i >= 0 && n > 0; i--) if (inv.slots[i].id === id) n -= G.inv.removeAt(i, n); },
-    canFit(id, x) {
-      if (inv.slots.length < inv.size) return true;
-      const it = G.items.get(id); if (!it || x || (it.stack || 1) <= 1) return false;
-      return inv.slots.some((s) => s.id === id && !s.x && s.n < it.stack);
+    canFit(id, x, n = 1) {
+      const it = G.items.get(id); if (!it) return false;
+      const max = it.stack || 1;
+      let room = Math.max(0, inv.size - inv.slots.length) * max;
+      if (!x && max > 1) for (const s of inv.slots) {
+        if (s.id === id && !s.x) room += Math.max(0, max - s.n);
+      }
+      return room >= n;
     },
     sort() {
       const ord = { tool: 0, letter: 1, bug: 2, fish: 3, fossil: 4, shell: 5, mat: 6, sea: 7, crop: 8, seed: 9, dish: 10, ranch: 11, furn: 12, fest: 13 };
@@ -127,6 +131,17 @@
     stats: econ,
   };
   G.shop = {
+    WARDROBE: { body: '옷', head: '헤어', hat: '머리 장식', face: '얼굴 장식', neck: '목 장식', mouth: '입 장식' },
+    wardrobeStock() {
+      const pk = G.art?.PK;
+      if (!pk) return [];
+      const parts = [['body', pk.bodies], ['head', pk.heads], ...pk.slots.map((slot) => [slot.k, slot.items])];
+      const stock = [];
+      for (const [part, items] of parts) for (const [id, name, info] of items) {
+        if (info?.lock === 'shop') stock.push({ kind: 'pk', id, part, name, price: info.price, key: 'pk_' + id });
+      }
+      return stock;
+    },
     // 오늘의 진열 (가판대 단계: 도구만)
     // 오늘의 진열: 도구 + 가구 6점(날마다 결정적으로 바뀜, 하루 한 번씩만 판매)
     stock(day) {
@@ -142,24 +157,16 @@
       }
       // 가방 늘리기 (오너 요청: 30칸은 좁다) 30 → 80칸, 10칸씩
       if (G.inv.size < G.inv.MAX) list.push({ kind: 'bag', id: 'bag', name: `가방 10칸 늘리기 (지금 ${G.inv.size}칸)`, price: G.inv.growPrice(), key: 'bag' });
-      // 도구 업그레이드 (한 번 사면 영구)
-      for (const [t, nm, pr] of [['net', '튼튼 잠자리채', 3000], ['can', '큰 물뿌리개', 2500]]) {
-        if (G.player.hasTool(t) && !(G.player.up && G.player.up[t])) list.push({ kind: 'up', id: t, name: nm, price: pr, key: 'up_' + t });
+      if (G.player.hasTool('can') && !G.player.up?.can) list.push({ kind: 'up', id: 'can', name: '큰 물뿌리개', price: 2500, key: 'up_can' });
+      for (const id of ['net', 'rod', 'axe']) {
+        if (!G.player.hasTool(id)) continue;
+        const level = G.toolLevel(id) + 1, tier = G.toolTiers(id)?.[level];
+        if (!tier) continue;
+        const detail = id === 'axe' ? `나무당 목재 ${tier.wood.reduce((sum, n) => sum + n, 0)}개` :
+          id === 'net' ? `포획 범위 +${Math.round((tier.reach - 1) * 100)}% · 희귀 출현↑` : '희귀 물고기 확률 증가';
+        list.push({ kind: 'up', id, name: tier.name, price: tier.price, key: `up_${id}_${level}`, level, detail });
       }
-      if (G.player.hasTool('rod')) {
-        const level = G.fishing.rodLevel() + 1, rod = G.fishing.RODS[level];
-        if (rod) list.push({ kind: 'up', id: 'rod', name: rod.name, price: rod.price, key: 'up_rod_' + level, level });
-      }
-      // 👕 옷 코너 (되살림): 아직 없는 옷·모자·머리 중 날마다 4개 (GPT 부품 그림)
-      if (G.art && G.art.PK) {
-        const pool = [];
-        for (const it of G.art.PK.bodies) if (it[2] && it[2].lock === 'shop') pool.push({ part: 'body', it });
-        for (const it of G.art.PK.heads) if (it[2] && it[2].lock === 'shop') pool.push({ part: 'head', it });
-        for (const s of G.art.PK.slots) for (const it of s.items) if (it[2] && it[2].lock === 'shop') pool.push({ part: s.k, it });
-        const own = G.player.unlocks || {}, left = pool.filter((x) => !own['pk_' + x.it[0]]);
-        const R3 = G.rng.stream(G.rng.KEYS.SHOP, d, 11);
-        for (let k = 0; k < 4 && left.length; k++) { const x = left.splice(Math.floor(R3() * left.length), 1)[0]; list.push({ kind: 'pk', id: x.it[0], part: x.part, name: x.it[1], price: x.it[2].price, key: 'pk_' + x.it[0] }); }
-      }
+      list.push(...G.shop.wardrobeStock());
       if (G.ranch) {
         for (const [k, v] of Object.entries(G.ranch.KINDS)) list.push({ kind: 'animal', id: k, name: v.baby, price: v.price, key: 'an_' + k });
       }
@@ -203,11 +210,12 @@
       }
       if (entry.kind === 'up') {
         let level = 1, price = entry.price;
-        if (entry.id === 'rod') {
-          level = G.fishing.rodLevel() + 1;
-          const rod = G.fishing.RODS[level];
-          if (!rod || entry.level !== level || !G.player.hasTool('rod')) return { ok: false, why: '상점에서 다음 낚싯대를 골라 주세요.' };
-          price = rod.price;
+        const tiers = G.toolTiers(entry.id);
+        if (tiers) {
+          level = G.toolLevel(entry.id) + 1;
+          const tier = tiers[level];
+          if (!tier || entry.level !== level || !G.player.hasTool(entry.id)) return { ok: false, why: '상점에서 다음 단계 도구를 골라 주세요.' };
+          price = tier.price;
         } else if (G.player.up && G.player.up[entry.id]) return { ok: false, why: '이미 좋은 걸 가지고 있어요.' };
         if (!G.wallet.spend(price, 'buy')) return { ok: false, why: '몽이 조금 모자라요.' };
         G.player.up = Object.assign({}, G.player.up, { [entry.id]: level }); G.save.mark('up');
@@ -241,7 +249,7 @@
     money(n = 10000000) { G.wallet.add(n, 'admin'); },
     tools() {
       for (const t of ['net', 'rod', 'shovel', 'axe', 'can']) if (G.TOOLS[t]) G.player.giveTool(t);
-      G.player.up = Object.assign({}, G.player.up, { net: 1, rod: 1, can: 1 });
+      G.player.up = Object.assign({}, G.player.up, { net: Math.max(1, G.toolLevel('net')), rod: Math.max(1, G.toolLevel('rod')), can: 1 });
     },
     // 보관함(100칸)에 가구 전부 1개씩 + 재료·씨앗
     items() {

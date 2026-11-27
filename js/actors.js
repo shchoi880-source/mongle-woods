@@ -913,7 +913,7 @@
     const s = [0, 5, 7, 9, 12, 15][f.shadow] || 6;
     ctx.save(); ctx.translate(f.x, f.y); ctx.rotate(f.ang || 0);
     const wig = Math.sin(t * 8 + f.seed) * 0.25;
-    const slim = f.sp?.shape === 'eel' || f.sp?.shape === 'long';
+    const slim = f.slim;
     const h = s * (slim ? 0.28 : 0.45);
     ctx.fillStyle = 'rgba(30,60,76,0.4)';
     ctx.beginPath(); ctx.moveTo(-s * 1.5, -h * 0.69 + wig * s * 0.3);
