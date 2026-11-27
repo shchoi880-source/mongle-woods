@@ -576,7 +576,14 @@
   // 친구에게 선물: 가방에서 하나 골라 보낸다
   UI.giftTo = (o) => UI.modal(`${o.name}에게 선물하기`, (body, close) => {
     body.append($('div', 'pane-head', '<span>줄 물건을 눌러요 (한 개씩 보내요)</span>'));
-    body.append(slotGrid(async (i) => { const ok = await G.net.gift(o.uid, i, 1); if (ok) close(); }));
+    let sending = false;
+    body.append(slotGrid(async (_, s) => {
+      const slot = G.inv.slots.indexOf(s);
+      if (sending || slot < 0) return;
+      sending = true;
+      try { if (await G.net.gift(o.uid, slot, 1)) close(); }
+      finally { sending = false; }
+    }));
   });
   // 친구 기능 오류를 한국어로 (Firebase 영어 원문 대신)
   UI.netErr = (e) => {
