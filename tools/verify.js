@@ -24,6 +24,7 @@ const ok = (name, cond, detail) => { console.log(`${cond ? '✔' : '✘'} ${name
   const moduleG = { art, u: G.u, modules: new Set(), settings: { get() {} } };
   vm.runInNewContext(fs.readFileSync(path.join(ROOT, 'js', 'actors.js'), 'utf8'), { G: moduleG, Image: PreviewImage });
   let sample, flip, toolAngle;
+  const layers = [];
   const ctx = {
     save() {}, restore() {}, translate() {},
     scale(x) { flip = x; },
@@ -31,9 +32,14 @@ const ok = (name, cond, detail) => { console.log(`${cond ? '✔' : '✘'} ${name
     transform() {}, beginPath() {}, moveTo() {}, lineTo() {}, quadraticCurveTo() {},
     stroke() {}, clip() {}, arc() {}, closePath() {}, fill() {},
     createLinearGradient() { return { addColorStop() {} }; },
-    drawImage(im, x, y) { sample = [path.basename(im.src), x, y, flip < 0]; },
+    drawImage(im, x, y, sw, sh, dx, dy, dw, dh) {
+      const name = path.basename(im.src);
+      sample = [name, x, y, flip < 0];
+      layers.push({ name, x, y, sw, sh, dx, dy, dw, dh });
+    },
   };
   const render = (look, dir, moving = false, walk = 0) => {
+    layers.length = 0;
     art.actor.draw(ctx, { species: 'human', look, x: 0, y: 0, dir, moving, walk }, 0);
     return sample.join('/');
   };
@@ -43,6 +49,25 @@ const ok = (name, cond, detail) => { console.log(`${cond ? '✔' : '✘'} ${name
     render(male, 1) === 'postkeeper-male-walk.png/0/144/true' && render(male, 2) === 'postkeeper-male-walk.png/0/288/false');
   ok('우편지기: 걸음마다 두 자세를 교대로 사용', render(male, 2, true, 0.1) === 'postkeeper-male-walk.png/144/288/false' &&
     render(male, 2, true, 0.6) === 'postkeeper-male-walk.png/288/288/false');
+  const layered = { ...male, pk: { ...art.pkDefault('male'), head: 'male-mullet', hat: 'bear-ears', face: 'round-glasses' } };
+  render(layered, 0);
+  const [nape, outfit, head, glasses, band] = layers;
+  ok('우편지기: 울프컷의 목 아래 머리는 옷 뒤에 이어짐', nape?.name === 'head-male-mullet.webp' &&
+    outfit?.name === 'outfit-overalls.webp' && head?.name === nape.name && head.y + head.sh === nape.y &&
+    Math.abs(head.dy + head.dh - nape.dy) < 1e-6);
+  ok('우편지기: 안경과 머리띠는 얼굴 위에 함께 표시', glasses?.name === 'accessory-round-glasses.webp' &&
+    band?.name === 'accessory-male-bear-ears.webp');
+  layered.pk.head = 'male-tousled';
+  render(layered, 0);
+  const standingBand = layers.at(-1);
+  render(layered, 0, true, 0.6);
+  const walkingBand = layers.at(-1);
+  ok('우편지기: 부스스 머리의 머리띠가 내려오고 걸을 때도 같은 위치', standingBand.dy > band?.dy &&
+    walkingBand.x === 288 && walkingBand.dx === standingBand.dx && walkingBand.dy === standingBand.dy);
+  layered.pk.head = 'male-mullet';
+  render(layered, 2);
+  ok('우편지기: 뒷머리는 옷 위에 이어지고 뒷면에 안경이 없음', layers[0]?.name === 'outfit-overalls.webp' &&
+    layers[1]?.name === 'head-male-mullet.webp' && layers[1].sh === 144 && layers.length === 3);
   const swing = (tool, actionPhase) => {
     art.actor.draw(ctx, { species: 'human', look: male, x: 0, y: 0, dir: 3, tool, actionPhase }, 0);
     return [sample[1], toolAngle];
