@@ -201,6 +201,7 @@
   }
   function markers() {
     const m = G.world.map, out = [];
+    const guest = G.net?.guest;
     const P = (k) => m.plots[k];
     const add = (tx, ty, icon, name, kind) => out.push({ tx, ty, icon, name, kind });
     const b = (k, icon, name, art) => {
@@ -208,13 +209,14 @@
       if (p) out.push({ tx: p.x + p.w / 2, ty: p.y + p.h / 2, icon, name, kind: 'bld', art });
     };
     b('shop', '🏪', '땅굴상점', 'stall');
-    if (G.ranch.st.pen) add(G.ranch.st.pen.x + G.ranch.st.pen.w / 2, G.ranch.st.pen.y + G.ranch.st.pen.h / 2, '🐮', '내 목장', 'bld');
-    if (G.farm.st.plots[0]) {
+    if (!guest && G.ranch.st.pen) add(G.ranch.st.pen.x + G.ranch.st.pen.w / 2, G.ranch.st.pen.y + G.ranch.st.pen.h / 2, '🐮', '내 목장', 'bld');
+    if (!guest && G.farm.st.plots[0]) {
       const p = G.farm.st.plots[0];
       out.push({ tx: p.tx + 1.5, ty: p.ty + 0.5, name: '내 텃밭', kind: 'bld', item: 'crop:carrot' });
     }
     b('post', '📮', '우체국 (보리 할멈)', 'post');
-    b('tent', '🏠', '내 ' + G.nest.cur().name, ['tent', 'cabin', 'smallhouse', 'bighouse', 'dreamhouse'][G.nest.st.stage]);
+    const house = guest ? 'tent' : ['tent', 'cabin', 'smallhouse', 'bighouse', 'dreamhouse'][G.nest.st.stage];
+    b('tent', '🏠', guest ? G.net.hostName + '의 집' : '내 ' + G.nest.cur().name, house);
     if (P('museum2')) b('museum2', '🦴', G.museum.isOpen() ? '조약돌 박물관' : '박물관 (내일 개관)', 'museum');
     if (P('oak')) b('oak', '🌳', '할아버지 참나무 (광장)', 'bigoak');
     for (const [id, v] of Object.entries(G.npc.VILLAGERS)) {
@@ -264,10 +266,21 @@
       const g = cv.getContext('2d');
       const info = document.createElement('div'); info.className = 'slot-info mapinfo';
       const mk = markers();
+      const friendBar = document.createElement('div'); friendBar.className = 'subtabs';
+      friendBar.setAttribute('aria-label', '같은 마을에 있는 친구');
+      const friendButtons = new Map();
+      const friendMarkers = () => G.net?.active ? Object.values(G.net.others)
+        .filter((p) => p.x >= 0 && p.y >= y0 * TILE && p.x < m.w * TILE && p.y < m.h * TILE)
+        .map((p) => ({ tx: p.x / TILE, ty: p.y / TILE, name: p.name, kind: 'friend', player: p })) : [];
       let sel = null;
       const goBtn = (k) => {
         const b = document.createElement('button'); b.className = 'btn small'; b.textContent = '🚶 여기로 가기';
-        b.onclick = () => { if (G.game.autoGo(k.tx, k.ty, k.short || '')) { G.audio.sfx('tap'); close(); } else G.ui.toast('거기로 가는 길을 찾지 못했어요.', { icon: '🚧' }); };
+        b.onclick = () => {
+          const dest = k.player ? friendMarkers().find((f) => f.player === k.player) : k;
+          if (!dest) return;
+          if (G.game.autoGo(dest.tx, dest.ty, k.player ? dest.name : (k.short || ''))) { G.audio.sfx('tap'); close(); }
+          else G.ui.toast('거기로 가는 길을 찾지 못했어요.', { icon: '🚧' });
+        };
         return b;
       };
       // 순간이동 (오너: 지역마다 텔레포트) — 건물·장소 표시만. 밖에서, 내 마을에서
@@ -301,6 +314,30 @@
       };
       const centerOn = (px, py, z) => { view.z = z; view.ox = wrap.clientWidth / 2 - px * z; view.oy = wrap.clientHeight / 2 - py * z; clamp(); };
       const meXY = () => ({ x: G.player.x / TILE * S, y: (G.player.y / TILE - y0) * S });
+      const syncFriends = (friends) => {
+        for (const [p, b] of friendButtons) {
+          if (friends.some((f) => f.player === p)) continue;
+          b.remove(); friendButtons.delete(p);
+          if (sel?.player === p) { sel = null; showInfo(); }
+        }
+        for (const f of friends) {
+          let b = friendButtons.get(f.player);
+          if (!b) {
+            b = document.createElement('button'); b.className = 'chip';
+            b.onclick = () => {
+              const pin = friendMarkers().find((k) => k.player === f.player);
+              if (!pin) return;
+              centerOn(pin.tx * S, (pin.ty - y0) * S, Math.max(view.z, fitZ() * 2.5));
+              sel = pin; showInfo(); G.audio.sfx('tap');
+            };
+            friendButtons.set(f.player, b); friendBar.append(b);
+          }
+          const label = '👤 ' + f.name;
+          if (b.textContent !== label) b.textContent = label;
+        }
+        const display = friends.length ? '' : 'none';
+        if (friendBar.style.display !== display) friendBar.style.display = display;
+      };
       // 처음엔 내 위치를 2.5배로
       // 처음 보기: 미션 위치(⭐)가 있으면 나와 ⭐가 함께 보이게, 없으면 내 위치를 크게
       requestAnimationFrame(() => {
@@ -314,6 +351,7 @@
       let t0 = performance.now(), raf = 0;
       const draw = () => {
         if (!cv.isConnected && raf) return;
+        if (G.world.map !== m) { close(); return; }
         const t = (performance.now() - t0) / 1000;
         g.drawImage(terrain(m, y0), 0, 0, W * S, H * S);
         g.textAlign = 'center'; g.textBaseline = 'middle';
@@ -337,6 +375,17 @@
           g.fillStyle = 'rgba(255,107,139,0.25)'; g.beginPath(); g.arc(p.x, p.y, 20 + Math.sin(t * 3) * 4, 0, 6.3); g.fill();
           g.fillStyle = '#ff6b8b'; g.beginPath(); g.arc(p.x, p.y, 11, 0, 6.3); g.fill(); g.lineWidth = 3; g.strokeStyle = '#fff'; g.stroke();
         }
+        const friends = friendMarkers();
+        syncFriends(friends);
+        for (const f of friends) {
+          const x = f.tx * S, y = (f.ty - y0) * S, unit = 1 / view.z;
+          g.fillStyle = '#7658a8'; g.strokeStyle = '#fff';
+          g.lineWidth = 2 * unit;
+          g.beginPath(); g.arc(x, y, (sel?.player === f.player ? 7 : 5) * unit, 0, 6.3); g.fill(); g.stroke();
+          g.font = G.fontPx(12 * unit);
+          g.lineWidth = 3 * unit; g.strokeText(f.name, x, y - 13 * unit);
+          g.fillStyle = '#472d6b'; g.fillText(f.name, x, y - 13 * unit);
+        }
         raf = requestAnimationFrame(draw);
       };
       draw();
@@ -357,7 +406,7 @@
           // 누르기: 가장 가까운 표시 고르기
           const sx = (p0.x - view.ox) / view.z, sy = (p0.y - view.oy) / view.z;
           let best = null, bd = 30 / view.z + 10;
-          const all = mk.concat([{ tx: G.player.x / TILE, ty: G.player.y / TILE, name: `나 (${G.player.name})`, me: true }]);
+          const all = friendMarkers().concat(mk, [{ tx: G.player.x / TILE, ty: G.player.y / TILE, name: `나 (${G.player.name})`, me: true }]);
           for (const k of all) { const d = Math.hypot(k.tx * S - sx, (k.ty - y0) * S - sy); if (d < bd) { bd = d; best = k; } }
           // 빈 땅을 누르면 그 자리로
           if (!best) best = { tx: sx / S, ty: sy / S + y0, name: '여기', short: '' };
@@ -373,11 +422,11 @@
       ctr.append(mkb('＋', () => zoomAt(view.z * 1.4, wrap.clientWidth / 2, wrap.clientHeight / 2), '확대'), mkb('－', () => zoomAt(view.z / 1.4, wrap.clientWidth / 2, wrap.clientHeight / 2), '축소'), mkb('📍', () => { const p = meXY(); centerOn(p.x, p.y, Math.max(view.z, fitZ() * 2.5)); }, '내 위치'), mkb('🗺️', () => { view.z = fitZ(); clamp(); }, '전체 보기'));
       wrap.append(cv, ctr);
       const legend = document.createElement('div'); legend.className = 'muted small maplegend';
-      legend.textContent = (G.input.isTouch() || (globalThis.matchMedia && matchMedia('(pointer: coarse)').matches) ? '두 손가락으로 확대·축소, 끌어서 이동' : '휠·＋－로 확대·축소, 끌어서 이동') + ' · 표시를 누르면 이름과 길 안내 · 장소는 순간이동 가능 · 분홍 점은 내 위치';
+      legend.textContent = (G.input.isTouch() || (globalThis.matchMedia && matchMedia('(pointer: coarse)').matches) ? '두 손가락으로 확대·축소, 끌어서 이동' : '휠·＋－로 확대·축소, 끌어서 이동') + ' · 분홍 점은 내 위치 · 보라 점은 같은 마을 친구';
       // ☁️ 구름섬 나들이 (12차 C)
       const sky = document.createElement('button'); sky.className = 'btn'; sky.style.marginTop = '8px'; sky.textContent = '☁️ 구름배 타고 구름섬 나들이';
       sky.onclick = () => { G.audio.sfx('tap'); close(); setTimeout(() => G.cloudIsle && G.cloudIsle.offer(), 150); };
-      body.append(wrap, info, legend, sky);
+      body.append(wrap, info, friendBar, legend, sky);
     }, { wide: true });
   };
 

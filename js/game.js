@@ -86,21 +86,25 @@
   const gainCount = {};
   GM.gain = (id, n, x, opt = {}) => {
     if (!G.inv.canFit(id, x, n)) {
-      G.audio.sfx('error');
-      G.ui.toast('가방이 꽉 찼어요! 가판대에서 팔거나, 집 앞에서 📦 보관함에 넣어요.', { icon: '🎒', ms: 3200 });
+      if (!opt.quiet) {
+        G.audio.sfx('error');
+        G.ui.toast('가방이 꽉 찼어요! 가판대에서 팔거나, 집 앞에서 📦 보관함에 넣어요.', { icon: '🎒', ms: 3200 });
+      }
       return false;
     }
     G.inv.add(id, n, x);
-    const it = G.items.get(id);
-    gainCount[id] = (gainCount[id] || 0) + 1;
-    const short = gainCount[id] >= 10 && !(x && (x.newSp || x.v));
-    // 도구(낚싯대·잠자리채·삽·도끼)를 든 채 얻으면 손에 들어 보이는 동작을 생략한다 — 매번 맨손으로 바뀌어 보여 귀찮다(오너 피드백)
-    if (!opt.keepTool && pl.tool === 'hand') {
-      pl.hold = { id, x }; pl.holdT = short ? 0.4 : 1.2; pl.busy = Math.max(pl.busy, short ? 0.35 : 0.9);
+    if (!opt.quiet) {
+      const it = G.items.get(id);
+      gainCount[id] = (gainCount[id] || 0) + 1;
+      const short = gainCount[id] >= 10 && !(x && (x.newSp || x.v));
+      // 도구를 든 채 얻으면 손에 들어 보이는 동작을 생략한다.
+      if (!opt.keepTool && pl.tool === 'hand') {
+        pl.hold = { id, x }; pl.holdT = short ? 0.4 : 1.2; pl.busy = Math.max(pl.busy, short ? 0.35 : 0.9);
+      }
+      pl.dir = 0;
+      G.ui.itemPop(id, x, opt.msg, short);
+      if (opt.sfx !== false) G.audio.sfx(it && it.ref && it.ref.tier >= 3 || (x && x.v) ? 'rare' : opt.sfx || 'pickup');
     }
-    pl.dir = 0;
-    G.ui.itemPop(id, x, opt.msg, short);
-    if (opt.sfx !== false) G.audio.sfx(it && it.ref && it.ref.tier >= 3 || (x && x.v) ? 'rare' : opt.sfx || 'pickup');
     G.emit('item:gain', { id, n, src: opt.src });
     return true;
   };
@@ -1041,6 +1045,7 @@
     cam.follow(pl.x, pl.y, 0, true);
     G.ui.refreshHud();
     GM.started = true;
+    G.net?.openIfAllowed();
     if (!G.quest.st.intro) {
       // 보리 할멈이 텐트 앞으로 마중 나온다
       const b = G.npc.get('bori');

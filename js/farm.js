@@ -251,21 +251,43 @@
     }
     return Array.from(seeds, ([id, n]) => ({ id, n }));
   };
-  // 가운데 통로로 분리된 좌우 한 줄의 빈 칸만, 누른 칸에서 가까운 순서로 심는다.
-  function plantingRow(p) {
+  // 가운데 통로로 분리된 좌우 한 줄에서 누른 칸에 가까운 순서.
+  function bedRow(p, select) {
     const f = st.field;
     const start = f?.split ? (p.tx < aisle(f) ? f.x : aisle(f) + 1) : p.tx - (BED_WIDTH - 1);
     const end = f?.split ? start + BED_WIDTH : p.tx + BED_WIDTH;
-    return st.plots.filter(q => q.ty === p.ty && q.tx >= start && q.tx < end && !q.crop)
+    return st.plots.filter(q => q.ty === p.ty && q.tx >= start && q.tx < end && select(q))
       .sort((a, b) => Math.abs(a.tx - p.tx) - Math.abs(b.tx - p.tx) || a.tx - b.tx)
       .slice(0, BED_WIDTH);
+  }
+  const plantingRow = (p) => bedRow(p, (q) => !q.crop);
+  const ripeRow = (p) => bedRow(p, (q) => F.stage(q) === 3);
+
+  function harvestPlot(p, quiet) {
+    const c = D.get('crops', p.crop);
+    // 거대 작물은 12%. 거대 작물이 8번 연속 나오지 않으면 다음 수확에서 보장한다.
+    const giant = (st.dry || 0) >= 8 || u.hashf(G.rng.seed, G.time.pmin(), p.tx, p.ty, st.harvested) < 0.12;
+    const n = giant ? 1 : 1 + (u.hashf(G.rng.seed, p.tx, p.ty, G.time.pmin(), st.harvested) < (G.skills ? G.skills.farmExtra() : 0.35) ? 1 : 0);
+    const x = giant ? { v: 1, size: Math.round(c.val / 10) } : null;
+    const msg = giant ? `거대 ${c.name}를 수확했다! 쫑알이 보면 1면감이야!` : `${c.name} ${n}개 수확!`;
+    if (!G.game.gain('crop:' + c.id, n, x, { msg, src: 'farm', quiet })) return null;
+    Object.assign(p, { crop: null, prog: 0, gp: 0, wet: 0, water: -1, giant: false });
+    st.harvested += n;
+    st.dry = giant ? 0 : (st.dry || 0) + 1;
+    if (giant) st.giants++;
+    G.emit('farm:harvest', { crop: c.id, n, giant });
+    return { n, giant };
   }
 
   F.target = (fx, fy) => {
     const p = F.at(Math.floor(fx / TILE), Math.floor(fy / TILE)); if (!p) return null;
     const s = F.stage(p);
     // 이름 + 상태 (오너: 누가 봐도 뭔지 알아야) — 「옥수수 · 3분 남음」
-    if (s === 3) return { kind: 'farm', ref: p, act: 'harvest', icon: '🧺', label: '수확', name: D.get('crops', p.crop).name + ' · 다 자랐어요!' };
+    if (s === 3) {
+      const n = ripeRow(p).length;
+      return { kind: 'farm', ref: p, act: 'harvest', icon: '🧺', label: n > 1 ? '줄 수확' : '수확',
+        name: n > 1 ? `${bedName(p)} · 다 자란 작물 ${n}칸` : D.get('crops', p.crop).name + ' · 다 자랐어요!' };
+    }
     if (s >= 0) { const w = F.watered(p); return { kind: 'farm', ref: p, act: w ? 'look' : 'water', icon: w ? '🌱' : 'tool:can', label: w ? '보기' : '물 주기', name: D.get('crops', p.crop).name + (w ? ` · ${F.minsLeft(p)}분 남음` : ' · 목말라요 💧') }; }
     return { kind: 'farm', ref: p, act: 'plant', icon: '🌰', label: '심기', name: bedName(p) };
   };
@@ -303,18 +325,22 @@
       G.emit('farm:water', {}); G.save.mark('farm'); return;
     }
     if (tg.act === 'harvest') {
-      const c = D.get('crops', p.crop);
-      // 거대 작물: 12% ("잘 나오네" 정도, 오너 요청) + 8번 연속 안 나오면 다음은 확정
-      const giant = (st.dry || 0) >= 8 || u.hashf(G.rng.seed, G.time.pmin(), p.tx, p.ty, st.harvested) < 0.12;
-      st.dry = giant ? 0 : (st.dry || 0) + 1;
-      const n = giant ? 1 : 1 + (u.hashf(G.rng.seed, p.tx, p.ty, G.time.pmin(), st.harvested) < (G.skills ? G.skills.farmExtra() : 0.35) ? 1 : 0);
-      const x = giant ? { v: 1, size: Math.round(c.val / 10) } : null;
-      if (!G.inv.canFit('crop:' + c.id, x)) { G.audio.sfx('error'); G.ui.toast('가방이 꽉 찼어요!', { icon: '🎒' }); return; }
-      if (G.game.gain('crop:' + c.id, n, x, { msg: giant ? `거대 ${c.name}를 수확했다! 쫑알이 보면 1면감이야!` : `${c.name} ${n}개 수확!`, src: 'farm' })) {
-        Object.assign(p, { crop: null, prog: 0, gp: 0, wet: 0, water: -1, giant: false });
-        st.harvested += n; if (giant) st.giants++;
-        G.emit('farm:harvest', { crop: c.id, n, giant });
-        G.save.mark('farm');
+      const row = ripeRow(p), batch = row.length > 1;
+      let count = 0, total = 0, giants = 0;
+      for (const q of row) {
+        const result = harvestPlot(q, batch);
+        if (!result) continue;
+        count++; total += result.n;
+        if (result.giant) giants++;
+      }
+      if (count) G.save.mark('farm');
+      if (batch) {
+        if (!count) { G.audio.sfx('error'); G.ui.toast('가방이 꽉 찼어요!', { icon: '🎒' }); return; }
+        pl.squash = 0.12;
+        G.audio.sfx(giants ? 'rare' : 'pickup');
+        const giantNote = giants ? ` (거대 ${giants}개)` : '';
+        const left = count < row.length ? ` · 가방이 차서 ${row.length - count}칸 남았어요.` : '';
+        G.ui.toast(`${count}칸에서 작물 ${total}개 수확!${giantNote}${left}`, { icon: '🧺' });
       }
       return;
     }

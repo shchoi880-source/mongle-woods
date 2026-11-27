@@ -1,4 +1,4 @@
-// 멀티플레이 1차 (5차 회의): 친구 코드로 친구 마을에 놀러 가기 + 실시간 이동 + 채팅(말풍선·감정) + 선물
+// 친구 마을 방문, 실시간 이동, 채팅, 선물
 // Firebase RTDB: codes/{코드}=uid · rooms/{주인uid}/{info, players/{uid}, chat/{id}, gifts/{받는uid}/{id}, kick/{uid}}
 // 원칙: 다른 사람에게는 캐릭터 이름·모습만 보인다(아이디·이메일 없음). 친구 마을에서는 구경·채집만(나무·땅·건물은 주인만)
 (function (G) {
@@ -10,8 +10,15 @@
   const EMOTES = [['👋', '안녕!'], ['💗', '좋아!'], ['😂', 'ㅋㅋㅋ'], ['🎣', '낚시 가자!'], ['🦋', '벌레 잡자!'], ['🎁', '선물이야!'], ['👍', '최고!'], ['😴', '졸려…']];
 
   // 저장(내 세이브): 만난 친구 목록(코드·캐릭터 이름)만
-  const st = { friends: [] };
-  G.save.section('net', { v: 1, def: () => ({ friends: [] }), get: () => ({ friends: st.friends.slice(0, 20) }), set: (d) => { st.friends = Array.isArray(d.friends) ? d.friends.filter((f) => f && /^[A-Z2-9]{6}$/.test(f.code)).slice(0, 20) : []; } });
+  const st = { friends: [], visits: true };
+  G.save.section('net', {
+    v: 1, def: () => ({ friends: [], visits: true }),
+    get: () => ({ friends: st.friends.slice(0, 20), visits: st.visits }),
+    set: (d) => {
+      st.friends = Array.isArray(d.friends) ? d.friends.filter((f) => f && /^[A-Z2-9]{6}$/.test(f.code)).slice(0, 20) : [];
+      st.visits = d.visits !== false;
+    },
+  });
 
   const N = G.net = {
     st, EMOTES,
@@ -22,7 +29,8 @@
     get active() { return N.mode !== 'off'; },
     get guest() { return N.mode === 'guest'; },
   };
-  let F = null, offs = [], sendT = 0, lastSent = '', lastChatAt = 0, infoT = 0, backup = null, seenChat = new Set(), joining = false;
+  let F = null, offs = [], sendT = 0, lastSent = '', lastChatAt = 0, infoT = 0, backup = null, seenChat = new Set(), joining = false, visiting = false;
+  let opening = null, codeJob = null;
 
   // ---------- Firebase 접근 ----------
   function fb() { return G.cloud && G.cloud._fb ? G.cloud._fb() : null; }
@@ -32,24 +40,44 @@
 
   // ---------- 친구 코드 ----------
   N.myCode = async () => {
-    need();
+    const auth = need();
     if (N.code) return N.code;
-    const mine = (await F.db.get(R('users/' + F.uid + '/code'))).val();
-    if (mine) { N.code = mine; return mine; }
-    for (let k = 0; k < 6; k++) {
-      let c = ''; for (let i = 0; i < 6; i++) c += CODE_CH[Math.floor(Math.random() * CODE_CH.length)];
-      try { await F.db.set(R('codes/' + c), F.uid); } catch (e) { if (k === 5) throw e; continue; } // 이미 있는 코드면 규칙이 거절 → 다시 (계속 거절되면 규칙 미게시)
-      await F.db.set(R('users/' + F.uid + '/code'), c);
-      N.code = c; return c;
+    if (codeJob?.uid === auth.uid) return codeJob.promise;
+    const job = { uid: auth.uid };
+    const ref = (p) => auth.db.ref(auth.ref, p);
+    job.promise = (async () => {
+      const mine = ref('users/' + auth.uid + '/code');
+      const saved = (await auth.db.get(mine)).val();
+      if (saved) return saved;
+      for (let k = 0; k < 6; k++) {
+        let c = ''; for (let i = 0; i < 6; i++) c += CODE_CH[Math.floor(Math.random() * CODE_CH.length)];
+        try { await auth.db.set(ref('codes/' + c), auth.uid); } catch (e) { if (k === 5) throw e; continue; }
+        await auth.db.set(mine, c);
+        return c;
+      }
+      throw new Error('친구 목록 등록을 마치지 못했어요.');
+    })();
+    codeJob = job;
+    try {
+      const code = await job.promise;
+      if (fb()?.uid === auth.uid) N.code = code;
+      return code;
+    } finally {
+      if (codeJob === job) codeJob = null;
     }
-    throw new Error('친구 코드를 만들지 못했어요. 잠시 뒤 다시 해 주세요.');
   };
-  N.cleanCode = (s) => String(s || '').toUpperCase().replace(/[^A-Z2-9]/g, '').slice(0, 6);
+  async function friendUid(p) {
+    if (p.uid) return p.uid;
+    if (!/^[A-Z2-9]{6}$/.test(p.code || '')) return null;
+    return (await F.db.get(R('codes/' + p.code))).val();
+  }
 
   // ---------- 가입한 사람 목록 (오너 요청: 친구 추가할 때 고르기 쉽게) ----------
   // directory/{uid} = { name, town, code, open, at } — 캐릭터 이름·마을 이름·친구 코드만(아이디·이메일 없음)
-  N.publish = async (open) => {
-    need(); const code = await N.myCode();
+  N.publish = async () => {
+    const auth = need(), code = await N.myCode();
+    if (fb()?.uid !== auth.uid) return;
+    const open = N.mode === 'host';
     const v = { name: (G.player.name || '?').slice(0, 8), town: (G.player.town || '').slice(0, 8), code, open: !!open, at: F.db.serverTimestamp() };
     await F.db.set(R('directory/' + F.uid), v);
     if (open) F.db.onDisconnect(R('directory/' + F.uid + '/open')).set(false);
@@ -57,15 +85,27 @@
   N.people = async () => {
     need();
     const all = (await F.db.get(F.db.query(R('directory'), F.db.orderByChild('at'), F.db.limitToLast(60)))).val() || {};
-    return Object.entries(all).filter(([uid, v]) => uid !== F.uid && v && /^[A-Z2-9]{6}$/.test(v.code || ''))
-      .map(([uid, v]) => ({ uid, name: String(v.name || '?').slice(0, 8), town: String(v.town || '').slice(0, 8), code: v.code, open: !!v.open, at: +v.at || 0, friend: st.friends.some((f) => f.code === v.code) }))
-      .sort((a, b) => (b.open - a.open) || (b.friend - a.friend) || (b.at - a.at));
+    const seen = new Set(Object.values(all).map((v) => v?.code));
+    const saved = await Promise.all(st.friends.filter((f) => !seen.has(f.code)).map(async (f) => {
+      try {
+        const uid = await friendUid(f);
+        const profile = uid ? (await F.db.get(R('directory/' + uid))).val() : null;
+        return { ...profile, uid, name: profile?.name || f.name, town: profile?.town || f.town, code: f.code };
+      } catch (e) {
+        return f;
+      }
+    }));
+    const people = Object.entries(all).filter(([uid, v]) => uid !== F.uid && v && /^[A-Z2-9]{6}$/.test(v.code || ''))
+      .map(([uid, v]) => ({ ...v, uid }));
+    return people.concat(saved)
+      .map((v) => ({ uid: v.uid, name: String(v.name || '친구').slice(0, 8), town: String(v.town || '').slice(0, 8), code: v.code, open: !!v.open, at: +v.at || 0, friend: st.friends.some((f) => f.code === v.code) }))
+      .sort((a, b) => (b.friend - a.friend) || (b.open - a.open) || (b.at - a.at));
   };
   N.addFriend = (p) => { rememberFriend(p.code, p.name, p.town, p.uid); watchFriends(); G.audio.sfx('chime'); G.ui.toast(`${rl(p.name)} 친구로 추가했어요!`, { icon: '👫' }); };
   // 놀러 가도 돼? (친구 마을이 닫혀 있을 때) → 친구에게 물어보고, 친구가 문을 열면 알림이 온다
   N.knock = async (p) => {
     need();
-    let uid = p.uid; if (!uid) uid = (await F.db.get(R('codes/' + p.code))).val();
+    const uid = await friendUid(p);
     if (!uid) throw new Error('친구를 찾지 못했어요.');
     try { await F.db.set(R('knock/' + uid + '/' + F.uid), { name: (G.player.name || '?').slice(0, 8), at: F.db.serverTimestamp() }); }
     catch (e) { e.knock = true; throw e; }
@@ -104,21 +144,66 @@
   };
 
   // ---------- 방 열기(주인) ----------
-  N.open = async () => {
-    need(); if (N.mode === 'guest') throw new Error('친구 마을에서 먼저 돌아와 주세요.');
+  async function openRoom(quiet) {
+    const auth = need();
+    if (N.mode === 'guest') throw new Error('친구 마을에서 먼저 돌아와 주세요.');
     const meta = G.save.sections.get('meta').get() || {};
-    await F.db.set(R('rooms/' + F.uid + '/info'), { open: true, name: G.player.name || '?', town: G.player.town || '', seed: meta.seed, vms: Math.round(G.time.now()), at: F.db.serverTimestamp(), v: G.VERSION });
-    F.db.onDisconnect(R('rooms/' + F.uid + '/info/open')).set(false);
+    if (!meta.seed) return;
+    const path = 'rooms/' + auth.uid + '/info';
+    await auth.db.onDisconnect(R(path + '/open')).set(false);
+    await auth.db.set(R(path), { open: true, name: G.player.name || '?', town: G.player.town || '', seed: meta.seed, vms: Math.round(G.time.now()), at: auth.db.serverTimestamp(), v: G.VERSION });
+    if (fb()?.uid !== auth.uid) return;
     N.mode = 'host'; N.room = F.uid; N.hostName = G.player.name; N.hostTown = G.player.town;
-    await join();
-    N.publish(true).catch((e) => G.log.err('net.publish', e));
-    G.emit('net:change', {}); sys('마을 문을 열었어요! 친구에게 내 친구 코드를 알려 주세요.');
+    try { await join(); } catch (e) { joining = false; await N.close(); throw e; }
+    N.publish().catch((e) => G.log.err('net.publish', e));
+    G.emit('net:change', {});
+    if (!quiet) sys('마을 문을 열었어요! 친구 목록에서 바로 놀러 올 수 있어요.');
+  }
+  N.open = async (quiet) => {
+    if (opening) return opening;
+    if (N.mode === 'host') return;
+    opening = openRoom(quiet);
+    try { await opening; } finally { opening = null; }
   };
-  N.close = async () => {
+  N.openIfAllowed = () => {
+    if (st.visits && !visiting && N.mode === 'off' && fb() && G.game?.started && G.scene.is('town'))
+      return N.open(true).catch((e) => G.log.err('net.open', e));
+  };
+  async function restorePresence(auth) {
+    const base = 'rooms/' + auth.uid;
+    const me = R(base + '/players/' + auth.uid);
+    await auth.db.onDisconnect(R(base + '/info/open')).set(false);
+    await auth.db.onDisconnect(me).remove();
+    if (!st.visits || visiting || N.mode !== 'host' || N.room !== auth.uid || fb()?.uid !== auth.uid) return;
+    await auth.db.set(me, myState());
+    if (!st.visits || visiting || N.mode !== 'host' || N.room !== auth.uid || fb()?.uid !== auth.uid) return;
+    await auth.db.set(R(base + '/info/open'), true);
+    await N.publish();
+  }
+  let connectedOff = null;
+  function watchConnection(auth) {
+    if (connectedOff) connectedOff();
+    let connected = false;
+    connectedOff = auth.db.onValue(R('.info/connected'), (snap) => {
+      if (!snap.val()) return;
+      if (connected && N.mode === 'host' && st.visits && !visiting)
+        restorePresence(auth).catch((e) => G.log.err('net.reconnect', e));
+      else N.openIfAllowed();
+      connected = true;
+    });
+  }
+  N.setVisits = async (allow) => {
+    st.visits = allow;
+    G.save.mark('net');
+    if (allow) return N.open();
+    if (opening) { try { await opening; } catch (e) { /* 열리지 않은 방 */ } }
+    await N.close();
+  };
+  N.close = async (quiet) => {
     if (N.mode !== 'host') return;
     try { await F.db.set(R('rooms/' + F.uid + '/info/open'), false); await F.db.remove(R('rooms/' + F.uid + '/players')); await F.db.remove(R('rooms/' + F.uid + '/chat')); } catch (e) { G.log.err('net.close', e); }
-    await leaveRoom(); sys('마을 문을 닫았어요.');
-    N.publish(false).catch(() => {});
+    await leaveRoom(); if (!quiet) sys('마을 문을 닫았어요.');
+    N.publish().catch(() => {});
   };
   N.kick = async (uid) => {
     if (N.mode !== 'host' || !uid) return;
@@ -127,28 +212,52 @@
   };
 
   // ---------- 놀러 가기(손님) ----------
-  N.visit = async (code) => {
-    need(); code = N.cleanCode(code);
-    if (!/^[A-Z2-9]{6}$/.test(code)) throw new Error('친구 코드는 6글자예요.');
-    if (N.mode === 'host') await N.close();
-    if (N.mode === 'guest') await N.home(true);
-    const host = (await F.db.get(R('codes/' + code))).val();
-    if (!host) throw new Error('그런 친구 코드가 없어요. 다시 확인해 주세요.');
-    if (host === F.uid) throw new Error('내 친구 코드예요! 친구의 코드를 넣어 주세요.');
-    const info = (await F.db.get(R('rooms/' + host + '/info'))).val();
-    if (!info || !info.open) throw new Error('친구가 지금 마을 문을 열어 두지 않았어요. 친구에게 「내 마을 열기」를 부탁해 주세요.');
-    if ((await F.db.get(R('rooms/' + host + '/kick/' + F.uid))).val()) throw new Error('지금은 이 마을에 들어갈 수 없어요.');
-    rememberFriend(code, info.name, info.town, host); watchFriends();
-    N.mode = 'guest'; N.room = host; N.hostName = info.name || '친구'; N.hostTown = info.town || '';
-    enterGuestWorld(info);
-    await join();
-    G.emit('net:change', {});
-    G.ui.toast(`${N.hostName}의 「${N.hostTown || '마을'}」에 놀러 왔어요! 벌레·물고기·조개는 내 가방에 담겨요.`, { icon: '🧳', ms: 4200 });
+  N.visit = async (person, allowRequest = true) => {
+    const auth = need();
+    if (visiting) throw new Error('마을로 이동하는 중이에요.');
+    if (!G.scene.is('town')) throw new Error('실내에서 나와 마을에 서면 놀러 갈 수 있어요.');
+    visiting = true;
+    try {
+      const host = await friendUid(person);
+      if (!host || host === F.uid) throw new Error('놀러 갈 친구를 찾지 못했어요.');
+      if (N.mode === 'guest' && N.room === host) return { joined: true };
+      const [infoSnap, kickSnap] = await Promise.all([
+        F.db.get(R('rooms/' + host + '/info')),
+        F.db.get(R('rooms/' + host + '/kick/' + F.uid)),
+      ]);
+      if (fb()?.uid !== auth.uid) throw new Error('다시 로그인한 뒤 놀러 가 주세요.');
+      if (kickSnap.val()) throw new Error('지금은 이 마을에 들어갈 수 없어요.');
+      const info = infoSnap.val();
+      if (!info?.open) {
+        if (!allowRequest) throw new Error('친구가 마을 문을 닫았어요.');
+        await N.knock({ ...person, uid: host });
+        return { joined: false };
+      }
+      if (opening) await opening;
+      if (N.mode === 'host') await N.close(true);
+      if (N.mode === 'guest') await N.home(true);
+      rememberFriend(person.code, info.name, info.town, host); watchFriends();
+      N.mode = 'guest'; N.room = host; N.hostName = info.name || '친구'; N.hostTown = info.town || '';
+      try {
+        enterGuestWorld(info);
+        await join();
+      } catch (e) {
+        joining = false;
+        await leaveRoom();
+        throw e;
+      }
+      G.emit('net:change', {});
+      G.ui.toast(`${N.hostName}의 「${N.hostTown || '마을'}」에 놀러 왔어요! 벌레·물고기·조개는 내 가방에 담겨요.`, { icon: '🧳', ms: 4200 });
+      return { joined: true };
+    } finally {
+      visiting = false;
+    }
   };
   N.home = async (quiet) => {
     if (N.mode !== 'guest') return;
     await leaveRoom();
     if (!quiet) G.ui.toast('집으로 돌아왔어요.', { icon: '🏡' });
+    N.openIfAllowed();
   };
   function rememberFriend(code, name, town, uid) {
     const old = st.friends.find((f) => f.code === code) || {};
@@ -186,6 +295,7 @@
     if (G.game.awayGrow) G.game.awayGrow(); // 놀러 간 동안에도 내 작물·동물은 자란다
   }
   function afterSwap() {
+    G.game.autoStop('visit'); G.fishing.cancel(true);
     G.art.season = G.time.season(); G.art.clearCache(); G.art.dropChunks && G.art.dropChunks();
     G.npc.init(); G.eco.clear(); G.game.resize(); G.ui.refreshHud();
   }
@@ -375,7 +485,7 @@
           // 내가 「놀러 가도 돼?」를 보낸 친구면 바로 갈지 묻는다
           if (knocked[f.uid] && Date.now() - knocked[f.uid] < 15 * 60000 && !G.ui.dialogOpen()) {
             delete knocked[f.uid];
-            G.ui.confirm(`${ga(f.name)} 마을 문을 열었어요! 지금 놀러 갈까요?`, '놀러 가기', '나중에').then((yes) => { if (yes) N.visit(f.code).catch((e) => G.ui.netErr(e)); });
+            G.ui.confirm(`${ga(f.name)} 마을 문을 열었어요! 지금 놀러 갈까요?`, '놀러 가기', '나중에').then((yes) => { if (yes) N.visit(f, false).catch((e) => G.ui.netErr(e)); });
           } else G.ui.toast(`${ga(f.name)} 마을 문을 열었어요! 잎첩 👫 친구 탭에서 놀러 갈 수 있어요.`, { icon: '🟢', ms: 4500 });
         }
       }));
@@ -383,9 +493,22 @@
   }
   N.watchFriends = watchFriends;
   // 이름·마을 이름을 바꾸면 목록에도 바로 반영
-  G.on('player:look', () => { if (fb()) N.publish(N.mode === 'host').catch(() => {}); });
+  G.on('player:look', () => { if (fb()) N.publish().catch(() => {}); });
   // 로그인하면 목록에 내 이름을 올린다(다른 사람이 나를 친구로 고를 수 있게)
-  G.on('cloud:state', (s) => { if (s.phase === 'synced' && !N._published && fb()) { N._published = true; N.publish(N.mode === 'host').catch((e) => { N._published = false; G.log.err('net.publish', e); }); watchFriends(); watchKnocks(); } if (s.phase === 'signed-out' || s.phase === 'kicked') { N._published = false; N.code = ''; } });
+  G.on('cloud:state', (s) => {
+    if (s.phase === 'synced' && fb()) {
+      if (!N._published) {
+        N._published = true;
+        N.publish().catch((e) => { N._published = false; G.log.err('net.publish', e); });
+        watchFriends(); watchKnocks(); watchConnection(need());
+      }
+      N.openIfAllowed();
+    }
+    if (s.phase === 'signed-out' || s.phase === 'kicked') {
+      N._published = false; N.code = '';
+      if (connectedOff) { connectedOff(); connectedOff = null; }
+    }
+  });
 
   G.modules.add('net');
 })(globalThis.G);

@@ -596,19 +596,17 @@
       return;
     }
     const top = $('div', 'netbox');
-    let code = '…'; try { code = await N.myCode(); } catch (e) { code = '?'; if (/PERMISSION/i.test(String(e && (e.code || e.message)))) { pane.append($('div', 'slot-info', '⚙️ 친구 기능 서버 설정이 아직 안 됐어요.<br>Firebase 콘솔 → Realtime Database → 규칙에 새 규칙(firebase.database.rules.json)을 게시하면 바로 쓸 수 있어요.')); return; } }
-    top.innerHTML = `<div><small class="muted">내 친구 코드</small><div class="mycode">${esc(code)}</div></div>`;
     // 상태: 내 마을 열기 / 친구 마을에 있음
     if (N.mode === 'guest') {
       top.append($('div', 'netstate', `🧳 지금 <b>${esc(N.hostName)}</b>의 마을에 놀러 와 있어요 · 함께 ${N.count() + 1}명`));
       const home = $('button', 'btn', '🏡 집으로 돌아가기'); home.onclick = async () => { await N.home(); UI.open && UI.open.close(); }; top.append(home);
     } else if (N.mode === 'host') {
       top.append($('div', 'netstate', `🟢 내 마을 문이 열려 있어요 · 손님 ${N.count()}명`));
-      const cl = $('button', 'btn ghost', '🚪 마을 문 닫기'); cl.onclick = async () => { await N.close(); friendsPane(pane); }; top.append(cl);
+      const cl = $('button', 'btn ghost', '🚪 마을 문 닫기'); cl.onclick = async () => { await N.setVisits(false); friendsPane(pane); }; top.append(cl);
       for (const o of Object.values(N.others)) { const r = $('div', 'personrow', `<span>🧑 <b>${esc(o.name)}</b></span>`); const k = $('button', 'btn small ghost', '내보내기'); k.onclick = async () => { if (await UI.confirm(`${o.name}${G.josa(o.name, '을/를').slice(-1)} 집으로 돌려보낼까요?`, '돌려보내기', '아니요')) { await N.kick(o.uid); friendsPane(pane); } }; r.append(k); top.append(r); }
     } else {
       const op = $('button', 'btn', '🚪 내 마을 열기 (친구가 놀러 올 수 있게)');
-      op.onclick = async () => { try { await N.open(); friendsPane(pane); } catch (e) { UI.netErr(e); } };
+      op.onclick = async () => { try { await N.setVisits(true); friendsPane(pane); } catch (e) { UI.netErr(e); } };
       top.append(op);
     }
     pane.append(top);
@@ -624,7 +622,7 @@
     list.innerHTML = '<div class="muted small">불러오는 중…</div>';
     let people = [];
     // 친구 탭을 열 때마다 내 이름을 목록에 올린다(예전에 등록이 실패했어도 여기서 다시)
-    try { await N.publish(N.mode === 'host'); } catch (e) { G.log.err('net.publish', e); }
+    try { await N.publish(); } catch (e) { G.log.err('net.publish', e); }
     try { people = await N.people(); } catch (e) { list.innerHTML = '<div class="muted small">목록을 불러오지 못했어요. 잠시 뒤 새로고침해 주세요.</div>'; }
     if (people.length || !list.querySelector('.muted')) list.innerHTML = '';
     // 저장해 둔 친구 중 목록(최근 60명)에 없는 사람도 보여 준다
@@ -633,24 +631,26 @@
     const draw = () => {
       list.innerHTML = '';
       const qq = (UI._netQ || '').trim();
-      const shown = all.filter((p) => (!UI._netOnly || p.friend) && (!qq || p.name.includes(qq) || p.town.includes(qq)));
-      if (!shown.length) list.append($('div', 'slot-info', all.length ? '찾는 사람이 없어요.' : '아직 목록에 다른 사람이 없어요.<br>친구가 <b>새 버전에서 로그인</b>하면 여기에 자동으로 나타나요. (친구도 게임을 껐다 켜서 최신 버전으로!)<br>또는 친구에게 위의 <b>내 친구 코드</b>를 알려 주고, 아래 「친구 코드로 찾기」를 써도 돼요.'));
+      const shown = all.filter((p) => (!UI._netOnly || p.friend) && (!qq || p.name.includes(qq)));
+      if (!shown.length) list.append($('div', 'slot-info', all.length ? '찾는 사람이 없어요.' : '친구가 게임에 로그인하면 목록에서 찾을 수 있어요.'));
       for (const p of shown) row(p);
     };
     q.oninput = () => { UI._netQ = q.value; draw(); };
     only.onclick = () => { UI._netOnly = !UI._netOnly; only.classList.toggle('on', UI._netOnly); draw(); };
     const row = (p) => {
-      const r = $('div', 'personrow' + (p.friend ? ' friend' : ''), `<span>${p.open ? '🟢' : '⚪'} ${p.friend ? '⭐' : ''}<b>${esc(p.name)}</b> <small class="muted">${esc(p.town)}${p.open ? ' · 마을 열림' : ''}</small></span>`);
+      const r = $('div', 'personrow' + (p.friend ? ' friend' : ''), `<span>${p.open ? '🟢' : '⚪'} ${p.friend ? '⭐' : ''}<b>${esc(p.name)}</b> <small class="muted">${p.open ? '마을 열림' : '마을 닫힘'}</small></span>`);
       const btns = $('div', 'row');
       if (!p.friend) { const a = $('button', 'btn small', '＋ 친구'); a.onclick = () => { N.addFriend(p); p.friend = true; draw(); }; btns.append(a); }
-      if (N.mode !== 'host') {
-        // 항상 보이는 「놀러 가기」: 열려 있으면 바로, 닫혀 있으면 「놀러 가도 돼?」를 보낸다
-        const v = $('button', 'btn small' + (p.open ? '' : ' ghost'), p.open ? '놀러 가기' : '놀러 가도 돼?');
+      if (!(N.guest && N.room === p.uid)) {
+        const v = $('button', 'btn small' + (p.open ? '' : ' ghost'), '놀러 가기');
         v.onclick = async () => {
+          const panel = UI.open;
+          v.disabled = true;
           try {
-            if (p.open) { await N.visit(p.code); UI.open && UI.open.close(); return; }
-            await N.knock(p); p.friend = true; v.textContent = '보냈어요 ✓'; v.disabled = true;
-          } catch (e) { UI.netErr(e); }
+            const result = await N.visit(p);
+            if (result.joined) { if (UI.open === panel) panel?.close(); return; }
+            p.friend = true; v.textContent = '요청 보냄 ✓';
+          } catch (e) { v.disabled = false; UI.netErr(e); }
         };
         btns.append(v);
       }
@@ -658,14 +658,7 @@
       r.append(btns); list.append(r);
     };
     if (!list.querySelector('.muted') || all.length) draw();
-    // 코드로 찾기
-    const cf = $('div', 'row wrap');
-    const ci = $('input', 'codein'); ci.placeholder = '친구 코드 6자리'; ci.maxLength = 8;
-    const cb = $('button', 'btn small', '코드로 놀러 가기');
-    cb.onclick = async () => { try { await N.visit(ci.value); UI.open && UI.open.close(); } catch (e) { UI.netErr(e); } };
-    cf.append(ci, cb);
-    pane.append($('div', 'pane-head', '<span>🔑 친구 코드로 찾기</span>'), cf);
-    pane.append($('div', 'muted small', '🟢 = 지금 마을 문을 열어 둔 사람 · 다른 사람에게는 캐릭터 이름과 마을 이름만 보여요.'));
+    pane.append($('div', 'muted small', '🟢 마을이 열려 있으면 바로 방문해요. 문이 닫혀 있으면 방문 요청을 보내요.'));
   }
 
   // 📦 보관함: 집 안이거나 집(텐트) 문 근처일 때만, 손님일 땐 안 됨
