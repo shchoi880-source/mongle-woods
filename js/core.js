@@ -3,7 +3,7 @@
 (function (root) {
   'use strict';
   const G = root.G = root.G || {};
-  G.VERSION = '0.18.7';
+  G.VERSION = '0.18.8';
   G.C = { TILE: 32, HSTEP: 16, CHUNK: 8, CELL: 4, DAY_H: 5, MAP_W: 112, MAP_H: 96 };
   G.C.FISH_BITE_SECONDS = 2;
   G.modules = new Set();
