@@ -1011,6 +1011,19 @@
       P.blob(g, 16, 19, 11, 8, '#d9946a', LINE, 1.4); P.blob(g, 13, 16, 5, 2.5, '#efb48e'); g.strokeStyle = '#b8714a'; g.beginPath(); g.moveTo(10, 21); g.quadraticCurveTo(16, 18, 22, 22); g.stroke();
     } else if (id === 'iron') {
       P.blob(g, 16, 19, 11, 8, '#7a8290', LINE, 1.4); for (const [x, y] of [[12, 17], [19, 20], [16, 23]]) P.blob(g, x, y, 2.2, 1.6, '#e9a26a');
+    } else if (id === 'gold') {
+      g.lineJoin = 'round';
+      g.strokeStyle = '#8a562f'; g.lineWidth = 1.2;
+      g.fillStyle = '#cf882e'; g.beginPath();
+      g.moveTo(3, 19); g.lineTo(7, 24); g.lineTo(23, 27);
+      g.lineTo(29, 19); g.lineTo(25, 12); g.lineTo(10, 11);
+      g.closePath(); g.fill(); g.stroke();
+      g.fillStyle = '#f6c65d'; g.beginPath();
+      g.moveTo(3, 19); g.lineTo(20, 22); g.lineTo(25, 12); g.lineTo(10, 11);
+      g.closePath(); g.fill(); g.stroke();
+      g.strokeStyle = '#fff0a9'; g.lineWidth = 1.7; g.lineCap = 'round'; g.beginPath();
+      g.moveTo(10, 15); g.lineTo(18, 16); g.stroke();
+      P.blob(g, 23, 7, 1.3, 1.3, '#eabb4c');
     } else if (id === 'fossil_raw') {
       P.blob(g, 16, 19, 12, 9, '#cdb894', LINE, 1.4); P.blob(g, 12, 16, 4, 2.4, '#e2d2b0');
       g.strokeStyle = '#9a8566'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(8, 22); g.lineTo(13, 20); g.moveTo(20, 24); g.lineTo(24, 20); g.stroke();
