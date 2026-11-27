@@ -193,6 +193,7 @@
   const items = [
     { id: 'branch', name: '나뭇가지', cat: 'mat', val: 15, stack: 30 },
     { id: 'fruit_acorn', name: '도토리', cat: 'mat', val: 30, stack: 30 },
+    { id: 'gold', name: '금', cat: 'mat', val: 0, stack: 1, nosell: true },
     { id: 'letter_ddalang', name: '딸랑에게 갈 편지', cat: 'letter', val: 0, stack: 1, nosell: true },
     { id: 'letter_noaddr', name: '주소 없는 편지', cat: 'letter', val: 0, stack: 1, nosell: true },
   ];

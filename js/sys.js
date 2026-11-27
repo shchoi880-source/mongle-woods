@@ -101,6 +101,7 @@
 
   // ---------- 지갑·상점·유행 바람 ----------
   const econ = { money: 1000, salesTotal: 0, soldDays: 0, firstSale: false, bought: {} };
+  const GOLD_PRICE = 100_000_000;
   G.wallet = {
     get: () => econ.money,
     add(n, why) { econ.money += n; G.emit('wallet:change', { delta: n, why }); G.save.mark('wallet'); },
@@ -147,6 +148,7 @@
     stock(day) {
       const d = day === undefined ? G.time.day() : day;
       const list = [{ kind: 'tool', id: 'shovel', name: G.TOOLS.shovel.name, price: G.TOOLS.shovel.price, key: 'shovel' }];
+      list.push({ kind: 'gold', id: 'gold', name: G.items.name('gold'), price: GOLD_PRICE, key: 'gold', detail: '소장용' });
       if (G.TOOLS.axe) list.push({ kind: 'tool', id: 'axe', name: G.TOOLS.axe.name, price: G.TOOLS.axe.price, key: 'axe' });
       // 계절 씨앗 (3개 묶음) + 물뿌리개
       if (G.farm) {
@@ -222,6 +224,13 @@
         G.emit('shop:buy', { id: 'up_' + entry.id, price }); return { ok: true };
       }
       if (entry.kind === 'animal') { const r = G.ranch.buy(entry.id); if (r.ok) G.emit('shop:buy', { id: entry.id, price: entry.price }); return r; }
+      if (entry.kind === 'gold') {
+        if (!G.inv.canFit('gold')) return { ok: false, why: '가방이 꽉 찼어요.' };
+        if (!G.wallet.spend(GOLD_PRICE, 'buy')) return { ok: false, why: '몽이 조금 모자라요.' };
+        G.inv.add('gold');
+        G.emit('shop:buy', { id: 'gold', price: GOLD_PRICE });
+        return { ok: true };
+      }
       if (entry.kind === 'seed') {
         if (!G.inv.canFit('seed:' + entry.id)) return { ok: false, why: '가방이 꽉 찼어요.' };
         if (!G.wallet.spend(entry.price, 'buy')) return { ok: false, why: '몽이 조금 모자라요.' };
