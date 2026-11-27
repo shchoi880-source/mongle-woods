@@ -452,7 +452,7 @@
         c.onclick = () => {
           if (locked) {
             const f = opt.lock !== 'shop' && G.fest && G.fest.FESTS.find((x) => 'hat' + x.hat === opt.lock);
-            UI.toast(opt.lock === 'shop' ? `「${it[1]}」은 땅굴상점 옷 코너에서 살 수 있어요! (날마다 바뀌어요)` : f ? `「${it[1]}」은 ${f.name}에서 ${f.tname}을 모아 받아요!` : `「${it[1]}」은 축제 모자 4개를 모두 모으면 받아요!`, { icon: '🔒' }); G.audio.sfx('error'); return;
+            UI.toast(opt.lock === 'shop' ? `「${it[1]}」은 땅굴상점 사기 탭에서 살 수 있어요!` : f ? `「${it[1]}」은 ${f.name}에서 ${f.tname}을 모아 받아요!` : `「${it[1]}」은 축제 모자 4개를 모두 모으면 받아요!`, { icon: '🔒' }); G.audio.sfx('error'); return;
           }
           look.pk[key] = v; sync(); G.audio.sfx('pop'); preload(); drawBuilder();
         };
@@ -1018,6 +1018,12 @@
   UI.shop = () => UI.modal('땅굴상점 가판대', (body, close) => {
     const sel = new Set();
     const tr = G.market.trend();
+    const groups = { tool: '도구·확장', seed: '씨앗', animal: '목장', furn: '가구', ...G.shop.WARDROBE };
+    const groupOf = (e) => {
+      if (e.kind === 'pk' || e.kind === 'look') return e.part;
+      return ['up', 'plot', 'bag'].includes(e.kind) ? 'tool' : e.kind;
+    };
+    let buyGroup = 'tool';
     const render = () => {
       body.innerHTML = '';
       // 사기/팔기 탭 (7차 회의: 폰에서 사는 칸이 한참 아래에 있어 안 보였다)
@@ -1025,7 +1031,7 @@
       const sellable = G.inv.slots.filter((x) => G.items.sellPrice(x.id, x.x)).length;
       const tab = UI._shopTab || (sellable ? 'sell' : 'buy');
       for (const [id, nm] of [['sell', `💰 팔기 (${sellable})`], ['buy', '🛒 사기'], ['cat', '📖 카탈로그']]) {
-        const b = $('button', 'tab' + (tab === id ? ' on' : ''), nm); b.onclick = () => { UI._shopTab = id; G.audio.sfx('tap'); render(); }; tabs.append(b);
+        const b = $('button', 'tab' + (tab === id ? ' on' : ''), nm); b.onclick = () => { UI._shopTab = id; G.audio.sfx('tap'); render(); body.scrollTop = 0; }; tabs.append(b);
       }
       body.append(tabs);
       const head = $('div', 'pane-head', `<span>팔 물건을 골라 주세요 · 유행 바람: 「${tr.name}」 +20%</span>`);
@@ -1052,11 +1058,23 @@
       foot.append(sb);
       // 구매
       const buy = $('div', 'buyrow');
-      for (const e of G.shop.stock()) {
-        if (e.kind === 'furn' && G.house) G.house.see(e.id);
+      const categories = $('div', 'subtabs');
+      const stock = G.shop.stock();
+      for (const e of stock) if (e.kind === 'furn') G.house.see(e.id);
+      if (tab === 'buy') for (const [id, name] of Object.entries(groups)) {
+        if (!stock.some((e) => groupOf(e) === id)) continue;
+        const active = id === buyGroup;
+        const b = $('button', 'tab' + (active ? ' on' : ''), name);
+        b.setAttribute('aria-pressed', String(active));
+        b.onclick = () => { buyGroup = id; G.audio.sfx('tap'); render(); body.scrollTop = 0; };
+        categories.append(b);
+      }
+      for (const e of tab === 'buy' ? stock.filter((item) => groupOf(item) === buyGroup) : []) {
         const own = e.kind === 'tool' ? G.player.hasTool(e.id) : e.kind === 'look' || e.kind === 'pk' ? !!(G.player.unlocks || {})[e.key] : G.shop.soldOut(e);
         const ico = e.kind === 'pk' ? `<span class="lookico">${e.part === 'hat' ? '🎩' : e.part === 'head' ? '💇' : '👕'}</span>` : e.kind === 'look' ? `<span class="lookico">${e.part === 'hat' ? '👒' : '👕'}</span>` : e.kind === 'plot' ? `<img src="${G.art.iconURL('seed:carrot', 64)}" alt=""><i class="upmark">＋</i>` : e.kind === 'bag' ? '<span class="lookico">🎒</span><i class="upmark">＋</i>' : e.kind === 'tool' || e.kind === 'up' ? `<img src="${G.art.iconURL('tool:' + e.id, 64)}" alt="">${e.kind === 'up' ? '<i class="upmark">⬆</i>' : ''}` : e.kind === 'seed' ? `<img src="${G.art.iconURL('seed:' + e.id, 64)}" alt="">` : e.kind === 'animal' ? `<img src="${G.art.iconURL('animal:' + e.id, 64)}" alt="">` : `<img src="${G.art.iconURL('furn:' + e.id + '#' + e.c, 64)}" alt="">`;
-        const b = $('button', 'buycard' + (own ? ' off' : ''), `${ico}<b>${esc(e.name)}</b><small>${own ? (e.kind === 'tool' ? '가지고 있음' : '다 팔림') : G.fmt.money(e.price)}</small>`);
+        const status = !own ? G.fmt.money(e.price) : e.kind === 'furn' ? '다 팔림' : '가지고 있음';
+        const b = $('button', 'buycard' + (own ? ' off' : ''), `${ico}<b>${esc(e.name)}</b><small>${status}</small>`);
+        b.disabled = !!own;
         b.onclick = async () => {
           if (own) return;
           const r = G.shop.buy(e);
@@ -1067,7 +1085,7 @@
           if (e.kind === 'animal') { tip(r.first ? `${e.name}가 집 옆 목장에 왔어요! 쓰다듬으면 몇 분 뒤 선물을 줘요.` : `${e.name}가 목장에 도착했어요!`, '🐣', 4000); }
           else if (r.gift) { tip('씨앗 첫 손님 덤으로 물뿌리개를 받았어요! 텃밭은 집 옆에 있어요.', '🚿', 4000); }
           else if (e.kind === 'tool') { G.player.setTool(e.id); tip(e.id === 'axe' ? '도끼를 샀어요! 나무를 찍으면 목재가 나와요.' : e.id === 'can' ? '물뿌리개를 샀어요! 텃밭에 물을 줘요.' : '삽을 샀어요! 땅의 금(✕)을 파 보세요.', '🧰'); }
-          else if (e.kind === 'pk') tip(`「${e.name}」을 샀어요! 잎첩 🪞 나 → 🎨 직접 꾸미기에서 입어 봐요.`, '👕', 3800);
+          else if (e.kind === 'pk') tip(`「${e.name}」을 샀어요! 잎첩 🪞 나에서 꾸며 봐요.`, '👕', 3800);
           else if (e.kind === 'look') tip(`「${e.name}」을 샀어요! 잎첩 🪞 나에서 입어 봐요.`, '👕', 3600);
           else if (e.kind === 'bag') tip(`가방이 ${G.inv.size}칸이 됐어요!`, '🎒');
           else if (e.kind === 'plot') tip(`텃밭이 ${r.n}칸 넓어졌어요! (모두 ${G.farm.st.plots.length}칸)`, '🥕');
@@ -1075,7 +1093,8 @@
           else if (e.kind === 'up') tip({ net: '튼튼 잠자리채! 채가 더 넓게 닿아요.', can: '큰 물뿌리개! 주변 5×3 칸에 한 번에 물을 줘요.' }[e.id], '⬆️', 3600);
           else if (e.kind === 'seed') tip(`${e.name}를 샀어요! 집 옆 텃밭에 심어요.`, '🌱');
           else tip(`${e.name}을(를) 샀어요! 집에서 꾸미기로 놓아 보세요.`, '🛋️');
-          render();
+          const scroll = body.scrollTop;
+          render(); body.scrollTop = scroll;
         };
         buy.append(b);
       }
@@ -1105,7 +1124,8 @@
       else {
         // 사기 탭: 팔기 칸은 감춘다
         for (const el of [head, body.querySelector('.grid')]) if (el) el.remove();
-        body.append($('div', 'pane-head', `<span>오늘의 물건 (매일 아침 바뀌어요) · 내 돈 ${G.fmt.money(G.wallet.get())}</span>`), buy);
+        const heading = buyGroup === 'furn' ? '오늘의 가구 · ' : '';
+        body.append(categories, $('div', 'pane-head', `<span>${heading}내 돈 ${G.fmt.money(G.wallet.get())}</span>`), buy);
       }
     };
     render();
