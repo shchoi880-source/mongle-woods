@@ -103,7 +103,7 @@
   function bump(el) { el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); }
   // 도구 아이콘 HTML (맨손만 이모지)
   UI.toolIcon = (t, cls = 'ti-img') => t === 'hand' ? '✋' : `<img class="${cls}" src="${G.art.iconURL('tool:' + t, 64)}" alt="">`;
-  const toolName = (t) => t === 'rod' ? G.fishing.RODS[G.fishing.rodLevel()].name : G.TOOLS[t].name;
+  const toolName = (t) => G.toolTier(t)?.name || G.TOOLS[t].name;
   UI.hud = (on) => { UI.root.classList.toggle('hud-on', !!on); };
   let lastGoal = '';
   UI.refreshGoal = () => {
@@ -1073,7 +1073,8 @@
         const own = e.kind === 'tool' ? G.player.hasTool(e.id) : e.kind === 'look' || e.kind === 'pk' ? !!(G.player.unlocks || {})[e.key] : G.shop.soldOut(e);
         const ico = e.kind === 'pk' ? `<span class="lookico">${e.part === 'hat' ? '🎩' : e.part === 'head' ? '💇' : '👕'}</span>` : e.kind === 'look' ? `<span class="lookico">${e.part === 'hat' ? '👒' : '👕'}</span>` : e.kind === 'plot' ? `<img src="${G.art.iconURL('seed:carrot', 64)}" alt=""><i class="upmark">＋</i>` : e.kind === 'bag' ? '<span class="lookico">🎒</span><i class="upmark">＋</i>' : e.kind === 'tool' || e.kind === 'up' ? `<img src="${G.art.iconURL('tool:' + e.id, 64)}" alt="">${e.kind === 'up' ? '<i class="upmark">⬆</i>' : ''}` : e.kind === 'seed' ? `<img src="${G.art.iconURL('seed:' + e.id, 64)}" alt="">` : e.kind === 'animal' ? `<img src="${G.art.iconURL('animal:' + e.id, 64)}" alt="">` : `<img src="${G.art.iconURL('furn:' + e.id + '#' + e.c, 64)}" alt="">`;
         const status = !own ? G.fmt.money(e.price) : e.kind === 'furn' ? '다 팔림' : '가지고 있음';
-        const b = $('button', 'buycard' + (own ? ' off' : ''), `${ico}<b>${esc(e.name)}</b><small>${status}</small>`);
+        const detail = e.detail ? `<small>${esc(e.detail)}</small>` : '';
+        const b = $('button', 'buycard' + (own ? ' off' : ''), `${ico}<b>${esc(e.name)}</b><small>${status}</small>${detail}`);
         b.disabled = !!own;
         b.onclick = async () => {
           if (own) return;
@@ -1089,8 +1090,8 @@
           else if (e.kind === 'look') tip(`「${e.name}」을 샀어요! 잎첩 🪞 나에서 입어 봐요.`, '👕', 3600);
           else if (e.kind === 'bag') tip(`가방이 ${G.inv.size}칸이 됐어요!`, '🎒');
           else if (e.kind === 'plot') tip(`텃밭이 ${r.n}칸 넓어졌어요! (모두 ${G.farm.st.plots.length}칸)`, '🥕');
-          else if (e.kind === 'up' && e.id === 'rod') { UI.refreshHud(); tip(`${e.name}! 희귀 물고기가 더 자주 나와요.`, '🎣', 3600); }
-          else if (e.kind === 'up') tip({ net: '튼튼 잠자리채! 채가 더 넓게 닿아요.', can: '큰 물뿌리개! 주변 5×3 칸에 한 번에 물을 줘요.' }[e.id], '⬆️', 3600);
+          else if (e.kind === 'up' && e.level) { UI.refreshHud(); tip(`${e.name} ${e.level + 1}단계 · ${e.detail}`, '⬆️', 3600); }
+          else if (e.kind === 'up') tip('큰 물뿌리개! 주변 5×3 칸에 한 번에 물을 줘요.', '🚿', 3600);
           else if (e.kind === 'seed') tip(`${e.name}를 샀어요! 집 옆 텃밭에 심어요.`, '🌱');
           else tip(`${e.name}을(를) 샀어요! 집에서 꾸미기로 놓아 보세요.`, '🛋️');
           const scroll = body.scrollTop;

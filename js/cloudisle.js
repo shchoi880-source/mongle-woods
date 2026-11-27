@@ -52,13 +52,12 @@
 
   // ---------- 생물 ----------
   const TIER_W = [0, 10, 5, 2, 0.7, 0.25];
-  function pickSp(list, kind) {
-    const weighted = list.map((s) => {
+  function islandWeights(list, kind) {
+    return list.map((s) => {
       const skill = G.skills ? G.skills.rareMul(kind, s.tier) : 1;
       const w = TIER_W[s.tier] * (s.rare || 1) * (s.tier >= 3 ? 3 : 1) * (s.cloud ? 4 : 1) * skill;
       return { s, w };
     });
-    return G.u.pickW(kind === 'fish' ? G.fishing.rodWeights(weighted) : weighted, Math.random()).s;
   }
   function spawnBug() {
     const m = G.time.month(), list = G.data.all('bugs').filter((s) => (s.cloud || s.months.includes(m)) && !s.high && s.loc !== 'water' && s.loc !== 'surface' && s.beh !== 'G');
@@ -66,14 +65,20 @@
     const fl = I.objs.filter((o) => o.k === 'flower' || o.k === 'tree' || o.k === 'fruit');
     const o = fl[Math.floor(Math.random() * fl.length)] || I.dock;
     const x = o.tx * TILE + 16 + (Math.random() - 0.5) * 30, y = o.ty * TILE + 16 + (Math.random() - 0.5) * 20;
-    const sp = pickSp(list, 'bug'), sz = sp.size || [3, 5];
+    const sp = G.u.pickW(G.eco.netWeights(islandWeights(list, 'bug')), Math.random()).s;
+    const sz = sp.size || [3, 5];
     I.bugs.push({ sp, x, y, hx: x, hy: y, seed: Math.random() * 10, alt: 6, baseAlt: 6, face: 1, t: 0, fade: 0, state: 'idle', v: 0, size: Math.round((sz[0] + Math.random() * (sz[1] - sz[0])) * 10) / 10 });
   }
+  function islandFishWeights() {
+    const m = G.time.month(), h = G.time.hour();
+    const list = G.data.all('fish').filter((s) => s.loc !== 'sea' && s.months.includes(m) && s.hours.some(([a, b]) => h >= a && h < b));
+    return islandWeights(list, 'fish');
+  }
   function spawnFish() {
-    const m = G.time.month(), list = G.data.all('fish').filter((s) => (s.cloud || s.months.includes(m)) && s.loc !== 'sea');
-    if (!list.length) return;
-    const sp = pickSp(list, 'fish'), a = Math.random() * 6.28, r = Math.random() * 0.6, sz = sp.size || [10, 20];
-    I.fish.push({ sp, shadow: sp.shadow || 2, x: I.pond.x + Math.cos(a) * I.pond.rx * r, y: I.pond.y + Math.sin(a) * I.pond.ry * r, ang: Math.random() * 6.28, seed: Math.random() * 10, fade: 0, size: Math.round(sz[0] + Math.random() * (sz[1] - sz[0])) });
+    const style = G.fishing.shadowStyle(islandFishWeights());
+    if (!style) return;
+    const a = Math.random() * 6.28, r = Math.random() * 0.6;
+    I.fish.push({ ...style, x: I.pond.x + Math.cos(a) * I.pond.rx * r, y: I.pond.y + Math.sin(a) * I.pond.ry * r, ang: Math.random() * 6.28, seed: Math.random() * 10, fade: 0 });
   }
 
   // ---------- 들어가기·나가기 ----------
@@ -124,11 +129,21 @@
   // ---------- 행동 ----------
   const D4 = [[0, 1], [-1, 0], [0, -1], [1, 0]];
   function front(d = 26) { const pl = G.player, [dx, dy] = D4[pl.dir]; return { x: pl.x + dx * d, y: pl.y + dy * d - 4 }; }
+  function netTarget(f) {
+    const { reach, grace } = G.toolTier('net');
+    let nearest, distance = 40 * reach;
+    for (const bug of I.bugs) {
+      if (bug.state !== 'idle' && !(bug.state === 'flee' && bug.t < grace)) continue;
+      const d = Math.hypot(f.x - bug.x, f.y - bug.y);
+      if (d < distance) { nearest = bug; distance = d; }
+    }
+    return nearest;
+  }
   function target() {
     const pl = G.player, f = front(), tool = pl.tool;
     if (I.dock && Math.hypot(pl.x - (I.dock.tx * TILE + 16), pl.y - (I.dock.ty * TILE + 20)) < 30) return { kind: 'dock' };
     for (const p of I.pick) if (Math.hypot(f.x - p.x, f.y - p.y) < 24 || Math.hypot(pl.x - p.x, pl.y - p.y) < 20) return { kind: 'pick', p };
-    if (tool === 'net') { const b = I.bugs.find((b) => b.state === 'idle' && Math.hypot(f.x - b.x, f.y - b.y) < 40); return { kind: 'net', b }; }
+    if (tool === 'net') return { kind: 'net', b: netTarget(f) };
     if (tool === 'rod') { for (const d of [40, 56, 72]) { const q = front(d); if (tileAt(q.x, q.y) === 2) return { kind: 'cast', q }; } }
     const o = I.objs.find((o) => o.k !== 'flower' && Math.hypot(f.x - (o.tx * TILE + 16), f.y - (o.ty * TILE + 22)) < 26);
     if (o && o.k === 'rock') return { kind: 'rock', o };
@@ -149,9 +164,11 @@
         return;
       }
       case 'net': {
+        const island = I;
         pl.swing = 0.001; pl.busy = 0.38; G.audio.sfx('swing');
         setTimeout(() => {
-          const b = tg.b && I && I.bugs.includes(tg.b) && tg.b.state === 'idle' ? tg.b : I && I.bugs.find((b) => b.state === 'idle' && Math.hypot(front().x - b.x, front().y - b.y) < 36);
+          if (I !== island) return;
+          const b = netTarget(front());
           if (!b) { G.audio.sfx('whiff'); return; }
           I.bugs.splice(I.bugs.indexOf(b), 1); setTimeout(() => I && spawnBug(), 12000);
           const r = G.collect.record('bug', b.sp.ix, 0, b.size); G.emit('eco:caught', { kind: 'bug', ix: b.sp.ix, v: 0, size: b.size });
@@ -178,8 +195,14 @@
         return;
       }
       case 'chop': {
-        const o = tg.o; pl.busy = 0.45; pl.swing = 0.001;
-        setTimeout(() => { o.shakeT = 0.4; G.audio.sfx('shake'); if (o.chop >= 3) { G.audio.sfx('bump'); G.ui.toast('이 나무는 더 내줄 게 없대요.', { icon: '🌳' }); return; } o.chop++; G.audio.sfx('drop'); gain('wood', 1, null, '목재를 얻었다!', 'drop'); }, 180);
+        const o = tg.o, island = I; pl.busy = 0.45; pl.swing = 0.001;
+        setTimeout(() => {
+          if (I !== island) return;
+          o.shakeT = 0.4; G.audio.sfx('shake');
+          const n = G.toolTier('axe', pl).wood[o.chop];
+          if (!n) { G.audio.sfx('bump'); G.ui.toast('이 나무는 더 내줄 게 없대요.', { icon: '🌳' }); return; }
+          if (gain('wood', n, null, `목재 ${n}개를 얻었다!`, 'drop')) { o.chop++; G.audio.sfx('drop'); }
+        }, 180);
         return;
       }
       case 'rock': {
@@ -201,13 +224,17 @@
     if (f.state === 'wait') { F = null; G.audio.sfx('miss'); G.ui.toast('너무 일찍 당겼어요. 찌가 쏙 들어갈 때 당겨요!', { icon: '🎣' }); return; }
     if (f.state === 'bite') {
       F = null;
-      let fi = I.fish.reduce((best, x) => (!best || Math.hypot(x.x - f.x, x.y - f.y) < Math.hypot(best.x - f.x, best.y - f.y) ? x : best), null);
-      if (!fi) { spawnFish(); fi = I.fish[I.fish.length - 1]; } if (!fi) return;
-      I.fish.splice(I.fish.indexOf(fi), 1); setTimeout(() => I && spawnFish(), 15000);
-      const r = G.collect.record('fish', fi.sp.ix, 0, fi.size); G.emit('eco:caught', { kind: 'fish', ix: fi.sp.ix, v: 0, size: fi.size });
+      const shadow = I.fish.reduce((best, x) => (!best || Math.hypot(x.x - f.x, x.y - f.y) < Math.hypot(best.x - f.x, best.y - f.y) ? x : best), null);
+      const sp = G.fishing.pickCatch(islandFishWeights());
+      if (!sp) return;
+      if (shadow) I.fish.splice(I.fish.indexOf(shadow), 1);
+      const island = I;
+      setTimeout(() => { if (I === island) spawnFish(); }, 15000);
+      const size = Math.round(sp.size[0] + Math.random() * (sp.size[1] - sp.size[0]));
+      const r = G.collect.record('fish', sp.ix, 0, size); G.emit('eco:caught', { kind: 'fish', ix: sp.ix, v: 0, size });
       G.audio.sfx('catch');
-      gain('fish:' + fi.sp.id, 1, { size: fi.size, v: 0, newSp: r.newSp }, `${G.josa(G.items.name('fish:' + fi.sp.id), '을/를')} 낚았다!${fi.sp.tier >= 3 ? ' 구름섬 희귀종!' : ''}`);
-      if (G.game.celebrate && (r.newSp || fi.sp.tier >= 3)) G.game.celebrate(G.player.x, G.player.y - 40, fi.sp.tier >= 4);
+      gain('fish:' + sp.id, 1, { size, v: 0, newSp: r.newSp }, `${G.josa(G.items.name('fish:' + sp.id), '을/를')} 낚았다!${sp.tier >= 3 ? ' 구름섬 희귀종!' : ''}`);
+      if (G.game.celebrate && (r.newSp || sp.tier >= 3)) G.game.celebrate(G.player.x, G.player.y - 40, sp.tier >= 4);
     }
   }
 

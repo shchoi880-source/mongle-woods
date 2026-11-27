@@ -209,6 +209,28 @@
     rod: { name: '낚싯대', icon: '🎣' },
     shovel: { name: '삽', icon: '', price: 500 }, // 아이콘은 그린 그림(tool:shovel)을 쓴다
   };
+  const TOOL_TIERS = {
+    net: [
+      { name: '기본 잠자리채', price: 0, reach: 1, grace: 0.50, rare: [1.1, 1.15, 1.25], minRare: 0 },
+      { name: '튼튼 잠자리채', price: 3000, reach: 1.35, grace: 0.50, rare: [1.2, 1.5, 1.7], minRare: 0 },
+      { name: '은물결 잠자리채', price: 10000, reach: 1.48, grace: 0.56, rare: [1.3, 1.75, 2.15], minRare: 0.02 },
+      { name: '달빛 잠자리채', price: 25000, reach: 1.62, grace: 0.63, rare: [1.45, 2.1, 2.75], minRare: 0.035 },
+      { name: '별빛 잠자리채', price: 50000, reach: 1.76, grace: 0.70, rare: [1.6, 2.45, 3.4], minRare: 0.05 },
+    ],
+    axe: [
+      { name: '기본 도끼', price: 0, wood: [1, 1, 1] },
+      { name: '튼튼 도끼', price: 3000, wood: [2, 1, 1] },
+      { name: '은물결 도끼', price: 10000, wood: [2, 2, 1] },
+      { name: '달빛 도끼', price: 25000, wood: [2, 2, 2] },
+      { name: '별빛 도끼', price: 50000, wood: [3, 3, 2] },
+    ],
+  };
+  G.toolTiers = (t) => t === 'rod' ? G.fishing?.RODS : TOOL_TIERS[t];
+  G.toolLevel = (t, p = G.player) => {
+    const level = Number(p?.up?.[t]), tiers = G.toolTiers(t);
+    return tiers && Number.isInteger(level) ? G.u.clamp(level, 0, tiers.length - 1) : 0;
+  };
+  G.toolTier = (t, p) => G.toolTiers(t)?.[G.toolLevel(t, p)];
 
   // 유행 바람 태그 (하루 1개, 판매가 ×1.2)
   G.TRENDS = [
