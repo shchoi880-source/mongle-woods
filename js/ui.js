@@ -392,6 +392,36 @@
     return grid;
   }
 
+  const isValuable = (slot) => G.items.get(slot.id)?.cat === 'valuable';
+  function itemGroupTabs(group, onChange) {
+    const tabs = $('div', 'subtabs');
+    for (const [id, name] of [['all', '전체'], ['valuable', '귀중품']]) {
+      const active = id === group;
+      const b = $('button', 'tab' + (active ? ' on' : ''), name);
+      b.setAttribute('aria-pressed', String(active));
+      b.onclick = () => { if (!active) { G.audio.sfx('tap'); onChange(id); } };
+      tabs.append(b);
+    }
+    return tabs;
+  }
+  function valuableCards(items, onTap, selected) {
+    if (!items.length) {
+      const hint = G.storage.slots.some(isValuable) ? '보관함에 있는 귀중품을 가방으로 옮겨 주세요.' : '금은 땅굴상점의 사기 → 귀중품에서 살 수 있어요.';
+      return $('p', 'muted small', '가방에 귀중품이 없어요. ' + hint);
+    }
+    const row = $('div', 'buyrow');
+    for (const s of items) {
+      const active = selected?.has(s);
+      const name = G.items.name(s.id, s.x) + (s.n > 1 ? ` × ${s.n}` : '');
+      const price = G.fmt.money(G.items.sellPrice(s.id, s.x) * (selected ? s.n : 1));
+      const card = $('button', 'buycard' + (active ? ' sel' : ''), `<img src="${G.art.iconURL(G.items.icon(s.id, s.x), 64)}" alt=""><b>${esc(name)}</b><small>${price}</small>`);
+      if (selected) card.setAttribute('aria-pressed', String(active));
+      card.onclick = () => onTap(s);
+      row.append(card);
+    }
+    return row;
+  }
+
   // 잎첩: 탭 4개
   UI.notebook = (tab = 'bag') => UI.modal('잎첩', (body, close, card) => {
     const tabs = $('div', 'tabs');
@@ -575,15 +605,21 @@
   };
   // 친구에게 선물: 가방에서 하나 골라 보낸다
   UI.giftTo = (o) => UI.modal(`${o.name}에게 선물하기`, (body, close) => {
-    body.append($('div', 'pane-head', '<span>줄 물건을 눌러요 (한 개씩 보내요)</span>'));
-    let sending = false;
-    body.append(slotGrid(async (_, s) => {
+    let sending = false, group = 'all';
+    const send = async (s) => {
       const slot = G.inv.slots.indexOf(s);
       if (sending || slot < 0) return;
       sending = true;
-      try { if (await G.net.gift(o.uid, slot, 1)) close(); }
+      try { if (await G.net.gift(o.uid, slot, 1)) close(); else render(); }
       finally { sending = false; }
-    }));
+    };
+    const render = () => {
+      body.innerHTML = '';
+      body.append(itemGroupTabs(group, (id) => { group = id; render(); body.scrollTop = 0; }));
+      body.append($('div', 'pane-head', '<span>줄 물건을 눌러요 (한 개씩 보내요)</span>'));
+      body.append(group === 'valuable' ? valuableCards(G.inv.slots.filter(isValuable), send) : slotGrid((_, s) => send(s)));
+    };
+    render();
   });
   // 친구 기능 오류를 한국어로 (Firebase 영어 원문 대신)
   UI.netErr = (e) => {
@@ -1023,7 +1059,7 @@
       if (e.kind === 'pk' || e.kind === 'look') return e.part;
       return ['up', 'plot', 'bag'].includes(e.kind) ? 'tool' : e.kind;
     };
-    let buyGroup = 'tool';
+    let buyGroup = 'tool', sellGroup = 'all';
     const render = () => {
       body.innerHTML = '';
       // 사기/팔기 탭 (7차 회의: 폰에서 사는 칸이 한참 아래에 있어 안 보였다)
@@ -1034,33 +1070,52 @@
         const b = $('button', 'tab' + (tab === id ? ' on' : ''), nm); b.onclick = () => { UI._shopTab = id; G.audio.sfx('tap'); render(); body.scrollTop = 0; }; tabs.append(b);
       }
       body.append(tabs);
-      const head = $('div', 'pane-head', `<span>팔 물건을 골라 주세요 · 유행 바람: 「${tr.name}」 +20%</span>`);
-      const all = $('button', 'btn small ghost', '모두 고르기');
-      all.onclick = () => { G.inv.slots.forEach((s, i) => { if (G.items.sellPrice(s.id, s.x)) sel.add(i); }); render(); };
-      head.append(all);
-      body.append(head);
-      body.append(slotGrid((i, s) => {
-        if (!G.items.sellPrice(s.id, s.x)) { UI.toast('그건 팔 수 없어요.', { icon: '✉️' }); return; }
-        if (sel.has(i)) sel.delete(i); else sel.add(i); G.audio.sfx('tap'); render();
-      }, sel));
-      let total = 0; for (const i of sel) { const s = G.inv.slots[i]; if (s) total += G.items.sellPrice(s.id, s.x) * s.n; }
-      const foot = $('div', 'shopfoot');
-      const sb = $('button', 'btn big' + (total ? '' : ' off'), total ? `${G.fmt.money(total)}에 팔기` : '팔 물건을 골라요');
-      sb.onclick = async () => {
-        if (!total) return;
-        const got = G.market.sell([...sel]); sel.clear();
-        G.audio.sfx('coin');
-        // 사고팔 때 창을 닫지 않는다(오너 요청: 매번 닫혀서 불편) — 말은 알림으로
-        const t2 = G.lines('tosil', 'sold');
-        UI.toast('토실: ' + G.str(G.u.pick(t2, Math.random()).text, { total: G.fmt.money(got) }), { icon: '🪙', ms: 3200 });
-        render();
-      };
-      foot.append(sb);
+      const stock = G.shop.stock();
+      for (const e of stock) if (e.kind === 'furn') G.house.see(e.id);
+      if (tab === 'sell') {
+        const valuables = G.inv.slots.filter((s) => isValuable(s) && G.items.sellPrice(s.id, s.x));
+        const items = sellGroup === 'valuable' ? valuables : G.inv.slots;
+        body.append(itemGroupTabs(sellGroup, (id) => { sellGroup = id; sel.clear(); render(); body.scrollTop = 0; }));
+        const heading = sellGroup === 'valuable' ? '귀중품을 고르면 구매가 그대로 팔 수 있어요.' : `팔 물건을 골라 주세요 · 유행 바람: 「${tr.name}」 +20%`;
+        const head = $('div', 'pane-head', `<span>${heading}</span>`);
+        if (items.some((s) => G.items.sellPrice(s.id, s.x))) {
+          const all = $('button', 'btn small ghost', '모두 고르기');
+          all.onclick = () => { for (const s of items) if (G.items.sellPrice(s.id, s.x)) sel.add(s); render(); };
+          head.append(all);
+        }
+        body.append(head);
+        const toggle = (s) => {
+          if (!G.items.sellPrice(s.id, s.x)) { UI.toast('그건 팔 수 없어요.', { icon: '✉️' }); return; }
+          if (sel.has(s)) sel.delete(s); else sel.add(s);
+          G.audio.sfx('tap'); render();
+        };
+        if (sellGroup === 'valuable') {
+          body.append(valuableCards(valuables, toggle, sel));
+        } else {
+          const selectedSlots = new Set(G.inv.slots.flatMap((s, i) => sel.has(s) ? [i] : []));
+          body.append(slotGrid((_, s) => toggle(s), selectedSlots));
+        }
+        const total = items.reduce((sum, s) => sel.has(s) ? sum + G.items.sellPrice(s.id, s.x) * s.n : sum, 0);
+        const foot = $('div', 'shopfoot');
+        const sb = $('button', 'btn big' + (total ? '' : ' off'), total ? `${G.fmt.money(total)}에 팔기` : '팔 물건을 골라요');
+        sb.disabled = !total;
+        sb.onclick = () => {
+          const selectedSlots = G.inv.slots.flatMap((s, i) => sel.has(s) ? [i] : []);
+          const got = G.market.sell(selectedSlots);
+          sel.clear();
+          if (got) {
+            G.audio.sfx('coin');
+            const t2 = G.lines('tosil', 'sold');
+            UI.toast('토실: ' + G.str(G.u.pick(t2, Math.random()).text, { total: G.fmt.money(got) }), { icon: '🪙', ms: 3200 });
+          }
+          render();
+        };
+        foot.append(sb); body.append(foot);
+        return;
+      }
       // 구매
       const buy = $('div', 'buyrow');
       const categories = $('div', 'subtabs');
-      const stock = G.shop.stock();
-      for (const e of stock) if (e.kind === 'furn') G.house.see(e.id);
       if (tab === 'buy') for (const [id, name] of Object.entries(groups)) {
         if (!stock.some((e) => groupOf(e) === id)) continue;
         const active = id === buyGroup;
@@ -1101,9 +1156,7 @@
         };
         buy.append(b);
       }
-      if (tab === 'sell') { body.append(foot); }
-      else if (tab === 'cat') {
-        for (const el of [head, body.querySelector('.grid')]) if (el) el.remove();
+      if (tab === 'cat') {
         const list = G.house.catalog();
         body.append($('div', 'pane-head', `<span>본 적 있는 가구 ${list.length}/${G.house.SHOP_FORMS.length}종 · 언제든 원하는 색으로 주문 · 내 돈 ${G.fmt.money(G.wallet.get())}</span>`));
         if (!list.length) body.append($('div', 'muted small', '아직 본 가구가 없어요. 「사기」 칸의 오늘의 가구를 보면 여기에 쌓여요.'));
@@ -1125,8 +1178,6 @@
         body.append(row);
       }
       else {
-        // 사기 탭: 팔기 칸은 감춘다
-        for (const el of [head, body.querySelector('.grid')]) if (el) el.remove();
         const heading = buyGroup === 'furn' ? '오늘의 가구 · ' : '';
         body.append(categories, $('div', 'pane-head', `<span>${heading}내 돈 ${G.fmt.money(G.wallet.get())}</span>`), buy);
       }
