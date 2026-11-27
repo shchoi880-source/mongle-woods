@@ -138,7 +138,7 @@
         const season = G.farm.SEASON_OF(G.time.dayDate(d).m);
         for (const c of G.data.all('crops').filter((x) => x.season === season)) list.push({ kind: 'seed', id: c.id, name: c.name + ' 씨앗 3개', price: c.seed * 3, key: 'seed_' + c.id });
         if (G.TOOLS.can && !G.player.hasTool('can')) list.push({ kind: 'tool', id: 'can', name: G.TOOLS.can.name, price: G.TOOLS.can.price, key: 'can' });
-        if ((G.farm.st.extra || 0) < G.farm.EXTRA_MAX) list.push({ kind: 'plot', id: 'plot', name: `텃밭 3칸 넓히기 (지금 ${G.farm.st.plots.length}칸)`, price: G.farm.expandPrice(), key: 'plot' });
+        if (G.farm.canExpand()) list.push({ kind: 'plot', id: 'plot', name: `텃밭 3칸 넓히기 (지금 ${G.farm.st.plots.length}칸)`, price: G.farm.expandPrice(), key: 'plot' });
       }
       // 가방 늘리기 (오너 요청: 30칸은 좁다) 30 → 80칸, 10칸씩
       if (G.inv.size < G.inv.MAX) list.push({ kind: 'bag', id: 'bag', name: `가방 10칸 늘리기 (지금 ${G.inv.size}칸)`, price: G.inv.growPrice(), key: 'bag' });

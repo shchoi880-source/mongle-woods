@@ -1,4 +1,4 @@
-// 묶음 3: 텃밭(농사) — 밭 구역 10×6(D23), 계절 작물 23종(그림은 cropart.js), 물 주기(비·눈 오는 날은 자동), 수확·거대 작물, 요리 8종
+// 텃밭: 좌우 5칸씩 10줄과 가운데 통로, 계절 작물 23종, 물 주기, 수확·거대 작물과 요리
 // 원칙: 벌 없음 — 물을 깜빡해도 시들지 않고 그동안 자라지 않을 뿐
 // 시간(2026-11 개편): grow 1 = 마을 4시간(실제 4분). 물은 한 번 주면 마을 12시간(실제 12분) 촉촉. 비·눈이 오면 저절로 촉촉
 (function (G) {
@@ -75,67 +75,112 @@
   const st = { plots: [], lastTick: -1, lastMin: -1, harvested: 0, giants: 0, seedGift: false, dry: 0, field: null };
   const F = G.farm = { st, DISHES, SEASON_OF };
 
-  // 텃밭 자리: 집(텐트) 문 근처 풀밭에서 3칸씩 줄 (지도는 바꾸지 않고 '데칼'로만 그린다)
-  // 밭 구역 (오너: "밭 구조가 이상하다, 처음부터 공간을 잘 잡아야") — 텐트 가까이 가로 10 × 세로 6 칸을 한 번 정해 두고,
-  // 그 안을 줄 맞춰 채운다(최대 60칸). 구역 안의 풀꽃·나무·바위는 치운다. 예전처럼 흩어진 밭은 작물째 옮겨 온다
-  const FW = 10, FH = 6;
-  F.FW = FW; F.FH = FH;
+  const BED_WIDTH = 5, STARTING_ROWS = 10;
+  const ROW_PLOTS = BED_WIDTH * 2, FIELD_WIDTH = ROW_PLOTS + 1;
+  const aisle = (f) => f.x + BED_WIDTH;
+  const capacity = (f) => (f.w - (f.split ? 1 : 0)) * f.h;
+  const bedName = (p) => st.field?.split ? (p.tx < aisle(st.field) ? '왼쪽 밭' : '오른쪽 밭') : '텃밭';
   F.inField = (x, y) => { const f = st.field; return !!f && x >= f.x && x < f.x + f.w && y >= f.y && y < f.y + f.h; };
-  function pickField() {
-    const W = G.world, m = W.map, door = m.plots.tent.door;
-    const nat = (o) => ['tree', 'pine', 'fruit', 'flower', 'rock'].includes(o.kind);
+  const NATURAL = new Set(['tree', 'pine', 'fruit', 'flower', 'rock']);
+  function fieldGround(x, y, isAisle) {
+    const W = G.world, t = W.tile(x, y);
+    if (t !== G.TERR.GRASS && !(isAisle && t === G.TERR.PATH)) return false;
+    const o = W.objAtTile(x, y);
+    if ((o && !NATURAL.has(o.kind)) || (G.yard && G.yard.at(x, y))) return false;
     const pen = G.ranch && G.ranch.st.pen;
-    const inner = (x, y) => {
-      if (W.tile(x, y) !== G.TERR.GRASS) return false;
-      const o = W.objAtTile(x, y); if (o && !nat(o)) return false;
-      if (G.yard && G.yard.at(x, y)) return false;
-      if (pen && x >= pen.x - 1 && x <= pen.x + pen.w && y >= pen.y - 1 && y <= pen.y + pen.h) return false;
-      return !(x >= door.x - 2 && x <= door.x + 2 && y >= door.y - 3 && y <= door.y + 2);
-    };
-    const ring = (x, y) => { const t = W.tile(x, y); return t === G.TERR.GRASS || t === G.TERR.PATH || t === G.TERR.SAND || t === G.TERR.PLAZA; };
-    for (const [w, h] of [[FW, FH], [9, 6], [8, 6], [8, 5], [7, 5]]) {
-      let best = null, bd = 1e9;
-      for (let y0 = door.y - 14; y0 <= door.y + 12; y0++) for (let x0 = door.x - 18; x0 <= door.x + 14; x0++) {
-        const d = Math.hypot(x0 + w / 2 - door.x, y0 + h / 2 - door.y); if (d >= bd) continue;
-        let ok = true;
-        for (let y = y0; y < y0 + h && ok; y++) for (let x = x0; x < x0 + w && ok; x++) if (!inner(x, y)) ok = false;
-        // 둘레 한 칸은 걸어 들어갈 수 있는 땅이 대부분이어야 한다
-        if (ok) { let r = 0, n = 0; for (let x = x0 - 1; x <= x0 + w; x++) for (const y of [y0 - 1, y0 + h]) { n++; if (ring(x, y)) r++; } for (let y = y0; y < y0 + h; y++) for (const x of [x0 - 1, x0 + w]) { n++; if (ring(x, y)) r++; } if (r < n * 0.75) ok = false; }
-        if (ok) { bd = d; best = { x: x0, y: y0, w, h }; }
-      }
-      if (best) return best;
+    if (pen && x >= pen.x - 1 && x <= pen.x + pen.w && y >= pen.y - 1 && y <= pen.y + pen.h) return false;
+    const door = W.map.plots.tent.door;
+    return x < door.x - 2 || x > door.x + 2 || y < door.y - 3 || y > door.y + 2;
+  }
+  function fieldRowFits(x, y) {
+    for (let i = 0; i < FIELD_WIDTH; i++) {
+      if (!fieldGround(x + i, y, i === BED_WIDTH)) return false;
     }
-    return null;
+    return true;
+  }
+  function hasEntrance(x, y, h) {
+    const W = G.world, door = W.map.plots.tent.door;
+    const gateY = door.y < y + h / 2 ? y - 1 : y + h;
+    const t = W.tile(x + BED_WIDTH, gateY);
+    const o = W.objAtTile(x + BED_WIDTH, gateY);
+    return (t === G.TERR.GRASS || t === G.TERR.PATH || t === G.TERR.SAND || t === G.TERR.PLAZA) &&
+      !o?.solid && !G.yard?.at(x + BED_WIDTH, gateY);
+  }
+  function pickField(rows) {
+    const m = G.world.map, door = m.plots.tent.door;
+    const old = st.field;
+    const nearX = old ? old.x + old.w / 2 : door.x;
+    const nearY = old ? old.y + old.h / 2 : door.y;
+    // 같은 x에 필요한 높이만큼 빈 줄이 이어지는 곳 중 기존 밭이나 집에 가까운 곳을 고른다.
+    let best = null, bestScore = Infinity;
+    for (let x = 1; x < m.w - FIELD_WIDTH; x++) {
+      let run = 0;
+      for (let y = 1; y < m.h - 1; y++) {
+        run = fieldRowFits(x, y) ? run + 1 : 0;
+        if (run < STARTING_ROWS) continue;
+        const h = Math.min(run, rows), top = y + 1 - h;
+        const dist = Math.hypot(x + FIELD_WIDTH / 2 - nearX, top + h / 2 - nearY);
+        const score = dist + (rows - h) * 12;
+        if (score < bestScore && hasEntrance(x, top, h)) {
+          best = { x, y: top, w: FIELD_WIDTH, h, split: true };
+          bestScore = score;
+        }
+      }
+    }
+    return best;
+  }
+  function nextFieldRow(f) {
+    const door = G.world.map.plots.tent.door;
+    const away = door.y < f.y + f.h / 2 ? [f.y + f.h, f.y - 1] : [f.y - 1, f.y + f.h];
+    return away.find((y) => fieldRowFits(f.x, y) && hasEntrance(f.x, Math.min(y, f.y), f.h + 1));
   }
   // 밭 칸 순서: 텐트 쪽 줄부터, 왼쪽에서 오른쪽으로
   function fieldCells(f) {
     const door = G.world.map.plots.tent.door, rows = [];
     for (let k = 0; k < f.h; k++) rows.push(f.y + k);
     if (f.y + f.h / 2 < door.y) rows.reverse();
-    const out = []; for (const y of rows) for (let x = f.x; x < f.x + f.w; x++) out.push([x, y]);
+    const out = [];
+    for (const y of rows) for (let x = f.x; x < f.x + f.w; x++) {
+      if (!f.split || x !== aisle(f)) out.push([x, y]);
+    }
     return out;
   }
+  const emptyPlot = (tx, ty) => ({ tx, ty, crop: null, prog: 0, water: -1, giant: false });
+  const plotKey = (x, y) => x + ',' + y;
+  function migrateField(f, want) {
+    const crops = new Map(st.plots.filter((p) => p.crop).map((p) => [plotKey(p.tx, p.ty), p]));
+    const cells = fieldCells(f).slice(0, Math.max(want, crops.size));
+    // 새 밭 안에 있는 작물의 좌표는 유지하고, 통로나 밭 밖의 작물만 빈 칸으로 옮긴다.
+    const staying = cells.map(([x, y]) => {
+      const key = plotKey(x, y), p = crops.get(key);
+      crops.delete(key);
+      return p;
+    });
+    const moving = crops.values();
+    st.plots = cells.map(([x, y], i) => staying[i] || { ...emptyPlot(x, y), ...moving.next().value, tx: x, ty: y });
+    st.field = f;
+  }
   F.ensurePlots = () => {
-    const W = G.world, m = W.map; if (!m) return;
-    const want = 6 + (G.nest ? G.nest.st.stage : 0) * 3 + (st.extra || 0) * 3; // 집 단계 + 상점에서 넓힌 만큼
-    if (!st.field) {
-      const f = pickField(); if (!f) return legacyPlots(want);
-      st.field = f;
-      // 예전 밭(흩어진 칸)은 작물 있는 칸부터 새 구역으로 옮긴다
-      const old = st.plots.slice().sort((a, b) => (b.crop ? 1 : 0) - (a.crop ? 1 : 0));
-      st.plots = []; const cells = fieldCells(f);
-      for (let i = 0; i < Math.min(cells.length, Math.max(want, old.filter((p) => p.crop).length)); i++) {
-        const o = old[i] || { crop: null, prog: 0, water: -1, giant: false };
-        st.plots.push(Object.assign({}, o, { tx: cells[i][0], ty: cells[i][1] }));
-      }
-      G.save.mark('farm');
+    const W = G.world; if (!W.map || G.net?.guest) return;
+    const want = STARTING_ROWS * ROW_PLOTS + (G.nest?.st.stage || 0) * 3 + (st.extra || 0) * 3;
+    if (!st.field?.split) {
+      const next = pickField(Math.ceil(want / ROW_PLOTS));
+      if (next) migrateField(next, want);
+      else if (!st.field) return legacyPlots(want);
     }
-    W.clearNatural(st.field.x, st.field.y, st.field.w, st.field.h);
-    const cells = fieldCells(st.field), used = new Set(st.plots.map((p) => p.tx + ',' + p.ty));
+    const f = st.field;
+    while (f.split && capacity(f) < want) {
+      const y = nextFieldRow(f);
+      if (y === undefined) break;
+      f.y = Math.min(y, f.y);
+      f.h++;
+    }
+    W.clearNatural(f.x, f.y, f.w, f.h);
+    const cells = fieldCells(f), used = new Set(st.plots.map((p) => plotKey(p.tx, p.ty)));
     for (const [x, y] of cells) {
       if (st.plots.length >= Math.min(want, cells.length)) break;
-      if (used.has(x + ',' + y)) continue;
-      st.plots.push({ tx: x, ty: y, crop: null, prog: 0, water: -1, giant: false }); used.add(x + ',' + y);
+      if (used.has(plotKey(x, y))) continue;
+      st.plots.push(emptyPlot(x, y));
     }
     G.save.mark('farm');
   };
@@ -188,15 +233,33 @@
   F.minsLeft = (p) => { const c = D.get('crops', p.crop); return Math.max(0, Math.ceil((c.grow * GROW_MIN - (p.gp || 0)) / G.time.SPEED)); };
   // 밭 넓히기 (상점): 3칸씩, 최대 14번(= 42칸 더)
   F.EXTRA_MAX = 14;
+  F.canExpand = () => (st.extra || 0) < F.EXTRA_MAX &&
+    (!st.field || st.plots.length < capacity(st.field) || (st.field.split && nextFieldRow(st.field) !== undefined));
   F.expandPrice = () => 2000 * ((st.extra || 0) + 1);
   F.expand = () => {
-    if ((st.extra || 0) >= F.EXTRA_MAX) return { ok: false, why: '더는 넓힐 수 없어요. 아주 넓은 밭이에요!' };
+    if (!F.canExpand()) return { ok: false, why: '더는 넓힐 수 없어요. 아주 넓은 밭이에요!' };
     const before = st.plots.length; st.extra = (st.extra || 0) + 1; F.ensurePlots();
     if (st.plots.length <= before) { st.extra--; return { ok: false, why: '집 근처에 밭을 늘릴 빈 풀밭이 없어요.' }; }
     G.save.mark('farm'); return { ok: true, n: st.plots.length - before };
   };
   F.at = (tx, ty) => st.plots.find((p) => p.tx === tx && p.ty === ty);
-  F.seedsInBag = () => G.inv.slots.filter((s) => s.id.startsWith('seed:'));
+  F.seedsInBag = () => {
+    const seeds = new Map();
+    for (const { id, n } of G.inv.slots) {
+      if (!id.startsWith('seed:') || n <= 0) continue;
+      seeds.set(id, (seeds.get(id) || 0) + n);
+    }
+    return Array.from(seeds, ([id, n]) => ({ id, n }));
+  };
+  // 가운데 통로로 분리된 좌우 한 줄의 빈 칸만, 누른 칸에서 가까운 순서로 심는다.
+  function plantingRow(p) {
+    const f = st.field;
+    const start = f?.split ? (p.tx < aisle(f) ? f.x : aisle(f) + 1) : p.tx - (BED_WIDTH - 1);
+    const end = f?.split ? start + BED_WIDTH : p.tx + BED_WIDTH;
+    return st.plots.filter(q => q.ty === p.ty && q.tx >= start && q.tx < end && !q.crop)
+      .sort((a, b) => Math.abs(a.tx - p.tx) - Math.abs(b.tx - p.tx) || a.tx - b.tx)
+      .slice(0, BED_WIDTH);
+  }
 
   F.target = (fx, fy) => {
     const p = F.at(Math.floor(fx / TILE), Math.floor(fy / TILE)); if (!p) return null;
@@ -204,26 +267,26 @@
     // 이름 + 상태 (오너: 누가 봐도 뭔지 알아야) — 「옥수수 · 3분 남음」
     if (s === 3) return { kind: 'farm', ref: p, act: 'harvest', icon: '🧺', label: '수확', name: D.get('crops', p.crop).name + ' · 다 자랐어요!' };
     if (s >= 0) { const w = F.watered(p); return { kind: 'farm', ref: p, act: w ? 'look' : 'water', icon: w ? '🌱' : 'tool:can', label: w ? '보기' : '물 주기', name: D.get('crops', p.crop).name + (w ? ` · ${F.minsLeft(p)}분 남음` : ' · 목말라요 💧') }; }
-    return { kind: 'farm', ref: p, act: 'plant', icon: '🌰', label: '심기', name: '텃밭' };
+    return { kind: 'farm', ref: p, act: 'plant', icon: '🌰', label: '심기', name: bedName(p) };
   };
   F.act = async (tg) => {
     const p = tg.ref, pl = G.player;
     if (tg.act === 'plant') {
       const seeds = F.seedsInBag();
       if (!seeds.length) { await G.ui.say([{ who: 'sys', text: '빈 텃밭이에요. 땅굴상점에서 계절 씨앗을 사 와서 심어요.' }]); return; }
-      let seed = seeds[0];
-      if (seeds.length > 1) { const names = seeds.slice(0, 3).map((s) => G.items.get(s.id).name); const i = await G.ui.choose({ who: 'sys', text: '어떤 씨앗을 심을까요?' }, names.concat(['그만두기'])); if (i >= names.length) return; seed = seeds[i]; }
-      const c = G.items.get(seed.id).ref;
-      G.inv.removeAt(G.inv.slots.indexOf(seed), 1);
-      Object.assign(p, { crop: c.id, prog: 0, gp: 0, wet: 0, water: -1, giant: false });
-      // 한 줄 심기 (6차 회의): 같은 줄에 붙어 있는 빈 칸까지 같은 씨앗으로
-      let more = 0;
-      for (let dir of [1, -1]) for (let k = 1; k < 12; k++) {
-        const q = F.at(p.tx + dir * k, p.ty); if (!q || q.crop) break;
-        if (!G.inv.count('seed:' + c.id)) break;
-        G.inv.removeId('seed:' + c.id, 1); Object.assign(q, { crop: c.id, prog: 0, gp: 0, wet: 0, water: -1, giant: false }); more++;
+      const rowSize = plantingRow(p).length;
+      const seedId = await G.ui.chooseSeed(seeds, bedName(p), rowSize);
+      if (!seedId || p.crop || F.at(p.tx, p.ty) !== p) return;
+      const c = G.items.get(seedId).ref;
+      let planted = 0;
+      for (const q of plantingRow(p).slice(0, rowSize)) {
+        const index = G.inv.slots.findIndex((s) => s.id === seedId && s.n > 0);
+        if (!G.inv.removeAt(index, 1)) break;
+        Object.assign(q, { crop: c.id, prog: 0, gp: 0, wet: 0, water: -1, giant: false });
+        planted++;
       }
-      if (more) G.ui.toast(`${c.name} 씨앗을 이 줄에 ${more + 1}칸 심었어요!`, { icon: '🌱' });
+      if (!planted) return;
+      G.ui.toast(`${c.name} 씨앗을 ${planted}칸 심었어요!`, { icon: '🌱' });
       pl.squash = 0.12; G.audio.sfx('dig'); G.emit('farm:plant', { crop: c.id });
       if (c.season !== SEASON_OF(G.time.month())) G.ui.toast(`${c.name}는 ${({ spring: '봄', summer: '여름', autumn: '가을', winter: '겨울' })[c.season]} 작물이라 천천히 자랄지도 몰라요. (그래도 자라요!)`, { icon: '🌱' });
       if (!pl.hasTool('can')) G.ui.toast('물뿌리개는 땅굴상점에서 팔아요.', { icon: '🚿' });
@@ -265,15 +328,23 @@
     if (f) {
       const X = f.x * TILE, Y = f.y * TILE, Wd = f.w * TILE, Hd = f.h * TILE;
       if (!(X > rect.x + rect.w + 60 || X + Wd < rect.x - 60 || Y > rect.y + rect.h + 60 || Y + Hd < rect.y - 60)) {
+        const P = G.art.paint;
+        if (f.split) {
+          const x = aisle(f) * TILE;
+          P.rrect(ctx, x + 2, Y, TILE - 4, Hd, 8, '#d3bb96');
+          ctx.save(); ctx.clip();
+          G.scenery?.material(ctx, 'dirt', [x + 2, Y, TILE - 4, Hd], 0.5);
+          ctx.restore();
+        }
         // 아직 안 연 칸: 옅은 흙빛 + 점선 (상점에서 넓히면 열린다)
         const used = new Set(st.plots.map((p) => p.tx + ',' + p.ty));
         ctx.save(); ctx.setLineDash([3, 4]); ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(140,100,60,0.35)'; ctx.fillStyle = 'rgba(185,138,94,0.13)';
-        for (let y = f.y; y < f.y + f.h; y++) for (let x = f.x; x < f.x + f.w; x++) if (!used.has(x + ',' + y)) { ctx.beginPath(); ctx.roundRect(x * TILE + 3, y * TILE + 4, 26, 25, 6); ctx.fill(); ctx.stroke(); }
+        for (let y = f.y; y < f.y + f.h; y++) for (let x = f.x; x < f.x + f.w; x++) if ((!f.split || x !== aisle(f)) && !used.has(x + ',' + y)) { ctx.beginPath(); ctx.roundRect(x * TILE + 3, y * TILE + 4, 26, 25, 6); ctx.fill(); ctx.stroke(); }
         ctx.restore();
         // 나무 울타리. 드나드는 문은 텐트 쪽(위 또는 아래) 가운데
         const post = (px, py) => { P.rrect(ctx, px - 2.5, py - 12, 5, 13, 2, '#c98e5a', '#7a5233', 1); };
         ctx.strokeStyle = '#a87448'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
-        const door = G.world.map.plots.tent.door, gateTop = door.y < f.y;
+        const door = G.world.map.plots.tent.door, gateTop = door.y < f.y + f.h / 2;
         const gate = X + Math.floor(f.w / 2) * TILE, topY = Y - 4, botY = Y + Hd + 4;
         const hline = (y, withGate) => { if (withGate) { ctx.moveTo(X - 6, y); ctx.lineTo(gate - 4, y); ctx.moveTo(gate + TILE + 4, y); ctx.lineTo(X + Wd + 6, y); } else { ctx.moveTo(X - 6, y); ctx.lineTo(X + Wd + 6, y); } };
         ctx.beginPath();
@@ -352,8 +423,8 @@
   };
   G.on('house:stage', () => F.ensurePlots());
   G.save.section('farm', {
-    v: 1, def: () => ({ plots: [], lastTick: -1, lastMin: -1, harvested: 0, giants: 0, seedGift: false, extra: 0 }),
-    get: () => JSON.parse(JSON.stringify(st)), set: (d) => Object.assign(st, d),
+    v: 1, def: () => ({ plots: [], lastTick: -1, lastMin: -1, harvested: 0, giants: 0, seedGift: false, extra: 0, field: null }),
+    get: () => JSON.parse(JSON.stringify(st)), set: (d) => Object.assign(st, { field: null }, d),
   });
   G.modules.add('farm');
 })(globalThis.G);

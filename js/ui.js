@@ -280,6 +280,16 @@
     if (ev.type === 'back' || ev.type === 'menu' || ev.type === 'map') UI.open.close();
     return true;
   };
+  UI.chooseSeed = (seeds, bed, rowSize) => UI.modal(`${bed} · 한 줄 심기`, (body, close) => {
+    const grid = $('div', 'buyrow');
+    for (const { id, n } of seeds) {
+      const name = G.items.get(id).name;
+      const card = $('button', 'buycard', `<img src="${G.art.iconURL(id, 64)}" alt=""><b>${esc(name)}</b><small>${Math.min(rowSize, n)}칸 심기 · 보유 ${G.fmt.num(n)}개</small>`);
+      card.onclick = () => close(id);
+      grid.append(card);
+    }
+    body.append(grid);
+  });
   UI.confirm = (msg, yes = '네', no = '아니요') => new Promise((resolve) => {
     const box = $('div', 'confirm', `<p>${esc(msg)}</p>`);
     const row = $('div', 'row');
