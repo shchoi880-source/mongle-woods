@@ -167,9 +167,22 @@
   };
   // 모자 그림에서 머리에 닿는 y와, 두피부터 그 점까지 내려갈 거리.
   const HAT_BAND = {
-    'postal-cap': [42, 15], 'bear-ears': [19, 5], 'star-beret': [39, 16],
+    'postal-cap': [42, 15], 'bear-ears': [19, 10], 'star-beret': [39, 16],
     'watermelon-cap': [42, 16], 'pumpkin-hat': [41, 16],
     'snowflake-crown': [33, 7], 'golden-crown': [33, 7],
+  };
+  // 곰돌이 귀 원본에서 띠와 만나는 귀의 아래쪽 윤곽. 각 줄은 정면·옆·뒷면이다.
+  const BEAR_EAR_EDGES = {
+    male: [
+      [[[44, 24], [51, 24], [54, 19], [59, 15], [65, 12], [67, 11]], [[76, 11], [80, 13], [86, 16], [90, 20], [92, 24], [99, 24]]],
+      [[[61, 23], [66, 23], [70, 22], [74, 17], [78, 11]], [[77, 10], [81, 9.5], [86, 10], [89, 10]]],
+      [[[43, 24], [50, 23], [54, 18], [60, 14], [66, 11]], [[76, 11], [81, 13], [87, 16], [91, 21], [93, 24], [100, 24]]],
+    ],
+    female: [
+      [[[46, 23], [52, 23], [55, 18], [60, 15], [65, 13], [68, 11.5]], [[76, 11.5], [81, 13], [86, 15.5], [90, 19], [92, 23], [98, 23]]],
+      [[[64, 23], [68, 23], [72, 22], [75, 18], [79, 14], [80, 11]]],
+      [[[46, 24], [52, 23], [56, 18], [61, 15], [66, 13], [69, 11.5]], [[76, 11.5], [81, 13], [86, 15.5], [90, 19], [93, 24], [98, 24]]],
+    ],
   };
   const HAIR_CLIP = {
     'hair-bow': { x: [54, 51, 70], y: 27, dx: [-17, -17, -2], dy: 11 },
@@ -188,7 +201,8 @@
         -height / 2 + left * k, -height + 3 + (top + start * zoom) * k, height * zoom, (end - start) * zoom * k);
     }
     // 정면과 옆모습의 목 아래 머리카락은 옷 뒤로, 뒷모습에서는 옷 위로 보인다.
-    if (row !== 2) draw(parts.head, dx, dy, scale, chin);
+    // 두 조각을 2px 겹쳐서 축소할 때 경계에 가는 틈이 생기지 않게 한다.
+    if (row !== 2) draw(parts.head, dx, dy, scale, chin - 2);
     draw(parts.outfit);
     draw(parts.head, dx, dy, scale, 0, row === 2 ? PART_SIZE : chin);
     for (const { slot, name, image } of parts.accessories) {
@@ -199,7 +213,25 @@
         const bandX = row === 1 ? 74 : 72;
         const sideOffset = row === 1 ? 4 : 0;
         const band = bandY + (parts.gender === 'female' && bandY === 41 ? 1 : 0);
-        draw(image, dx + (scalpX + sideOffset - bandX) * scale, dy + (scalpY + drop - band) * scale, scale);
+        const left = dx + (scalpX + sideOffset - bandX) * scale;
+        const top = dy + (scalpY + drop - band) * scale;
+        if (name === 'bear-ears') {
+          const earX = -height / 2 + left * k, earY = -height + 3 + top * k;
+          const unit = scale * k;
+          ctx.save();
+          ctx.beginPath();
+          for (const edge of BEAR_EAR_EDGES[parts.gender][row]) {
+            ctx.moveTo(earX + edge[0][0] * unit, earY);
+            for (const [x, y] of edge) ctx.lineTo(earX + x * unit, earY + y * unit);
+            ctx.lineTo(earX + edge[edge.length - 1][0] * unit, earY);
+            ctx.closePath();
+          }
+          ctx.clip();
+          draw(image, left, top, scale);
+          ctx.restore();
+        } else {
+          draw(image, left, top, scale);
+        }
       } else if (slot === 'hat' && HAIR_CLIP[name]) {
         const clip = HAIR_CLIP[name];
         draw(image, dx + (scalpX + clip.dx[row] - clip.x[row]) * scale, dy + (scalpY + clip.dy - clip.y) * scale, scale);
