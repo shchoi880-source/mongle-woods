@@ -132,12 +132,82 @@
   };
   A.pkLayers = (pk) => {
     A.pkFix(pk);
-    const gender = String(pk.head || '').startsWith('male') ? 'male' : 'female';
-    const out = [A.pkPart('outfit', fileOf('body', pk.body || 'overalls', gender), pk.bc), A.pkPart('head', pk.head || 'female-wavy', pk.hc)];
-    if (out.some((x) => !x)) return null;
-    for (const s of PK.slots) if (pk[s.k]) { const a = A.pkPart('accessory', fileOf('acc', pk[s.k], gender), pk[s.k + 'C']); if (a) out.push(a); }
-    return out;
+    const gender = A.pkGender(pk), headId = pk.head || 'female-wavy';
+    const outfit = A.pkPart('outfit', fileOf('body', pk.body || 'overalls', gender), pk.bc);
+    const head = A.pkPart('head', headId, pk.hc);
+    const accessories = [];
+    for (const { k } of PK.slots) {
+      const name = pk[k];
+      if (!name) continue;
+      const image = A.pkPart('accessory', fileOf('acc', name, gender), pk[k + 'C']);
+      if (image) accessories.push({ slot: k, name, image });
+    }
+    return outfit && head ? { outfit, head, headId, gender, accessories } : null;
   };
+
+  // 144px 셀에서 정면·옆·뒷면별 [목 x, 턱 y, 두피 x, 두피 y, 안경 중심 x, 안경 중심 y].
+  // 배율은 머리카락 전체가 아니라 얼굴 크기에 맞춘다. 똥머리나 꽁지는 두피 위로 따로 올라온다.
+  const PART_SIZE = 144;
+  const OUTFIT_NECK = [[72, 71], [71, 71], [72, 70]];
+  const HEAD_FIT = {
+    'female-bob':           [0.99, [73, 70, 72, 23, 73, 53], [73, 70, 66, 23, 85, 52], [71, 71, 71, 23]],
+    'female-bun':           [1.00, [72, 69, 72, 23, 72, 52], [73, 68, 66, 22, 84, 51], [71, 71, 71, 23]],
+    'female-high-ponytail': [1.03, [71, 69, 71, 22, 71, 52], [72, 69, 66, 24, 85, 52], [71, 70, 71, 22]],
+    'female-space-buns':    [0.97, [73, 69, 73, 22, 73, 52], [73, 68, 69, 22, 85, 52], [71, 70, 71, 22]],
+    'female-straight-long': [1.02, [71, 68, 71, 17, 71, 52], [70, 68, 64, 18, 81, 51], [72, 70, 72, 17]],
+    'female-twin-braids':   [0.98, [72, 69, 72, 16, 72, 52], [73, 68, 66, 16, 85, 51], [72, 70, 72, 16]],
+    'female-wavy':          [0.98, [73, 69, 72, 23, 73, 52], [73, 68, 67, 23, 84, 51], [71, 71, 71, 23]],
+    'male-buzz-cut':        [1.02, [71, 68, 71, 21, 71, 52], [72, 68, 67, 22, 83, 52], [71, 70, 71, 22]],
+    'male-curly':           [1.00, [72, 70, 71, 24, 72, 53], [73, 70, 67, 25, 83, 53], [71, 71, 71, 24]],
+    'male-mullet':          [0.95, [71, 69, 70, 13, 71, 52], [72, 69, 66, 14, 85, 52], [71, 70, 71, 13]],
+    'male-pompadour':       [0.98, [72, 68, 71, 13, 72, 52], [73, 68, 68, 14, 85, 52], [71, 70, 71, 13]],
+    'male-side-part':       [1.01, [72, 70, 71, 24, 72, 53], [73, 70, 67, 25, 84, 53], [71, 71, 71, 25]],
+    'male-topknot':         [1.00, [72, 69, 72, 25, 72, 52], [73, 68, 67, 23, 85, 52], [72, 70, 72, 23]],
+    'male-tousled':         [1.02, [72, 70, 72, 24, 72, 53], [73, 70, 67, 25, 84, 53], [72, 71, 72, 24]],
+  };
+  // 모자 그림에서 머리에 닿는 y와, 두피부터 그 점까지 내려갈 거리.
+  const HAT_BAND = {
+    'postal-cap': [42, 15], 'bear-ears': [19, 5], 'star-beret': [39, 16],
+    'watermelon-cap': [42, 16], 'pumpkin-hat': [41, 16],
+    'snowflake-crown': [33, 7], 'golden-crown': [33, 7],
+  };
+  const HAIR_CLIP = {
+    'hair-bow': { x: [54, 51, 70], y: 27, dx: [-17, -17, -2], dy: 11 },
+    'sakura-pin': { x: [53, 83, 91], y: 31, dx: [-18, 15, 19], dy: 14 },
+  };
+  function drawPostkeeperParts(ctx, parts, row, col, height) {
+    const fit = HEAD_FIT[parts.headId] || HEAD_FIT['female-wavy'];
+    const scale = fit[0];
+    const [neckX, chin, scalpX, scalpY, eyeX, eyeY] = fit[row + 1];
+    const [x, y] = OUTFIT_NECK[row];
+    const dx = x - neckX * scale, dy = y - chin * scale;
+    const k = height / PART_SIZE;
+    function draw(image, left = 0, top = 0, zoom = 1, start = 0, end = PART_SIZE) {
+      const cell = image.naturalWidth / 3, source = cell / PART_SIZE;
+      ctx.drawImage(image, col * cell, row * cell + start * source, cell, (end - start) * source,
+        -height / 2 + left * k, -height + 3 + (top + start * zoom) * k, height * zoom, (end - start) * zoom * k);
+    }
+    // 정면과 옆모습의 목 아래 머리카락은 옷 뒤로, 뒷모습에서는 옷 위로 보인다.
+    if (row !== 2) draw(parts.head, dx, dy, scale, chin);
+    draw(parts.outfit);
+    draw(parts.head, dx, dy, scale, 0, row === 2 ? PART_SIZE : chin);
+    for (const { slot, name, image } of parts.accessories) {
+      if (slot === 'face' && name === 'round-glasses') {
+        if (row !== 2) draw(image, dx + (eyeX - (row === 1 ? 84 : 72)) * scale, dy + (eyeY - 52.5) * scale, scale);
+      } else if (slot === 'hat' && HAT_BAND[name]) {
+        const [bandY, drop] = HAT_BAND[name];
+        const bandX = row === 1 ? 74 : 72;
+        const sideOffset = row === 1 ? 4 : 0;
+        const band = bandY + (parts.gender === 'female' && bandY === 41 ? 1 : 0);
+        draw(image, dx + (scalpX + sideOffset - bandX) * scale, dy + (scalpY + drop - band) * scale, scale);
+      } else if (slot === 'hat' && HAIR_CLIP[name]) {
+        const clip = HAIR_CLIP[name];
+        draw(image, dx + (scalpX + clip.dx[row] - clip.x[row]) * scale, dy + (scalpY + clip.dy - clip.y) * scale, scale);
+      } else {
+        draw(image);
+      }
+    }
+  }
 
   // 각 행은 정면·오른쪽·뒷면, 각 열은 서기·왼발·오른발이다.
   const WALK_FRAMES = [1, 0, 2, 0];
@@ -254,8 +324,6 @@
     const pose = action ? actionPose(a.tool, action) : null;
     const col = pose ? (action > 0.34 && action < 0.85 ? 2 : 0) :
       a.moving ? WALK_FRAMES[Math.floor(phase * 4) % 4] : 0;
-    const ims = Array.isArray(im) ? im : [im];
-    const size = ims[0].naturalWidth / 3;
     const height = H || 72;
     const hop = a.hop || 0;
     const squash = a.squash || 0;
@@ -287,7 +355,11 @@
     const toolBehind = using ? back : !back;
     if (hasTool && toolBehind) tool();
     // 아틀라스에서 발바닥이 셀 바닥보다 6px 위에 등록되어 있다.
-    for (const L of ims) ctx.drawImage(L, col * size, row * size, size, size, -height / 2, -height + 3, height, height);
+    if (im.outfit) drawPostkeeperParts(ctx, im, row, col, height);
+    else {
+      const size = im.naturalWidth / 3;
+      ctx.drawImage(im, col * size, row * size, size, size, -height / 2, -height + 3, height, height);
+    }
     if (hasTool && !toolBehind) tool();
     ctx.restore();
   }
