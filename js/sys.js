@@ -18,6 +18,7 @@
     // 판매가: val × 변이 배율 × 유행 바람
     sellPrice(id, x) {
       const it = G.items.get(id); if (!it || it.nosell) return 0;
+      if (it.cat === 'valuable') return it.val;
       let p = it.val;
       if (x && x.v) p *= G.VARIANTS[x.v].mul;
       const tr = G.market.trend();
@@ -63,7 +64,7 @@
       return room >= n;
     },
     sort() {
-      const ord = { tool: 0, letter: 1, bug: 2, fish: 3, fossil: 4, shell: 5, mat: 6, sea: 7, crop: 8, seed: 9, dish: 10, ranch: 11, furn: 12, fest: 13 };
+      const ord = { tool: 0, letter: 1, bug: 2, fish: 3, fossil: 4, shell: 5, mat: 6, sea: 7, crop: 8, seed: 9, dish: 10, ranch: 11, furn: 12, fest: 13, valuable: 14 };
       inv.slots.sort((a, b) => ((ord[G.items.get(a.id).cat] ?? 20) - (ord[G.items.get(b.id).cat] ?? 20)) || a.id.localeCompare(b.id) || ((b.x && b.x.size || 0) - (a.x && a.x.size || 0)));
       G.emit('inv:change', {});
     },
@@ -101,7 +102,6 @@
 
   // ---------- 지갑·상점·유행 바람 ----------
   const econ = { money: 1000, salesTotal: 0, soldDays: 0, firstSale: false, bought: {} };
-  const GOLD_PRICE = 100_000_000;
   G.wallet = {
     get: () => econ.money,
     add(n, why) { econ.money += n; G.emit('wallet:change', { delta: n, why }); G.save.mark('wallet'); },
@@ -115,17 +115,20 @@
     },
     sell(indices) {
       // indices: 가방 칸 번호 배열 (내림차순으로 제거)
-      let total = 0; const sold = [];
+      let total = 0, earnedSales = 0; const sold = [];
       for (const i of [...indices].sort((a, b) => b - a)) {
         const s = inv.slots[i]; if (!s) continue;
         const p = G.items.sellPrice(s.id, s.x); if (!p) continue;
-        total += p * s.n; sold.push(s.id);
+        const amount = p * s.n;
+        total += amount;
+        // 귀중품을 되팔면 구매에 쓴 몽을 돌려받는다. 판매 목표는 일반 판매로 채운다.
+        if (G.items.get(s.id).cat !== 'valuable') { earnedSales += amount; sold.push(s.id); }
         G.inv.removeAt(i, s.n);
       }
       if (total > 0) {
-        econ.salesTotal += total; econ.firstSale = true;
+        if (earnedSales > 0) { econ.salesTotal += earnedSales; econ.firstSale = true; }
         G.wallet.add(total, 'sell');
-        G.emit('market:sell', { items: sold, total });
+        if (earnedSales > 0) G.emit('market:sell', { items: sold, total: earnedSales });
       }
       return total;
     },
@@ -148,7 +151,9 @@
     stock(day) {
       const d = day === undefined ? G.time.day() : day;
       const list = [{ kind: 'tool', id: 'shovel', name: G.TOOLS.shovel.name, price: G.TOOLS.shovel.price, key: 'shovel' }];
-      list.push({ kind: 'gold', id: 'gold', name: G.items.name('gold'), price: GOLD_PRICE, key: 'gold', detail: '소장용' });
+      for (const it of G.data.all('items')) {
+        if (it.cat === 'valuable') list.push({ kind: 'valuable', id: it.id, name: it.name, price: it.val, key: 'valuable_' + it.id, detail: '구매가 그대로 되팔기' });
+      }
       if (G.TOOLS.axe) list.push({ kind: 'tool', id: 'axe', name: G.TOOLS.axe.name, price: G.TOOLS.axe.price, key: 'axe' });
       // 계절 씨앗 (3개 묶음) + 물뿌리개
       if (G.farm) {
@@ -224,11 +229,13 @@
         G.emit('shop:buy', { id: 'up_' + entry.id, price }); return { ok: true };
       }
       if (entry.kind === 'animal') { const r = G.ranch.buy(entry.id); if (r.ok) G.emit('shop:buy', { id: entry.id, price: entry.price }); return r; }
-      if (entry.kind === 'gold') {
-        if (!G.inv.canFit('gold')) return { ok: false, why: '가방이 꽉 찼어요.' };
-        if (!G.wallet.spend(GOLD_PRICE, 'buy')) return { ok: false, why: '몽이 조금 모자라요.' };
-        G.inv.add('gold');
-        G.emit('shop:buy', { id: 'gold', price: GOLD_PRICE });
+      if (entry.kind === 'valuable') {
+        const it = G.items.get(entry.id);
+        if (it?.cat !== 'valuable') return { ok: false, why: '상점에서 귀중품을 골라 주세요.' };
+        if (!G.inv.canFit(it.id)) return { ok: false, why: '가방이 꽉 찼어요.' };
+        if (!G.wallet.spend(it.val, 'buy')) return { ok: false, why: '몽이 조금 모자라요.' };
+        G.inv.add(it.id);
+        G.emit('shop:buy', { id: it.id, price: it.val });
         return { ok: true };
       }
       if (entry.kind === 'seed') {

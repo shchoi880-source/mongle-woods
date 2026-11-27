@@ -1011,7 +1011,7 @@
   UI.shop = () => UI.modal('땅굴상점 가판대', (body, close) => {
     const sel = new Set();
     const tr = G.market.trend();
-    const groups = { tool: '도구·확장', seed: '씨앗', animal: '목장', furn: '가구', gold: '귀중품', ...G.shop.WARDROBE };
+    const groups = { tool: '도구·확장', seed: '씨앗', animal: '목장', furn: '가구', valuable: '귀중품', ...G.shop.WARDROBE };
     const groupOf = (e) => {
       if (e.kind === 'pk' || e.kind === 'look') return e.part;
       return ['up', 'plot', 'bag'].includes(e.kind) ? 'tool' : e.kind;
@@ -1064,7 +1064,7 @@
       }
       for (const e of tab === 'buy' ? stock.filter((item) => groupOf(item) === buyGroup) : []) {
         const own = e.kind === 'tool' ? G.player.hasTool(e.id) : e.kind === 'look' || e.kind === 'pk' ? !!(G.player.unlocks || {})[e.key] : G.shop.soldOut(e);
-        const ico = e.kind === 'gold' ? `<img src="${G.art.iconURL(e.id, 64)}" alt="">` :
+        const ico = e.kind === 'valuable' ? `<img src="${G.art.iconURL(e.id, 64)}" alt="">` :
           e.kind === 'pk' ? `<span class="lookico">${e.part === 'hat' ? '🎩' : e.part === 'head' ? '💇' : '👕'}</span>` : e.kind === 'look' ? `<span class="lookico">${e.part === 'hat' ? '👒' : '👕'}</span>` : e.kind === 'plot' ? `<img src="${G.art.iconURL('seed:carrot', 64)}" alt=""><i class="upmark">＋</i>` : e.kind === 'bag' ? '<span class="lookico">🎒</span><i class="upmark">＋</i>' : e.kind === 'tool' || e.kind === 'up' ? `<img src="${G.art.iconURL('tool:' + e.id, 64)}" alt="">${e.kind === 'up' ? '<i class="upmark">⬆</i>' : ''}` : e.kind === 'seed' ? `<img src="${G.art.iconURL('seed:' + e.id, 64)}" alt="">` : e.kind === 'animal' ? `<img src="${G.art.iconURL('animal:' + e.id, 64)}" alt="">` : `<img src="${G.art.iconURL('furn:' + e.id + '#' + e.c, 64)}" alt="">`;
         const status = !own ? G.fmt.money(e.price) : e.kind === 'furn' ? '다 팔림' : '가지고 있음';
         const detail = e.detail ? `<small>${esc(e.detail)}</small>` : '';
@@ -1087,7 +1087,7 @@
           else if (e.kind === 'up' && e.level) { UI.refreshHud(); tip(`${e.name} ${e.level + 1}단계 · ${e.detail}`, '⬆️', 3600); }
           else if (e.kind === 'up') tip('큰 물뿌리개! 주변 5×3 칸에 한 번에 물을 줘요.', '🚿', 3600);
           else if (e.kind === 'seed') tip(`${e.name}를 샀어요! 집 옆 텃밭에 심어요.`, '🌱');
-          else if (e.kind === 'gold') tip('금 1개를 가방에 넣었어요.', '✨');
+          else if (e.kind === 'valuable') tip(`${e.name} 1개를 가방에 넣었어요.`, '✨');
           else tip(`${e.name}을(를) 샀어요! 집에서 꾸미기로 놓아 보세요.`, '🛋️');
           const scroll = body.scrollTop;
           render(); body.scrollTop = scroll;

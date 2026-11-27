@@ -363,7 +363,8 @@
   }
   function receiveGifts(all) {
     for (const [id, g] of Object.entries(all)) {
-      if (!g || typeof g.id !== 'string' || !G.items.get(g.id)) { F.db.remove(R('rooms/' + N.room + '/gifts/' + F.uid + '/' + id)); continue; }
+      const it = typeof g?.id === 'string' && G.items.get(g.id);
+      if (!it || it.cat === 'valuable') { F.db.remove(R('rooms/' + N.room + '/gifts/' + F.uid + '/' + id)); continue; }
       let x = null; try { x = g.x ? JSON.parse(g.x) : null; } catch (e) { x = null; }
       const n = Math.max(1, Math.min(99, g.n | 0));
       if (!G.inv.canFit(g.id, x)) { G.ui.toast(`${ga(g.name || '친구')} 선물을 보냈는데 가방이 꽉 찼어요! 자리를 비우면 받아요.`, { icon: '🎒', ms: 3500 }); continue; }
@@ -386,7 +387,7 @@
   };
   N.gift = async (toUid, slot, n) => {
     const s = G.inv.slots[slot]; if (!s || !N.active || !N.others[toUid]) return false;
-    const it = G.items.get(s.id); if (!it || it.nosell || it.cat === 'letter') { G.ui.toast('그건 선물할 수 없어요.', { icon: '✉️' }); return false; }
+    const it = G.items.get(s.id); if (!it || it.nosell || it.cat === 'letter' || it.cat === 'valuable') { G.ui.toast('그건 선물할 수 없어요.', { icon: '✉️' }); return false; }
     n = Math.max(1, Math.min(n || 1, s.n));
     const id = s.id, x = s.x ? JSON.stringify(s.x) : '';
     G.inv.removeAt(slot, n);
