@@ -23,14 +23,15 @@ const ok = (name, cond, detail) => { console.log(`${cond ? '✔' : '✘'} ${name
   const art = { C: {}, paint: { shadow() {}, blob() {} } };
   const moduleG = { art, u: G.u, modules: new Set(), settings: { get() {} } };
   vm.runInNewContext(fs.readFileSync(path.join(ROOT, 'js', 'actors.js'), 'utf8'), { G: moduleG, Image: PreviewImage });
-  let sample, flip, toolAngle;
+  let sample, flip, toolAngle, pathStarts;
   const layers = [];
+  const clipPaths = [];
   const ctx = {
     save() {}, restore() {}, translate() {},
     scale(x) { flip = x; },
     rotate(angle) { toolAngle = angle; },
-    transform() {}, beginPath() {}, moveTo() {}, lineTo() {}, quadraticCurveTo() {},
-    stroke() {}, clip() {}, arc() {}, closePath() {}, fill() {},
+    transform() {}, beginPath() { pathStarts = 0; }, moveTo() { pathStarts++; }, lineTo() {}, quadraticCurveTo() {},
+    stroke() {}, clip() { clipPaths.push(pathStarts); }, arc() {}, closePath() {}, fill() {},
     createLinearGradient() { return { addColorStop() {} }; },
     drawImage(im, x, y, sw, sh, dx, dy, dw, dh) {
       const name = path.basename(im.src);
@@ -40,6 +41,7 @@ const ok = (name, cond, detail) => { console.log(`${cond ? '✔' : '✘'} ${name
   };
   const render = (look, dir, moving = false, walk = 0) => {
     layers.length = 0;
+    clipPaths.length = 0;
     art.actor.draw(ctx, { species: 'human', look, x: 0, y: 0, dir, moving, walk }, 0);
     return sample.join('/');
   };
@@ -53,8 +55,8 @@ const ok = (name, cond, detail) => { console.log(`${cond ? '✔' : '✘'} ${name
   render(layered, 0);
   const [nape, outfit, head, glasses, band] = layers;
   ok('우편지기: 울프컷의 목 아래 머리는 옷 뒤에 이어짐', nape?.name === 'head-male-mullet.webp' &&
-    outfit?.name === 'outfit-overalls.webp' && head?.name === nape.name && head.y + head.sh === nape.y &&
-    Math.abs(head.dy + head.dh - nape.dy) < 1e-6);
+    outfit?.name === 'outfit-overalls.webp' && head?.name === nape.name && head.y + head.sh - nape.y === 2 &&
+    head.dy + head.dh > nape.dy);
   ok('우편지기: 안경과 머리띠는 얼굴 위에 함께 표시', glasses?.name === 'accessory-round-glasses.webp' &&
     band?.name === 'accessory-male-bear-ears.webp');
   layered.pk.head = 'male-tousled';
@@ -68,6 +70,19 @@ const ok = (name, cond, detail) => { console.log(`${cond ? '✔' : '✘'} ${name
   render(layered, 2);
   ok('우편지기: 뒷머리는 옷 위에 이어지고 뒷면에 안경이 없음', layers[0]?.name === 'outfit-overalls.webp' &&
     layers[1]?.name === 'head-male-mullet.webp' && layers[1].sh === 144 && layers.length === 3);
+  const croppedEars = art.PK.heads.every(([head]) => {
+    const gender = art.pkGender({ head });
+    const look = { ...male, pk: { ...art.pkDefault(gender), head, hat: 'bear-ears' } };
+    return [0, 1, 2, 3].every(dir => {
+      render(look, dir, true, 0.6);
+      const side = dir === 1 || dir === 3;
+      return clipPaths.length === 1 && clipPaths[0] === (side && gender === 'female' ? 1 : 2) &&
+        layers.at(-1)?.name === `accessory-${gender}-bear-ears.webp`;
+    });
+  });
+  render({ ...male, pk: art.pkDefault('male') }, 0);
+  ok('우편지기: 모든 헤어에서 곰돌이 귀만 잘라 그리고 우편 모자는 그대로 표시', croppedEars &&
+    clipPaths.length === 0 && layers.at(-1)?.name === 'accessory-postal-cap.webp');
   const swing = (tool, actionPhase) => {
     art.actor.draw(ctx, { species: 'human', look: male, x: 0, y: 0, dir: 3, tool, actionPhase }, 0);
     return [sample[1], toolAngle];
