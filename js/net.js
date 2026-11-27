@@ -310,7 +310,14 @@
     F.db.onDisconnect(me).remove();
     offs.push(F.db.onValue(R(base + '/players'), (snap) => syncPlayers(snap.val() || {})));
     offs.push(F.db.onValue(F.db.query(R(base + '/chat'), F.db.limitToLast(30)), (snap) => syncChat(snap.val() || {})));
-    offs.push(F.db.onValue(R(base + '/gifts/' + F.uid), (snap) => receiveGifts(snap.val() || {})));
+    const room = N.room, uid = F.uid;
+    let gifts = {}, receiving = Promise.resolve();
+    const receive = () => {
+      if (!Object.keys(gifts).length) return;
+      receiving = receiving.then(() => receiveGifts(gifts, room, uid)).catch((e) => G.log.err('net.gift', e));
+    };
+    offs.push(F.db.onValue(R(base + '/gifts/' + uid), (snap) => { gifts = snap.val() || {}; receive(); }));
+    offs.push(G.on('inv:change', receive));
     if (N.mode === 'guest') {
       offs.push(F.db.onValue(R(base + '/kick/' + F.uid), (snap) => { if (snap.val()) { N.home(true); sys('마을 주인이 집으로 돌려보냈어요.'); } }));
       offs.push(F.db.onValue(R(base + '/info'), (snap) => {
@@ -335,7 +342,10 @@
   // ---------- 동기화 ----------
   function myState() {
     const p = G.player;
-    return { name: (p.name || '?').slice(0, 8), look: JSON.stringify(p.look || {}).slice(0, 400), x: Math.round(p.x), y: Math.round(p.y), dir: p.dir | 0, mv: p.moving ? 1 : 0, tool: p.tool || 'hand', at: F.db.serverTimestamp() };
+    const look = JSON.stringify(p.look || {});
+    // 기존 접속 정보에 선물 지원 여부를 함께 전달한다.
+    const giftLook = JSON.stringify({ ...p.look, valuableGift: true });
+    return { name: (p.name || '?').slice(0, 8), look: (giftLook.length <= 400 ? giftLook : look).slice(0, 400), x: Math.round(p.x), y: Math.round(p.y), dir: p.dir | 0, mv: p.moving ? 1 : 0, tool: p.tool || 'hand', at: F.db.serverTimestamp() };
   }
   function syncPlayers(all) {
     const seen = new Set();
@@ -345,7 +355,7 @@
       let o = N.others[uid];
       let look = {}; try { look = JSON.parse(v.look || '{}'); } catch (e) { /* 기본 모습 */ }
       if (!o) { o = N.others[uid] = { uid, x: v.x, y: v.y, seed: Math.random() * 10, walk: 0 }; if (G.game.started) sys(`${ga(v.name)} 왔어요!`); }
-      Object.assign(o, { name: String(v.name || '?').slice(0, 8), look, tx: +v.x || 0, ty: +v.y || 0, dir: v.dir | 0, moving: !!v.mv, tool: v.tool || 'hand' });
+      Object.assign(o, { name: String(v.name || '?').slice(0, 8), look, valuableGift: look?.valuableGift === true, tx: +v.x || 0, ty: +v.y || 0, dir: v.dir | 0, moving: !!v.mv, tool: v.tool || 'hand' });
     }
     for (const uid of Object.keys(N.others)) if (!seen.has(uid)) { sys(`${ga(N.others[uid].name)} 집으로 돌아갔어요.`); delete N.others[uid]; }
     G.emit('net:players', {});
@@ -361,18 +371,23 @@
     }
     G.emit('net:chat', {});
   }
-  function receiveGifts(all) {
+  async function receiveGifts(all, room, uid) {
     for (const [id, g] of Object.entries(all)) {
+      if (N.room !== room || fb()?.uid !== uid) return;
       const it = typeof g?.id === 'string' && G.items.get(g.id);
-      if (!it || it.cat === 'valuable') { F.db.remove(R('rooms/' + N.room + '/gifts/' + F.uid + '/' + id)); continue; }
-      let x = null; try { x = g.x ? JSON.parse(g.x) : null; } catch (e) { x = null; }
-      const n = Math.max(1, Math.min(99, g.n | 0));
-      if (!G.inv.canFit(g.id, x)) { G.ui.toast(`${ga(g.name || '친구')} 선물을 보냈는데 가방이 꽉 찼어요! 자리를 비우면 받아요.`, { icon: '🎒', ms: 3500 }); continue; }
-      F.db.remove(R('rooms/' + N.room + '/gifts/' + F.uid + '/' + id)).then(() => {
-        G.inv.add(g.id, n, x); G.audio.sfx('catch');
-        G.ui.itemPop(g.id, x, `${g.name || '친구'}에게 ${G.items.name(g.id, x)}${n > 1 ? ' ' + n + '개' : ''}${n > 1 ? '를' : G.josa(G.items.name(g.id, x), '을/를').slice(-1)} 받았다!`);
-        if (G.save.paused && N.mode !== 'guest') return; G.save.mark('gift');
-      }).catch(() => { /* 이미 받음 */ });
+      const db = F.db, ref = R('rooms/' + room + '/gifts/' + uid + '/' + id);
+      if (!it) { db.remove(ref).catch(() => {}); continue; }
+      let x = null;
+      if (it.cat !== 'valuable') try { x = g.x ? JSON.parse(g.x) : null; } catch (e) { x = null; }
+      const n = it.cat === 'valuable' ? 1 : Math.max(1, Math.min(99, g.n | 0));
+      if (!G.inv.canFit(g.id, x, n)) { G.ui.toast(`${ga(g.name || '친구')} 선물을 보냈는데 가방이 꽉 찼어요! 자리를 비우면 받아요.`, { icon: '🎒', ms: 3500 }); continue; }
+      const claim = await db.runTransaction(ref, (current) => {
+        if (current && N.room === room && fb()?.uid === uid && G.inv.canFit(g.id, x, n)) return null;
+      }, { applyLocally: false }).catch(() => null);
+      if (!claim?.committed || fb()?.uid !== uid) continue;
+      G.inv.add(g.id, n, x); G.audio.sfx('catch');
+      if (it.cat === 'valuable' && N.guest) N.safeSave();
+      G.ui.itemPop(g.id, x, `${g.name || '친구'}에게 ${G.items.name(g.id, x)}${n > 1 ? ' ' + n + '개' : ''}${n > 1 ? '를' : G.josa(G.items.name(g.id, x), '을/를').slice(-1)} 받았다!`);
     }
   }
 
@@ -386,15 +401,19 @@
     return true;
   };
   N.gift = async (toUid, slot, n) => {
-    const s = G.inv.slots[slot]; if (!s || !N.active || !N.others[toUid]) return false;
-    const it = G.items.get(s.id); if (!it || it.nosell || it.cat === 'letter' || it.cat === 'valuable') { G.ui.toast('그건 선물할 수 없어요.', { icon: '✉️' }); return false; }
-    n = Math.max(1, Math.min(n || 1, s.n));
+    const s = G.inv.slots[slot], friend = N.others[toUid]; if (!s || !N.active || !friend) return false;
+    const it = G.items.get(s.id); if (!it || it.nosell || it.cat === 'letter') { G.ui.toast('그건 선물할 수 없어요.', { icon: '✉️' }); return false; }
+    if (it.cat === 'valuable' && !friend.valuableGift) {
+      G.ui.toast('친구가 몽글숲을 새로 열고 다시 만나면 귀중품을 보낼 수 있어요.', { icon: '🎁' });
+      return false;
+    }
+    n = it.cat === 'valuable' ? 1 : Math.max(1, Math.min(n || 1, s.n));
     const id = s.id, x = s.x ? JSON.stringify(s.x) : '';
     G.inv.removeAt(slot, n);
     try { await F.db.push(R('rooms/' + N.room + '/gifts/' + toUid), { from: F.uid, name: (G.player.name || '?').slice(0, 8), id, n, x, t: F.db.serverTimestamp() }); }
     catch (e) { G.inv.add(id, n, s.x); G.ui.toast('선물을 보내지 못했어요.', { icon: '⚠️' }); return false; }
-    G.audio.sfx('chime'); G.ui.toast(`${N.others[toUid].name}에게 ${rl(G.items.name(id, s.x))} 선물했어요!`, { icon: '🎁' });
-    if (!G.save.paused) G.save.mark('gift');
+    G.audio.sfx('chime'); G.ui.toast(`${friend.name}에게 ${rl(G.items.name(id, s.x))} 선물했어요!`, { icon: '🎁' });
+    if (it.cat === 'valuable' && N.guest) N.safeSave();
     return true;
   };
 
